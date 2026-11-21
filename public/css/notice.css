@@ -1,0 +1,64 @@
+/* 全服公告条 (public/js/ui/notice.js): the server's rolling announcement at the very top of every screen.
+   The bar itself is fixed; the app root reserves its height (padding-top) so no screen is covered. */
+
+.app-root.has-notice { --notice-h: 34px; padding-top: var(--notice-h); }
+
+.notice {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-banner, 40);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--notice-h, 34px);
+  padding: 0 14px;
+  background: linear-gradient(180deg, rgba(46, 38, 10, .97), rgba(28, 22, 6, .95));
+  border-bottom: 1px solid rgba(255, 178, 77, .65);
+  color: #ffedc9;
+  font-size: calc(.16 * var(--t, 16px));
+  letter-spacing: .03em;
+  overflow: hidden;
+  animation: notice-in 200ms cubic-bezier(.22, .61, .36, 1);
+}
+@keyframes notice-in { from { transform: translateY(-100%); opacity: 0; } }
+
+.notice__tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #ffb24d;
+  font-weight: 700;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+.notice__tag .icon { width: 1em; height: 1em; }
+
+.notice__track {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+/* the classic marquee: start past the right edge, travel by the element's own width */
+.notice__text {
+  display: inline-block;
+  padding-left: 100%;
+  white-space: nowrap;
+  will-change: transform;
+  animation: notice-scroll var(--notice-sec, 20s) linear infinite;
+}
+@keyframes notice-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+.notice:hover .notice__text { animation-play-state: paused; }
+
+/* the 闪断预警条 sits right under the announcement instead of covering it */
+.app-root.has-notice .flashwarn { top: var(--notice-h, 34px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .notice, .notice__text { animation: none !important; }
+  .notice__text { padding-left: 0; }
+}

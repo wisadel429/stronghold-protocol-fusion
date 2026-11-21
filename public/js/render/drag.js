@@ -1,0 +1,357 @@
+// render/drag.js — prep-phase pointer interactions: hover, click, right-click / long-press detail, and
+// drag & drop of pieces between hand, temp and board (DESIGN §9, §10). Pure logic (no PIXI, no DOM access):
+// app.js feeds it canvas pointer events and supplies hit-testing callbacks, so the state machine and the drop
+// target resolution are unit tested in Node.
+//
+// Drop targets (protocol g.move `to`): { area: 'board', row, col } | { area: 'hand', idx }, plus
+// { area: 'outside', clientX, clientY } when the pointer is released off the stage grid or over DOM UI that
+// covers the canvas (the UI decides what, if anything, that means). Releasing over a grid tile that is not a legal
+// target (temp slot, enemy lane, `canPlace` false, or the piece's own bench slot) cancels the drag without a
+// pieceDrop. A board piece released on its OWN tile is a drop (when `canPlace` allows it): the UI opens the
+// direction wheel to re-orient it in place (research 09 §1.2 — "drag the unit onto its own tile and swipe").
+// Everything is judged at the pointer (user playtest #4 item 1: the ground is drawn as tiles): a press / hover is on the
+// piece standing on the tile under it (`hitPiece`, render/pick.js), and while dragging the target, `tileHover` and the
+// legality are that tile — an item dropped on a unit's tile goes to that unit. app.js draws a dragged unit standing on
+// that tile while it is a legal target (`dragStandTile`, the official deploy drag) and held under the pointer
+// otherwise; an item plate stays on the pointer. A release over DOM UI covering the canvas (the shop bar) is 'outside'
+// (mouse and touch alike).
+//
+// Events emitted through `emit(name, payload)`:
+//   pieceHover     { uid, piece, clientX, clientY } | { uid: null }            (mouse/pen hover changes)
+//   tileHover      { row, col, area, idx } | null                              (hover / drag target tile changes)
+//   pieceClick     { uid, piece, button, detail, clientX, clientY }            (detail: right-click / long-press)
+//   pieceDetail    { uid, piece, clientX, clientY }                            (right-click / long-press)
+//   pieceDragStart { uid, piece, from }
+//   pieceDragMove  { uid, piece, x, y, clientX, clientY, target, legal }       (for the ghost; high frequency)
+//   pieceDrop      { uid, piece, from, target }
+//   pieceDragEnd   { uid, piece, dropped, cancelled }
+
+import { GEO, benchTileOf, benchIndexAt, tempSlotsOf, tempIndexAt } from '../../../shared/constants.js';
+
+/**
+ * Where a piece currently sits, as a tile. `piece.area` 'board' uses row/col; 'hand'/'temp' use idx — the bench's own
+ * slot mapping (`shared/constants.js benchTileOf`: 10 slots = row 7 cols 0..9, the 20-slot 炸惊 bench = slots 0..9 on
+ * row 7 and 10..19 on the row behind it, row 8); a temp piece sits on a slot of the match's own temp table
+ * (`tempSlotsOf`, keyed on the bench width: row 8 cols 4..8 for a 10-slot bench, 炸惊's 2x2 block at rows 8/7 x cols
+ * -2/-1 — the rock strip left of its 20-slot bench, which does not move).
+ * `handSize` = this match's 整备区 width (`benchSizeOf`).
+ * @param {{area?:string,idx?:number,row?:number,col?:number}} piece
+ * @param {number} [handSize]
+ * @param {number} [baseRow] the row of the first bench row (`GEO.HAND_ROW`)
+ * @param {Array<{row:number,col:number}>} [tempSlots] the temp table (`tempSlotsOf(handSize)`)
+ */
+export function pieceTile(piece, handSize = GEO.HAND_SIZE, baseRow = GEO.HAND_ROW, tempSlots = tempSlotsOf(handSize)) {
+  if (!piece || typeof piece !== 'object') return null;
+  if (piece.area === 'hand' && Number.isInteger(piece.idx)) return benchTileOf(piece.idx, handSize, baseRow);
+  if (piece.area === 'temp' && Number.isInteger(piece.idx)) {
+    // the table the caller passes is the one the match drew (`tempSlotsOf` for its bench width) — an index past its end
+    // has no tile at all (the hidden overflow queue waits for a visible slot: render/app.js setPrep)
+    return Array.isArray(tempSlots) && tempSlots[piece.idx] ? { ...tempSlots[piece.idx] } : null;
+  }
+  if (Number.isInteger(piece.row) && Number.isInteger(piece.col)) return { row: piece.row, col: piece.col };
+  return null;
+}
+
+/** The slot a piece occupies, in protocol target form (temp slots → { area: 'temp', idx }). */
+export function pieceSlot(piece) {
+  if (!piece || typeof piece !== 'object') return null;
+  if (piece.area === 'hand' && Number.isInteger(piece.idx)) return { area: 'hand', idx: piece.idx };
+  if (piece.area === 'temp' && Number.isInteger(piece.idx)) return { area: 'temp', idx: piece.idx };
+  if (Number.isInteger(piece.row) && Number.isInteger(piece.col)) return { area: 'board', row: piece.row, col: piece.col };
+  return null;
+}
+
+/**
+ * Classify a grid tile as a potential drop slot.
+ * @param {{row:number,col:number}} tile
+ * @param {typeof GEO} [geo] GEO, or `{ ...GEO, HAND_SIZE: benchSize }` for a match whose 整备区 holds more than the
+ *   default 10 slots (炸惊 `economy.benchSize` = 20: shared/constants.js `benchSizeOf`). The bench slots are
+ *   `benchTileOf(0..HAND_SIZE-1, HAND_SIZE)` — one row for 10 slots, two rows (7 and 8) for 20 — and the temp band is
+ *   `tempSlotsOf(geo.HAND_SIZE)` (row 8 cols 4..8 for 10 slots, a 2x2 block at rows 8/7 x cols -2/-1 for 20), so
+ *   the bench wins every tile the two share.
+ * @returns {{area:'board',row,col}|{area:'hand',idx}|{area:'temp',idx}|null}
+ */
+export function tileSlot(tile, geo = GEO) {
+  if (!tile || !Number.isInteger(tile.row) || !Number.isInteger(tile.col)) return null;
+  const { row, col } = tile;
+  const bench = benchIndexAt(row, col, geo.HAND_SIZE, geo.HAND_ROW);
+  if (bench != null) return { area: 'hand', idx: bench };
+  const tempIdx = tempIndexAt(row, col, geo.HAND_SIZE);
+  if (tempIdx != null) return { area: 'temp', idx: tempIdx };
+  const F = geo.FIELD;
+  if (row >= F.r0 && row <= F.r1 && col >= F.c0 && col <= F.c1) return { area: 'board', row, col };
+  return null;
+}
+
+export const sameSlot = (a, b) => !!a && !!b && a.area === b.area &&
+  (a.area === 'board' ? a.row === b.row && a.col === b.col : a.idx === b.idx);
+
+/**
+ * Decide what a release does.
+ * @param {{ piece, from, tile, overCanvas: boolean, clientX: number, clientY: number,
+ *           canPlace?: (piece, row, col, target) => boolean, geo? }} p
+ * @returns {{ kind: 'drop', target } | { kind: 'cancel', reason: string }}
+ */
+export function resolveDrop(p) {
+  const { piece, from, tile, overCanvas, clientX, clientY } = p;
+  if (!overCanvas || !tile) {
+    return { kind: 'drop', target: { area: 'outside', clientX: Number(clientX) || 0, clientY: Number(clientY) || 0 } };
+  }
+  const slot = tileSlot(tile, p.geo || GEO);
+  if (!slot) return { kind: 'cancel', reason: 'notTarget' };
+  if (slot.area === 'temp') return { kind: 'cancel', reason: 'temp' };
+  if (sameSlot(slot, from) && slot.area !== 'board') return { kind: 'cancel', reason: 'same' };
+  if (!isLegal(p.canPlace, piece, slot, p.geo || GEO)) return { kind: 'cancel', reason: 'illegal' };
+  return { kind: 'drop', target: slot };
+}
+
+/**
+ * The tile a dragged UNIT is drawn standing on, from a `pieceDragMove` payload: the drop target under the pointer while
+ * it is legal — a board tile, or a bench slot (one of the bench's rows, shared/constants.js `benchTileOf`) — as
+ * `{ row, col, bench }` in board space; null otherwise (no target, an illegal tile, a temp slot, the pointer over DOM
+ * UI such as the shop bar): the unit is then held under
+ * the pointer. As in the official deploy drag (the owner's recording of 2026-10-09) the model stands on the tile the
+ * finger is on, and moving within that tile leaves it where it is. app.js never snaps an item plate.
+ */
+export function dragStandTile(move, geo = GEO) {
+  const t = move && move.legal === true ? move.target : null;
+  if (!t) return null;
+  if (t.area === 'board' && Number.isInteger(t.row) && Number.isInteger(t.col)) return { row: t.row, col: t.col, bench: false };
+  if (t.area === 'hand' && Number.isInteger(t.idx)) return { ...benchTileOf(t.idx, geo.HAND_SIZE, geo.HAND_ROW), bench: true };
+  return null;
+}
+
+/**
+ * Legality via the UI callback (board → (piece,row,col); hand → (piece, benchTileOf(idx).row, col)). Throwing ⇒ illegal.
+ */
+export function isLegal(canPlace, piece, slot, geo = GEO) {
+  if (!slot || slot.area === 'temp' || slot.area === 'outside') return false;
+  if (typeof canPlace !== 'function') return true;
+  const tile = slot.area === 'board' ? { row: slot.row, col: slot.col } : benchTileOf(slot.idx, geo.HAND_SIZE, geo.HAND_ROW);
+  const row = tile.row, col = tile.col;
+  try { return canPlace(piece, row, col, slot) !== false; } catch { return false; }
+}
+
+const DEFAULTS = { threshold: 6, touchThreshold: 10, longPressMs: 480 };
+
+/**
+ * GEO with this match's 整备区 width. `handSize` = GEO.HAND_SIZE (every official mode) returns GEO itself, so the
+ * official paths stay byte-identical; a wider bench (炸惊 20) makes the bench two rows (shared/constants.js
+ * `benchTileOf` / `benchIndexAt`) and its temp table (`tempSlotsOf`), both keyed off this
+ * HAND_SIZE — `tileSlot` reads the row and the column from the width, so no site can carry a stale pair.
+ * @param {number} handSize
+ */
+function geoOf(handSize) {
+  const wide = Number.isInteger(handSize) && handSize > 0 && handSize !== GEO.HAND_SIZE;
+  if (!wide) return GEO;
+  return { ...GEO, HAND_SIZE: handSize };
+}
+
+/**
+ * Pointer state machine.
+ * @param {{
+ *   hitPiece: (x, y) => (object|null),            // piece on the tile under canvas point (render/pick.js); piece.uid required
+ *   pickTile: (x, y) => ({row, col}|null),        // grid tile under canvas point
+ *   hitTemp?: (x, y) => ({row, col}|null),        // the temp block's cell under the point (its off-grid columns)
+ *   isOverCanvas?: (clientX, clientY) => boolean, // false when DOM UI covers the point (default true)
+ *   canPlace?: (piece, row, col, target) => boolean,
+ *   handSize?: number,                            // 整备区 width of the match (shared/constants.js benchSizeOf)
+ *   emit: (name, payload) => void,
+ *   setTimeout?, clearTimeout?, threshold?, touchThreshold?, longPressMs?
+ * }} hooks
+ */
+export function createDragController(hooks) {
+  const h = { ...DEFAULTS, ...hooks };
+  const setT = h.setTimeout || ((fn, ms) => setTimeout(fn, ms));
+  const clearT = h.clearTimeout || ((id) => clearTimeout(id));
+  let editable = false;
+  let handSize = Number.isInteger(h.handSize) && h.handSize > 0 ? h.handSize : GEO.HAND_SIZE;
+  let canPlace = typeof h.canPlace === 'function' ? h.canPlace : null;
+  const geo = () => geoOf(handSize);
+  /** @type {null | { mode: 'pressed'|'dragging'|'held', pointerId, pointerType, piece, from, sx, sy, timer, last? }} */
+  let st = null;
+  let hoverUid = null;
+  let hoverTileKey = '';
+
+  const emit = (name, payload) => { try { h.emit(name, payload); } catch (err) { console.error('[drag] listener failed', err); } };
+  const draggable = (piece) => !!piece && piece.draggable !== false && piece.uid != null;
+  const tileAt = (x, y) => { try { return h.pickTile(x, y); } catch { return null; } };
+  /**
+   * The tile a canvas point is on: the temp block first, then the grid.
+   *
+   * 炸惊's four temp cells hang off the grid on columns -2/-1 (shared/constants.js `tempSlotsOf`), where a grid pick
+   * answers null by rule (`projection.pickTile` keeps its own clamp); the UI judges those cells on their screen rect
+   * instead (`hitTemp`, render/app.js `tempSlotUnder`). Temp is asked FIRST on purpose: the block stands on the bench's
+   * own deck height, and around those cells the grid pick is not merely empty but WRONG — the raised deck plane makes the
+   * ray march land on the bench row behind the block, so a pointer over the bottom-left pad read as bench slot 10 (a
+   * legal drop!) instead of temp. Both answers are in board space, so `tileSlot` classifies either one, and a pointer
+   * over a temp cell then reports `{ area: 'temp' }` — a release turns that into `reason: 'temp'` (drag back into
+   * temp = cancel).
+   */
+  const tempAt = (x, y) => { try { return h.hitTemp ? h.hitTemp(x, y) : null; } catch { return null; } };
+  const tileUnder = (x, y) => tempAt(x, y) || tileAt(x, y);
+  const pieceAt = (x, y) => { try { return h.hitPiece(x, y); } catch { return null; } };
+  const overCanvas = (cx, cy) => { try { return h.isOverCanvas ? h.isOverCanvas(cx, cy) !== false : true; } catch { return true; } };
+
+  function setHoverTile(tile) {
+    const slot = tile ? tileSlot(tile, geo()) : null;
+    const key = tile ? `${tile.row},${tile.col}` : '';
+    if (key === hoverTileKey) return;
+    hoverTileKey = key;
+    emit('tileHover', tile ? { row: tile.row, col: tile.col, area: slot ? slot.area : null, idx: slot && slot.area !== 'board' ? slot.idx : undefined } : null);
+  }
+
+  function setHoverPiece(piece, e) {
+    const uid = piece ? piece.uid : null;
+    if (uid === hoverUid) return;
+    hoverUid = uid;
+    emit('pieceHover', piece ? { uid, piece, clientX: e.clientX, clientY: e.clientY } : { uid: null });
+  }
+
+  function clearTimer() { if (st && st.timer != null) { clearT(st.timer); st.timer = null; } }
+
+  function startDrag(e) {
+    clearTimer();
+    st.mode = 'dragging';
+    setHoverPiece(null, e);
+    emit('pieceDragStart', { uid: st.piece.uid, piece: st.piece, from: st.from });
+    moveDrag(e);
+  }
+
+  function moveDrag(e) {
+    st.last = e;
+    const over = overCanvas(e.clientX, e.clientY);
+    const tile = tileUnder(e.x, e.y);
+    const slot = over && tile ? tileSlot(tile, geo()) : null;
+    const legal = !!slot && slot.area !== 'temp' && (slot.area === 'board' || !sameSlot(slot, st.from)) && isLegal(canPlace, st.piece, slot, geo());
+    setHoverTile(over ? tile : null);
+    emit('pieceDragMove', { uid: st.piece.uid, piece: st.piece, x: e.x, y: e.y, clientX: e.clientX, clientY: e.clientY, target: slot, legal });
+  }
+
+  function endDrag(e, cancelled) {
+    const s = st;
+    st = null;
+    if (!s) return;
+    let dropped = false;
+    if (!cancelled) {
+      const tile = tileUnder(e.x, e.y);
+      const d = resolveDrop({ piece: s.piece, from: s.from, tile, overCanvas: overCanvas(e.clientX, e.clientY), clientX: e.clientX, clientY: e.clientY, canPlace, geo: geo() });
+      if (d.kind === 'drop') {
+        dropped = true;
+        emit('pieceDrop', { uid: s.piece.uid, piece: s.piece, from: s.from, target: d.target });
+      }
+    }
+    emit('pieceDragEnd', { uid: s.piece.uid, piece: s.piece, dropped, cancelled: !dropped });
+  }
+
+  return {
+    get editable() { return editable; },
+    get dragging() { return !!st && st.mode === 'dragging'; },
+    get dragPiece() { return st && st.mode === 'dragging' ? st.piece : null; },
+    get hoverUid() { return hoverUid; },
+
+    setEditable(v) {
+      editable = !!v;
+      if (!editable && st && st.mode === 'dragging') endDrag(null, true);
+    },
+    setCanPlace(fn) { canPlace = typeof fn === 'function' ? fn : null; },
+
+    /**
+     * The match's 整备区 width (shared/constants.js `benchSizeOf(priv)`): 10 for every official mode (the default, a
+     * no-op), 20 in 炸惊 — which also swaps the temp table for its 2x2 block (`tempSlotsOf`). A change
+     * re-judges a drag in flight so its highlight follows the new geometry.
+     */
+    setHandSize(n) {
+      const v = Number.isInteger(n) && n > 0 ? n : GEO.HAND_SIZE;
+      if (v === handSize) return false;
+      handSize = v;
+      if (st && st.mode === 'dragging' && st.last) moveDrag(st.last);
+      return true;
+    },
+    get handSize() { return handSize; },
+
+    /** The temp table of the current bench width (`tempSlotsOf`), for callers that draw it. */
+    get tempSlots() { return tempSlotsOf(handSize); },
+
+    /** e: { pointerId, pointerType, button, x, y (canvas CSS px), clientX, clientY } */
+    pointerDown(e) {
+      if (st) return false; // one pointer at a time
+      const piece = pieceAt(e.x, e.y);
+      if (!piece) { setHoverTile(tileUnder(e.x, e.y)); return false; }
+      if (e.button === 2) {
+        emit('pieceClick', { uid: piece.uid, piece, button: 2, detail: true, clientX: e.clientX, clientY: e.clientY });
+        emit('pieceDetail', { uid: piece.uid, piece, clientX: e.clientX, clientY: e.clientY });
+        return true;
+      }
+      if (e.button != null && e.button !== 0) return false;
+      st = { mode: 'pressed', pointerId: e.pointerId, pointerType: e.pointerType || 'mouse', piece, from: pieceSlot(piece), sx: e.x, sy: e.y, cx: e.clientX, cy: e.clientY, timer: null };
+      if (st.pointerType === 'touch' || st.pointerType === 'pen') {
+        const snapshot = st;
+        st.timer = setT(() => {
+          if (st !== snapshot || st.mode !== 'pressed') return;
+          st.timer = null;
+          st.mode = 'held';
+          emit('pieceClick', { uid: piece.uid, piece, button: 0, detail: true, clientX: snapshot.cx, clientY: snapshot.cy });
+          emit('pieceDetail', { uid: piece.uid, piece, clientX: snapshot.cx, clientY: snapshot.cy });
+        }, h.longPressMs);
+      }
+      return true;
+    },
+
+    pointerMove(e) {
+      if (!st) {
+        if (e.pointerType === 'touch') return;
+        setHoverPiece(pieceAt(e.x, e.y), e);
+        setHoverTile(tileUnder(e.x, e.y));
+        return;
+      }
+      if (e.pointerId !== st.pointerId) return;
+      if (st.mode === 'pressed') {
+        const th = st.pointerType === 'touch' ? h.touchThreshold : h.threshold;
+        if (Math.hypot(e.x - st.sx, e.y - st.sy) >= th) {
+          if (editable && draggable(st.piece)) startDrag(e);
+          else { clearTimer(); st.mode = 'held'; }
+        }
+      } else if (st.mode === 'dragging') moveDrag(e);
+    },
+
+    pointerUp(e) {
+      if (!st || e.pointerId !== st.pointerId) return;
+      if (st.mode === 'dragging') { endDrag(e, false); return; }
+      const s = st;
+      clearTimer();
+      st = null;
+      if (s.mode === 'pressed') emit('pieceClick', { uid: s.piece.uid, piece: s.piece, button: 0, detail: false, clientX: e.clientX, clientY: e.clientY });
+    },
+
+    pointerCancel(e) {
+      if (!st || (e && e.pointerId !== st.pointerId)) return;
+      if (st.mode === 'dragging') { endDrag(e, true); return; }
+      clearTimer();
+      st = null;
+    },
+
+    pointerLeave(e) {
+      if (st) return;
+      setHoverPiece(null, e || {});
+      setHoverTile(null);
+    },
+
+    /**
+     * Judge the drag again at the last pointer position: the ground under a still pointer changes while the camera
+     * moves (the shop-collapsed zoom of a deploy, GitHub #602), so the target tile, its legality and the dragged
+     * piece's place (pieceDragMove, tileHover) follow the camera, not only the pointer. No-op unless dragging.
+     */
+    refresh() {
+      if (st && st.mode === 'dragging' && st.last) moveDrag(st.last);
+    },
+
+    /** Abort any interaction (piece list replaced, view destroyed…). */
+    reset() {
+      if (st && st.mode === 'dragging') endDrag(null, true);
+      else { clearTimer(); st = null; }
+      hoverUid = null;
+      hoverTileKey = '';
+    },
+  };
+}

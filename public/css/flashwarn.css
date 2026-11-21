@@ -1,0 +1,37 @@
+/* 闪断预警条（顶部常驻，纯 transform/opacity 动画，不触发布局） */
+.flashwarn {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center; gap: .1rem;
+  padding: .09rem .2rem;
+  background: linear-gradient(180deg, rgba(46, 22, 6, .96), rgba(28, 14, 4, .92));
+  border-bottom: 1px solid rgba(255, 178, 77, .65);
+  color: #ffe9c7; font-size: calc(.16 * var(--t, 16px)); letter-spacing: .04em;
+  transform: translateY(-100%); opacity: 0; pointer-events: none;
+  transition: transform .16s ease-in, opacity .16s ease-in;
+  overflow: hidden;
+}
+.flashwarn.is-show {
+  transform: translateY(0); opacity: 1;
+  transition: transform .2s cubic-bezier(.22,.61,.36,1), opacity .2s cubic-bezier(.22,.61,.36,1);
+}
+.flashwarn::after {
+  content: ''; position: absolute; inset: 0; background: #ff8a1e; opacity: 0; pointer-events: none;
+}
+.flashwarn.is-soon::after { animation: flashwarn-breathe 1.6s ease-in-out infinite; }
+.flashwarn.is-urgent { color: #ffd2d2; border-bottom-color: rgba(255, 90, 90, .8); }
+.flashwarn.is-urgent::after { background: #ff2e2e; animation-duration: 1s; }
+.flashwarn__dot {
+  width: .08rem; height: .08rem; border-radius: 50%; background: #ffb24d; flex: 0 0 auto;
+  position: relative; z-index: 1;
+}
+.flashwarn.is-urgent .flashwarn__dot { background: #ff5a5a; }
+.flashwarn__text, .flashwarn__time { position: relative; z-index: 1; }
+.flashwarn__time { font-variant-numeric: tabular-nums; font-weight: 800; color: #ffd08a; }
+.flashwarn.is-urgent .flashwarn__time { color: #ff9a9a; }
+@keyframes flashwarn-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@media (max-width: 767px) {
+  .flashwarn.is-soon::after, .flashwarn.is-urgent::after { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flashwarn, .flashwarn::after { animation: none !important; transition-duration: 1ms !important; }
+}

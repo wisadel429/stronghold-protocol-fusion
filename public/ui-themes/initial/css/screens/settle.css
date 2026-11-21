@@ -1,0 +1,692 @@
+/* ==========================================================================================
+   screens/settle.css — the settlement flow (js/screens/settle.js): radar intro → 个人战报 → 同盟, drawn with the
+   official settlement sprites (assets settle/*). Every page is a 1920×1080 stage (19.2rem × 10.8rem, scaled down by
+   --k where the screen is smaller: settle.js useStageFit); positions are the design's pixels / 100. The boxes of
+   the sprites are set here, and the plain CSS fallbacks keep every page readable without the
+   resource pack.
+   ========================================================================================== */
+/* clip, not hidden: the bars and the terrain reach past the stage, and a hidden overflow could still be scrolled to them */
+.settle { overflow: hidden; overflow: clip; background: #040606; color: #eef3f1; }
+/* the sprites sit in boxes of their own (theme.css caps an img at its parent, which is 0 wide round the target point) */
+.settle img { max-width: none; }
+.settle__stage { position: absolute; left: 50%; top: 50%; width: 19.2rem; height: 10.8rem; transform: translate(-50%, -50%) scale(var(--k, 1)); }
+.settle__barbg { position: absolute; left: -10rem; right: -10rem; top: 9rem; bottom: -6rem; background: linear-gradient(180deg, #0d1010, #070909 40%); border-top: 1px solid rgba(200, 214, 210, .1); }
+.settle__barbg .sprite { position: absolute; left: 0; top: 0; width: 100%; height: 1.8rem; object-fit: fill; }
+.settle__detail { position: absolute; inset: 0; z-index: 5; background: #070909; }
+.settle__btnbg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+/* [ASSUMED] Preserve #698's boxes; uniformly shrink long translations and enlarged text within them (§35.1). */
+.settle__title { position: relative; overflow: hidden; }
+.settle__title > span { position: absolute; left: 0; top: 50%; display: block; width: max-content; white-space: nowrap;
+  transform-origin: left center; transform: translateY(-50%) scale(var(--title-scale, 1)); }
+.settle__btnbg--ghost { background: #2a2f2e; box-shadow: inset 0 0 0 2px rgba(220, 230, 226, .2); }
+.settle__btnbg--primary { background: linear-gradient(90deg, #44e6b8, #33d8ab);
+  clip-path: polygon(.12rem 0, 100% 0, 100% 100%, 0 100%, 0 .12rem); }
+@keyframes settle-fade { from { opacity: 0; } }
+
+/* logo (top left) */
+.slogo { position: absolute; left: .78rem; top: .5rem; z-index: 2; color: #c8d0cd; }
+.slogo__img { display: block; height: .64rem; width: auto; }
+.slogo__txt { display: block; font-family: var(--font-display); font-size: calc(.15 * var(--t)); line-height: .95; letter-spacing: .02em; font-weight: 600; }
+
+/* ---- radar intro ----
+   10-28 round 12: boxes from the footage (ref f0172–f0187), the outer/ originals at 1.5×. Timing [OUR] (the clip was not
+   found; matched by frame to the footage, ±0.1 s): 0.38 s ring / frames / logos / far terrain, 0.58 s tiles 00–01,
+   0.78 s tiles 02–04, 0.98 s corners, 0.95 s the teal wash over the terrain at the 个人战报 fit with the tiles faintly
+   through (the ring, the HUD and the footer stay above it), 1.3 s the 个人战报. */
+/* result.css still carries the old intro's sintro-out (a fade to black at 1.14 s): the wash hands over to the 个人战报 instead */
+.sintro { position: absolute; inset: 0; background: #040606; cursor: pointer; animation: none; }
+.sintro::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .35) 0 1px, transparent 1px 4px); }
+.so { position: absolute; display: block; max-width: none; pointer-events: none; }
+.sintro__far { -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%); mask-image: linear-gradient(90deg, transparent, #000 35%);
+  animation: sintro-far 400ms ease-out 380ms both; }
+@keyframes sintro-far { from { opacity: 0; } to { opacity: .3; } }
+.sintro__ring { z-index: 2; animation: sintro-ring 450ms var(--ease-out) 380ms both; }
+.sintro__hud { z-index: 2; animation: settle-fade 250ms 380ms both; }
+.sintro__frame, .sintro__season, .sintro__logo, .sintro__tag { animation: settle-fade 250ms 380ms both; }
+.sintro__season { position: absolute; }
+.sintro__season .sprite, .sself__season .sprite { display: block; width: 100%; height: 100%; object-fit: contain; }
+.sintro__core, .sintro__seat { animation: sintro-blink 300ms steps(3, end) calc(580ms + min(var(--i, 0), 1) * 200ms) both; }
+.sintro__core { --i: 0; }
+.sintro__ghost { position: absolute; width: 1.45rem; height: 1.47rem; animation: sintro-blink 300ms steps(3, end) 980ms both; }
+.sintro__ghost .sprite { display: block; width: 100%; height: 100%; }
+.sintro__seat.is-me { filter: drop-shadow(0 0 .1rem rgba(87, 214, 196, .9)); }
+.sintro__seat.is-out, .sintro__seat.is-left { filter: grayscale(1) brightness(.6); }
+.sintro__seat.is-empty { filter: grayscale(1) brightness(.35); }
+.sintro__foot { position: absolute; z-index: 2; left: 8.115rem; top: 9.675rem; width: 3.06rem; height: .24rem; animation: settle-fade 250ms 380ms both; }
+small.sintro__foot { left: 9.6rem; width: auto; height: auto; transform: translateX(-50%); white-space: nowrap; font-family: var(--font-display); font-size: calc(.16 * var(--t)); letter-spacing: .08em; color: #d77a2e; }
+.sintro__wash { position: absolute; z-index: 1; left: -10rem; right: -10rem; top: -6rem; bottom: -6rem; animation: settle-fade 100ms steps(3, end) 1100ms both; }
+.sintro__wash > .so { transform: translate(10rem, 6rem); opacity: .8; } /* the tiles show faintly through (ref f0186) */
+.sintro__wash::after, .sself__wash { content: ''; position: absolute; left: -10rem; right: -10rem; top: -6rem; bottom: -6rem; pointer-events: none;
+  background: rgba(48, 214, 182, .42); mix-blend-mode: screen; }
+.sintro__wash::after { inset: 0; }
+@keyframes sintro-ring { from { opacity: 0; transform: scale(.92); } }
+@keyframes sintro-blink { 0% { opacity: 0; } 34% { opacity: 1; } 67% { opacity: .25; } 100% { opacity: 1; } }
+
+/* the radar's crosshair, brackets, plus marks and HIGH/LOW gauge [OUR] (drawn after the footage, no art for them) */
+.shud { position: absolute; inset: 0; pointer-events: none; --hc: rgba(70, 205, 182, .6); }
+.shud > i, .shud__gauge { position: absolute; display: block; }
+.shud__v { left: 9.5925rem; top: 0; width: .015rem; height: 10.8rem; background: var(--hc); }
+.shud__h { top: 5.3925rem; height: .015rem; background: var(--hc); }
+.shud__h--l { left: 0; width: 2.7rem; }
+.shud__h--r { left: 16.42rem; width: 2.78rem; }
+.shud__brk { top: 3.72rem; width: .12rem; height: 3.33rem; box-sizing: border-box; border: .015rem solid var(--hc); }
+.shud__brk--l { left: 2.7rem; border-right: 0; }
+.shud__brk--r { left: 16.28rem; border-left: 0; }
+.shud__plus { width: .67rem; height: .67rem; }
+.shud__plus::before, .shud__plus::after { content: ''; position: absolute; background: var(--hc); }
+.shud__plus::before { left: .3275rem; top: 0; width: .015rem; height: 100%; }
+.shud__plus::after { top: .3275rem; left: 0; height: .015rem; width: 100%; }
+.shud__gauge { left: 17.58rem; top: 6.72rem; width: .34rem; height: 1.15rem; display: flex; flex-direction: column; gap: .06rem; }
+.shud__gauge i { flex: 1; box-sizing: border-box; border: .015rem solid var(--hc); }
+.shud__gauge i:nth-child(n + 3) { background: var(--hc); }
+.shud__gauge small { position: absolute; left: .5rem; font-family: var(--font-display); font-size: calc(.14 * var(--t)); line-height: 1; letter-spacing: .06em; color: var(--hc); }
+.shud__hi { top: .11rem; }
+.shud__lo { top: 1.68rem; }
+
+/* ---- 个人战报 ---- */
+/* 10-28: no fade of the whole page — it opens on the intro's last frame (terrain + teal wash + ring + HUD), the wash and
+   the carried-over ring / HUD go, the target lights, the rays draw from their ends, then the contents (timing [OUR]). */
+.sself { position: absolute; inset: 0; animation: none; } /* not result.css's sself-in: the wash is the hand-over */
+.sself.is-leaving { animation: sself-out 380ms steps(5, end) forwards; }
+@keyframes sself-out { 0% { opacity: 1; clip-path: inset(0); } 40% { clip-path: inset(18% 0 30% 0); transform: translateX(-.08rem); } 100% { opacity: 0; clip-path: inset(48% 0 48% 0); } }
+.sself__wash { animation: sself-out-fade 270ms linear forwards; } /* r16: the teal fades over ~0.27 s (measured) (ref f0020–f0034) */
+.sself__carry { position: absolute; inset: 0; pointer-events: none; animation: sself-out-fade 200ms linear 500ms forwards; }
+.sself__carry .shud__v { display: none; }
+.sself__ring { filter: sepia(1) hue-rotate(125deg) saturate(2.4) brightness(1.35); }
+@keyframes sself-out-fade { to { opacity: 0; } }
+.sself__season, .sself__logo { animation: settle-fade 300ms 100ms both; }
+.sself__fx { animation: settle-fade 800ms ease-out 430ms both; } /* r16: the map dims slowly from ~0.45 s to ~1.3 s (ref f0034–f0060, measured) */
+.sself__season { position: absolute; z-index: 2; }
+.sself__fx { position: absolute; left: -6.4rem; top: -3.6rem; width: 32rem; height: 18rem; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .32) 0 1px, transparent 1px 4px),
+    linear-gradient(90deg, rgba(4, 6, 6, .38) 19%, rgba(4, 6, 6, 0) 30%, rgba(4, 6, 6, .08) 46%, rgba(4, 6, 6, .58) 56%, rgba(4, 6, 6, .76) 80%),
+    linear-gradient(180deg, rgba(4, 6, 6, .28) 18%, transparent 30%, transparent 64%, rgba(4, 6, 6, .6) 74%); }
+
+/* the target point: quarter sprites turned round their corner (the target's centre), the dot, the label */
+.starget { position: absolute; width: 0; height: 0; pointer-events: none; animation: settle-fade 100ms both; }
+.starget__color { animation: starget-glow 400ms ease-out 300ms both; }
+@keyframes starget-glow { from { opacity: 0; } 50% { opacity: 1; filter: brightness(2.3); } to { filter: brightness(1.25); } }
+.starget__color { filter: brightness(1.25); }
+.starget > .starget__ring { animation: starget-ring 600ms var(--ease-out) both; }
+@keyframes starget-ring { from { opacity: 0; transform: rotate(-120deg) scale(1.25); } }
+.starget > .starget__dot, .starget > .starget__mid { animation: starget-dot 320ms ease-out 120ms both; }
+@keyframes starget-dot { 0% { opacity: 0; } 50% { opacity: 1; filter: brightness(2.6); } }
+.starget__label { animation: settle-fade 250ms 300ms both; }
+.starget .sprite { position: absolute; display: block; }
+.squad { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.starget .squad__q { left: 0; bottom: 0; width: var(--q); height: var(--q); transform-origin: 0 100%; }
+.squad__q--1 { transform: rotate(90deg); }
+.squad__q--2 { transform: rotate(180deg); }
+.squad__q--3 { transform: rotate(270deg); }
+.starget__color { --q: 1.4rem; }
+.sself.is-lose .starget__color { --q: 1.2rem; }
+.starget__arc { --q: .96rem; animation: starget-spin 14s linear infinite; }
+.starget__ring { --q: 1.16rem; }
+.sself.is-lose .starget__ring { --q: 1.11rem; }
+/* 模拟中断的目标点（原片 12:22 f1250–f1342 一直不变）：没有暗色圆盘，红光铺得很大，细红圈很淡 */
+.sself.is-lose .starget .starget__disc { display: none; }
+.sself.is-lose .starget__color { --q: 1.5rem; filter: none; opacity: .8; }
+.sself.is-lose .starget__ring { --q: 1.75rem; opacity: .6; }
+/* 目标点整组（圈、点、TARGET POINT 标签）在原片里比原图大约 1.4 倍（f0110 / f0200 / f1342 实测：中心灰圈直径 70 px，标签宽 82 px @1280） */
+.starget { scale: 1.4; }
+/* 标签贴近圆心：TARGET POINT 框左缘在圆心右侧 ~18 px、顶在上方 ~82 px，STRONGHOLD PROTOCOL 紧贴在框下（@1280，同上实测） */
+.starget .starget__label { left: .03rem; top: -1.13rem; }
+/* 模拟完成：暗盘里面是黄的、只剩一圈暗边（原片 f0036 起，f0110 / f0200 定格）——同一张 target_bg_color_s 缩小盖在暗盘上 */
+.sself.is-win .starget__color { opacity: .5; }
+.starget__fill { --q: .8rem; filter: brightness(1.35) saturate(1.2); animation: settle-fade 200ms ease-out 330ms both; }
+.starget .starget__down { margin-top: -.41rem; }
+@keyframes starget-spin { to { transform: rotate(360deg); } }
+.starget .starget__disc { left: -.695rem; top: -.695rem; width: 1.39rem; height: 1.39rem; }
+.starget .starget__dot { left: -.565rem; top: -.565rem; width: 1.13rem; height: 1.13rem; }
+.starget__dot--css { position: absolute; box-sizing: border-box; border-radius: 50%; border: .12rem solid rgba(240, 244, 243, .7); background: radial-gradient(circle, #f2f4f3 0 .14rem, transparent .15rem); }
+.starget .starget__mid { left: -.17rem; top: -.17rem; width: .34rem; height: .34rem; }
+.sself.is-lose .starget .starget__mid { left: -.285rem; top: -.285rem; width: .57rem; height: .57rem; }
+.starget__label { position: absolute; left: .32rem; top: -1.3rem; display: flex; flex-direction: column; gap: .06rem; white-space: nowrap; }
+.starget .starget__up, .starget .starget__down { position: static; }
+img.starget__up { width: 1.28rem; height: .64rem; }
+img.starget__down { width: 1.53rem; height: .54rem; }
+b.starget__up { align-self: flex-start; padding: .02rem .1rem; border: 2px solid rgba(220, 230, 226, .55); background: rgba(20, 26, 25, .55); font-family: var(--font-display); font-size: calc(.15 * var(--t)); color: #dfe7e4; }
+small.starget__down { font-family: var(--font-display); font-size: calc(.14 * var(--t)); color: rgba(220, 230, 226, .45); }
+
+/* the rays from the target point to the lineup */
+.srays { position: absolute; inset: 0; pointer-events: none; }
+.sray { position: absolute; height: 0; transform-origin: 0 0; }
+.sray__line { position: absolute; left: 0; top: -.255rem; width: 100%; height: .51rem; object-fit: fill; animation: sray-draw 230ms var(--ease-out) calc(100ms + var(--i) * 10ms) both; }
+.sray__line--css { top: -1px; height: 0; border-top: 2px dashed rgba(225, 235, 232, .72); }
+.sray__arrow { position: absolute; left: 50%; top: -.27rem; width: .58rem; height: .54rem; margin-left: -.29rem; animation: settle-fade 100ms calc(250ms + var(--i) * 10ms) both; }
+.sray__end { position: absolute; width: .84rem; height: .84rem; margin: -.42rem 0 0 -.42rem; animation: settle-fade 67ms calc(33ms + var(--i) * 8ms) both; }
+.sray__dot { position: absolute; width: .2rem; height: .2rem; margin: -.1rem 0 0 -.1rem; border-radius: 50%; background: #eef3f1;
+  box-shadow: 0 0 .08rem rgba(238, 243, 241, .7); animation: settle-fade 200ms calc(150ms + var(--i) * 50ms) both; }
+.sray__end .sprite { display: block; width: 100%; height: 100%; }
+.sray__ring { display: block; box-sizing: border-box; width: .3rem; height: .3rem; margin: .27rem; border-radius: 50%; border: 3px dashed rgba(225, 235, 232, .5); }
+.sray__ban { position: absolute; width: .66rem; height: .66rem; margin: -.33rem 0 0 -.33rem; display: grid; place-items: center; color: #ff4c3f; }
+.sray__ban .sprite { width: 100%; height: 100%; }
+.sray__ban .icon { width: .4rem; height: .4rem; }
+@keyframes sray-draw { from { clip-path: inset(0 100% 0 0); } }
+
+/* 10-29 r16: the avatar at the top left (ref f0110: 90x96 at 37,157, 720p) - no frame or corner marks, the picture fading
+   out at its edges over a teal glow */
+.sself__band { position: absolute; left: .555rem; top: 2.355rem; width: 1.35rem; height: 1.44rem; display: grid; place-items: center; border: 0; border-radius: .14rem; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 50%, rgba(60, 230, 186, .6), rgba(24, 120, 96, .4) 60%, rgba(10, 50, 40, .2) 85%); box-shadow: none;
+  -webkit-mask: radial-gradient(ellipse 72% 72% at 50% 50%, #000 72%, transparent 100%); mask: radial-gradient(ellipse 72% 72% at 50% 50%, #000 72%, transparent 100%);
+  animation: settle-fade 167ms 500ms both; }
+.sself__band .bandicon { width: 1.2rem; height: 1.2rem; }
+.sself__band .bandicon img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 .06rem rgba(60, 240, 190, .7)); }
+.sself__band .pavatar { --pa: 1.35rem; border: 0; }
+@keyframes sself-pop { from { opacity: 0; transform: scale(.86); } }
+
+/* the mode pill: the official plate (emblem at the left) under the difficulty's name */
+.smode { position: relative; display: inline-flex; align-items: center; min-width: 1.84rem; height: .5rem; padding: 0 .18rem 0 .58rem; box-sizing: border-box; isolation: isolate; }
+.smode__bg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; }
+.smode__bg--css { display: flex; align-items: center; box-sizing: border-box; padding-left: .12rem; border-radius: .25rem; background: rgba(120, 28, 18, .55); box-shadow: inset 0 0 0 1px rgba(255, 110, 70, .22); }
+.smode__bg--css .icon { width: .32rem; height: .32rem; color: var(--d-color); }
+.smode__name { font-size: calc(.22 * var(--t)); font-weight: 700; color: #fff; white-space: nowrap; text-shadow: 0 .02rem .04rem rgba(0, 0, 0, .5); }
+.sself__mode { position: absolute; left: 2.4rem; top: 2.24rem; display: flex; align-items: center; gap: .12rem; animation: sself-slide 200ms var(--ease-out) 500ms both; }
+.sself__title { position: absolute; left: 2.465rem; top: 2.82rem; width: 7.8rem; height: 1.04rem; margin: 0; white-space: nowrap; font-size: calc(.82 * var(--t)); font-weight: 900; letter-spacing: .03em; line-height: 1.15;
+  color: #4af2c4; text-shadow: 0 0 .2rem rgba(30, 240, 180, .45), 0 .03rem 0 rgba(0, 0, 0, .5); animation: sself-title 200ms var(--ease-out) 500ms both; }
+.sself.is-lose .sself__title { color: #ff4b3e; text-shadow: 0 0 .2rem rgba(255, 60, 50, .45), 0 .03rem 0 rgba(0, 0, 0, .5); }
+@keyframes sself-slide { from { opacity: 0; transform: translateX(-.3rem); } }
+@keyframes sself-title { 0% { opacity: 0; transform: translateX(-.3rem); clip-path: inset(0 100% 0 0); } 60% { opacity: 1; clip-path: inset(0 0 0 0); } 70% { transform: translateX(.03rem); } }
+
+/* 10-29 r16: the 通过回合 row (ref f0059-f0110, 1:1 at 720p x 1.5): the official brackets (info_frame, the right one
+   mirrored) round the label and the number, a divider, the teal glow (round_glow) under the number; the row fades in at
+   0.37 s and the number counts one round per 62 ms (settle.js SELF_T), flashing as it stops (--t-rend). */
+.sself__row { position: absolute; inset: 0; pointer-events: none; animation: settle-fade 250ms linear 533ms both; /* r16: the box fades in from ~0.55 s already counting (ref f0037, 12:08 f0843–f0851) */ }
+.sself__row > .sself__brk { position: absolute; top: 4.2rem; width: .15rem; height: 1.62rem; opacity: .42; }
+.sself__row > .sself__brk--l { left: .45rem; }
+.sself__row > .sself__brk--r { left: 6rem; transform: scaleX(-1); }
+.sself__glow { position: absolute; left: -.45rem; top: 4.5rem; width: 3.765rem; height: 1.065rem;
+  background: url(/assets/ui/settle/round_glow.png) 0 0 / 100% 100% no-repeat; filter: brightness(.55) sepia(1) hue-rotate(118deg) saturate(6) brightness(1.5); }
+.sself__div { position: absolute; left: 2.445rem; top: 4.23rem; width: 2px; height: 1.35rem; background: rgba(214, 224, 220, .32); }
+.sself__rounds { position: absolute; left: .45rem; top: 4.18rem; width: 1.95rem; height: 1.5rem; display: block; animation: settle-fade 250ms linear 533ms both; }
+.sself__rounds span { position: absolute; left: .375rem; top: .05rem; font-size: calc(.3 * var(--t)); line-height: 1; color: #8f9694; letter-spacing: .02em; white-space: nowrap; }
+.sself__rounds b { position: absolute; left: 0; right: 0; top: .26rem; text-align: center; font-family: var(--font-num); font-size: calc(1.42 * var(--t)); font-weight: 700; line-height: 1;
+  color: #2af0b8; text-shadow: none; animation: sself-flash 133ms linear var(--t-rend); } /* no fill: flat green while counting */
+@keyframes sself-flash { 0%, 75% { filter: brightness(2.4) drop-shadow(0 0 .12rem #2af0b8) drop-shadow(0 0 .3rem #2af0b8); } }
+
+/* the defeated leaders (ref f0110): plates of 187.5x186 at x 247.5 / 424.5, y 394.5; the leader's plate fades in with the
+   cards (0.63 s, 0.33 s), the core's after its broken sequence (CoreFx, --t-hid + 0.5 s) or at --t-hid when not cleared */
+.sself__medals { position: absolute; left: 0; top: 0; width: 0; height: 0; display: block; gap: 0; }
+.sself__medals::after { display: none; }
+.smedal { position: absolute; display: block; animation: settle-fade 333ms linear 633ms both; }
+.smedal--hidden { animation: settle-fade 200ms linear var(--t-hid) both; }
+.smedal--hidden.has-fx { animation: settle-fade 100ms linear calc(var(--t-hid) + 500ms) both; }
+.smedal img, .smedal--hidden img { filter: none; }
+.smedal .sprite, .smedal__ava { position: absolute; display: block; }
+.smedal .smedal__bg { left: 0; top: 0; width: 100%; height: 100%; }
+.smedal__ava { left: .33rem; top: .33rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; overflow: hidden; }
+.smedal__ava img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.smedal .smedal__icon { left: .39rem; top: .78rem; width: 1.11rem; height: 1.155rem; }
+.smedal--hidden .smedal__icon { left: .0525rem; top: .5175rem; width: 1.755rem; height: 1.665rem; }
+.smedal .smedal__doc { left: .2175rem; top: .9rem; width: 1.425rem; height: .81rem; }
+.smedal .smedal__check { left: .87rem; top: -.165rem; right: auto; width: 1.08rem; height: 1.11rem; }
+svg.smedal__icon { position: absolute; left: .64rem; top: 1.1rem; width: .6rem; height: .6rem; color: #f0a330; }
+i.smedal__check { position: absolute; left: 1.2rem; top: .05rem; right: auto; width: .42rem; height: .42rem; display: grid; place-items: center; border: 2px solid #f39a2c; background: rgba(40, 18, 4, .7); color: #ffb23f; }
+i.smedal__check .icon { width: .3rem; height: .3rem; }
+i.smedal__check.is-miss { border-color: #8a908e; color: #c4cac8; }
+.smedal.is-miss .smedal__icon, .smedal.is-miss .smedal__bg, .smedal.is-miss .smedal__ava { filter: grayscale(1) brightness(.6); }
+@keyframes smedal-in { from { opacity: 0; transform: scale(1.6); } }
+/* the Hidden Core broken (ref f0061-f0078), ms from --t-hid; centre of the plate's triangle at (84, 90) of its box */
+.shfx { position: absolute; pointer-events: none; animation: shfx-show 1ms var(--t-hid) both, shfx-end 100ms linear calc(var(--t-hid) + 467ms) forwards; }
+@keyframes shfx-show { from { visibility: hidden; } to { visibility: visible; } }
+@keyframes shfx-end { to { opacity: 0; filter: brightness(3); } }
+.shfx > * { position: absolute; display: block; }
+.shfx .shfx__tri { left: .4425rem; top: .555rem; width: .795rem; height: .69rem; animation: shfx-tri 100ms ease-out var(--t-hid) both; }
+@keyframes shfx-tri { from { transform: scale(.15); } }
+.shfx .shfx__doc { left: -.1125rem; top: 0; width: 1.905rem; height: 1.8rem; animation: shfx-doc 100ms ease-out calc(var(--t-hid) + 133ms) both; }
+@keyframes shfx-doc { from { opacity: 0; transform: scale(1.8); } to { transform: scale(.92); } }
+.shfx .shfx__line { left: .81rem; top: -.525rem; width: .06rem; height: 1.425rem; transform-origin: 50% 100%; transform: rotate(var(--a));
+  filter: brightness(.6) sepia(1) saturate(12) hue-rotate(-35deg) brightness(1.6) drop-shadow(0 0 2px #ff3a30); animation: settle-fade 67ms calc(var(--t-hid) + 167ms) both; }
+.shfx__fill { left: .4425rem; top: .555rem; width: .795rem; height: .69rem; background: #e23a36; clip-path: polygon(50% 10%, 90% 86%, 10% 86%);
+  animation: settle-fade 33ms calc(var(--t-hid) + 200ms) both; }
+.shfx .shfx__ban { left: .375rem; top: .435rem; width: .93rem; height: .93rem; animation: shfx-ban 67ms ease-out calc(var(--t-hid) + 267ms) both; }
+@keyframes shfx-ban { from { opacity: 0; transform: scale(1.6); } }
+
+/* my plate */
+.splate { position: absolute; left: .74rem; top: 6.84rem; height: 1.64rem; display: flex; animation: settle-fade 200ms linear 633ms both; }
+.splate .pavatar.splate__ava { --pa: 1.64rem; border: 2px solid rgba(240, 244, 243, .85); background: #20403a; }
+.splate .pavatar__glyph { font-size: calc(.6 * var(--t)); }
+.splate__info { position: relative; width: 2.66rem; display: grid; grid-template-columns: .66rem 1fr; grid-template-rows: .5rem 1fr; column-gap: .14rem;
+  background: linear-gradient(90deg, rgba(36, 150, 122, .5), rgba(18, 70, 60, .3) 70%, transparent); }
+.splate__name { position: relative; isolation: isolate; grid-column: 1 / -1; display: flex; align-items: center; min-width: 0; padding: 0 .16rem; white-space: nowrap;
+  font-size: calc(.25 * var(--t)); font-weight: 600; color: #f2f6f5; background: rgba(4, 22, 18, .45); }
+.splate__name > span { overflow: hidden; text-overflow: ellipsis; }
+.splate__namebg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; }
+.splate__rank { grid-row: 2; margin: .1rem 0 .08rem .12rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .04rem;
+  background: rgba(6, 30, 24, .7); border: 1px solid rgba(160, 230, 210, .3); color: #dfe8e5; }
+.splate__cup { width: .3rem; height: .36rem; }
+.splate__rank > .icon { width: .32rem; height: .32rem; color: #e8efec; }
+.splate__rank b { font-family: var(--font-display); font-size: calc(.18 * var(--t)); line-height: 1; }
+.splate__gain { grid-row: 2; display: flex; flex-direction: column; justify-content: center; }
+.splate__gain small { display: inline-flex; align-items: center; gap: .04rem; font-size: calc(.2 * var(--t)); color: #cfd8d5; white-space: nowrap; }
+.splate__gain small .icon { width: .18rem; height: .18rem; }
+.splate__gain b { font-family: var(--font-display); font-size: calc(.42 * var(--t)); line-height: 1.05; color: #f4f7f6; }
+
+/* final lineup: ten slots in two rows */
+/* round 13: measured on a full lineup (f0230, 1280×720): cards 83×163 px, 110 px apart; row 1 from x 741, row 2 from x 725 / y 252 */
+.sops__row { position: absolute; display: flex; gap: .4rem; }
+.sops__row--1 { left: 11.12rem; top: .75rem; }
+.sops__row--2 { left: 10.875rem; top: 3.79rem; }
+.sop { position: relative; isolation: isolate; width: 1.25rem; height: 2.45rem; flex: none; background: #e6eae8; box-shadow: 0 .06rem .14rem rgba(0, 0, 0, .55);
+  animation: sop-in 133ms step-end 500ms both; }
+/* r16: all ten at once - a pale grey ghost at 0.57 s, in colour at 0.63 s (ref f0037-f0039) */
+@keyframes sop-in { 0% { opacity: 0; } 50% { opacity: .6; filter: grayscale(1) brightness(1.7); } 100% { opacity: 1; filter: none; } }
+.sop__art { position: absolute; left: 0; top: 0; right: 0; height: 1.8rem; overflow: hidden; background: linear-gradient(180deg, #cfd5d3, #aab2af); display: grid; place-items: center; }
+.sop__art img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.sop__art img.is-avatar { object-position: 50% 30%; }
+.sop__glyph { font-size: calc(.5 * var(--t)); font-weight: 900; color: #6c7472; }
+.sop__frame { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+/* round 13: the official badge is a chamfered frame in the tier colour around a dark fill, the numeral in the same colour (V and VI too, f0230) */
+.sop__tier { position: absolute; z-index: 2; isolation: isolate; left: -.3rem; top: -.13rem; min-width: .5rem; height: .5rem; padding: 0 .07rem; box-sizing: border-box; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: calc(.3 * var(--t)); font-weight: 700; line-height: 1; color: var(--tc, #e6eae8); background: var(--tc, #e6eae8); border: 0;
+  clip-path: polygon(.07rem 0, calc(100% - .07rem) 0, 100% .07rem, 100% calc(100% - .07rem), calc(100% - .07rem) 100%, .07rem 100%, 0 calc(100% - .07rem), 0 .07rem); }
+.sop__tier::before { content: ''; position: absolute; inset: 2px; z-index: -1; background: #151818;
+  clip-path: polygon(.055rem 0, calc(100% - .055rem) 0, 100% .055rem, 100% calc(100% - .055rem), calc(100% - .055rem) 100%, .055rem 100%, 0 calc(100% - .055rem), 0 .055rem); }
+.sop--t1 { --tc: #cfd4d2; }
+.sop--t2 { --tc: #f0f3f2; }
+.sop--t3 { --tc: #50e08d; }
+.sop--t4 { --tc: #39b8f2; }
+.sop--t5 { --tc: #ffc81e; }
+.sop--t6 { --tc: #ff8a1d; }
+/* result.css (loaded first) still fills V/VI solid with dark text */
+.sop--t5 .sop__tier, .sop--t6 .sop__tier { color: var(--tc); background: var(--tc); }
+.sop__lv { position: absolute; z-index: 2; isolation: isolate; left: -.24rem; top: .49rem; width: .44rem; height: .85rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .02rem;
+  border-radius: .21rem; background: #2a2f2e; color: #c9cfcd; }
+.sop__lvbg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; }
+.selite { width: .28rem; height: .28rem; object-fit: contain; }
+small.selite { width: auto; height: auto; font-family: var(--font-display); font-size: calc(.13 * var(--t)); font-weight: 700; }
+.sop.is-golden .sop__lv { color: #ffd34d; }
+.sop__lv b { font-family: var(--font-display); font-size: calc(.19 * var(--t)); line-height: 1; color: #eef2f1; }
+.sop.is-golden .sop__lv b { color: #ffd34d; }
+.sop__si { position: absolute; z-index: 2; right: .04rem; top: .04rem; padding: 0 .04rem; font-size: calc(.13 * var(--t)); font-weight: 700; background: var(--ice, #9ad7ff); color: var(--ice-900, #06202e); }
+.sop__slots { position: absolute; left: 0; right: 0; bottom: 0; height: .65rem; display: flex; gap: .05rem; padding: .05rem; box-sizing: border-box; background: #d3d8d6; }
+.sop__slot { flex: 1 1 0; min-width: 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; background: #3a403f; box-shadow: inset 0 0 0 1px #8e9593; }
+.sop__slot.has-item { background: #2c3231; box-shadow: inset 0 0 0 1px #5e6664; }
+.sop__slot img { display: block; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; width: 92%; height: 92%; object-fit: contain; }
+.sop__slot .sop__trap { width: 100%; height: 100%; }
+.sop__slot b { font-size: calc(.2 * var(--t)); color: #e6eae8; }
+.sop__noinfo { font-family: var(--font-display); font-size: calc(.08 * var(--t)); letter-spacing: .02em; white-space: nowrap; color: #9aa3a0; }
+.sop.is-empty { background: none; box-shadow: none; }
+.sop__empty { position: absolute; left: -.12rem; top: -.08rem; width: 1.49rem; height: 2.61rem; }
+.sop.is-empty .sop__art { height: 100%; background: linear-gradient(to top right, transparent calc(50% - 1px), rgba(170, 180, 177, .45) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)), rgba(28, 32, 31, .55);
+  box-shadow: inset 0 0 0 2px rgba(150, 160, 158, .4); }
+.sop.is-empty .sop__noinfo { font-size: calc(.12 * var(--t)); }
+
+/* bonds */
+.sbonds { position: absolute; left: 11.02rem; top: 6.83rem; width: 7.65rem; height: 1.58rem; box-sizing: border-box; display: flex; align-items: center; gap: .2rem; padding: 0 .3rem 0 .2rem; animation: settle-fade 200ms linear 633ms both; }
+.sbonds::before, .sbonds::after { content: ''; position: absolute; top: 0; bottom: 0; width: .12rem; border: 2px solid rgba(220, 230, 226, .42); pointer-events: none; }
+.sbonds::before { left: 0; border-right: 0; }
+.sbonds::after { right: 0; border-left: 0; }
+.sbonds__mark { flex: none; width: 1rem; display: flex; justify-content: center; color: rgba(160, 170, 168, .5); }
+.sbonds__mark .sprite { width: .7rem; height: .54rem; opacity: .6; }
+.sbonds__mark small { font-family: var(--font-display); font-size: calc(.1 * var(--t)); letter-spacing: .1em; }
+.sbonds__list { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: .44rem; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-left: .1rem; }
+.sbonds__list::-webkit-scrollbar { display: none; }
+.sbond { flex: none; display: flex; flex-direction: column; align-items: center; gap: .02rem; animation: settle-fade 200ms linear 633ms both; }
+@keyframes sbond-in { from { opacity: 0; transform: scale(.5); } }
+.sbond__disc { width: 1rem; height: 1rem; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #34e9b6, #11a982 72%);
+  box-shadow: 0 0 0 .05rem rgba(60, 240, 190, .28), 0 0 .2rem rgba(40, 230, 180, .4); }
+.sbond:not(.is-on) .sbond__disc { background: radial-gradient(circle at 50% 40%, #58605e, #383e3d 72%); box-shadow: 0 0 0 .05rem rgba(160, 170, 168, .2); }
+.sbond__disc .bglyph { width: .58rem; height: .58rem; display: grid; place-items: center; }
+.sbond__disc .bglyph img { width: 100%; height: 100%; object-fit: contain; filter: brightness(0) opacity(.82); }
+.sbond__disc .bglyph__txt { font-size: calc(.36 * var(--t)); font-weight: 900; color: #063426; }
+.sbond b { font-family: var(--font-display); font-size: calc(.3 * var(--t)); line-height: 1; color: #f2f6f5; }
+.sbonds__none { font-family: var(--font-display); font-size: calc(.16 * var(--t)); color: #7d8583; letter-spacing: .1em; }
+img.sbonds__none { width: .64rem; height: .12rem; }
+.sbonds__more { position: absolute; right: -.06rem; top: 50%; width: .3rem; height: .5rem; margin-top: -.25rem; display: grid; place-items: center; background: none; border: 0; color: #e8eeec; cursor: pointer; }
+.sbonds__more .icon { width: .3rem; height: .3rem; }
+
+/* the level settlement (10-29 r16, ref 11:41 f0050-f0110 and 12:08 f0846-f0930, 1:1 at 720p x 1.5): every part at its
+   stage position; the LV group moves right by the 每日防卫目标 column when there is one. Fades in with the plate (0.63 s). */
+.sself .settle__barbg { animation: settle-fade 200ms linear 633ms both; }
+.slv { position: absolute; left: 0; top: 0; width: 19.2rem; height: 10.8rem; display: block; gap: 0; pointer-events: none; animation: settle-fade 200ms linear 633ms both; }
+.slv > *, .slv__lvg > * { position: absolute; }
+.slv__coin { left: .42rem; top: 8.46rem; width: 2.16rem; height: 2.16rem; clip-path: inset(.555rem 0 0 0); }
+.slv__got { left: .42rem; top: 10.2rem; font-size: calc(.32 * var(--t)); font-weight: 700; line-height: 1; color: #f2f4f3; white-space: nowrap; }
+.slv__col { left: 2.925rem; top: 9.3rem; width: 1.9rem; height: 1.3rem; }
+.slv__col > * { position: absolute; left: 0; }
+.slv__plus { left: -.06rem; top: .08rem; font-family: var(--font-num); font-size: calc(.71 * var(--t)); font-weight: 700; line-height: 1; color: #22f0b8; letter-spacing: -.01em; }
+.slv__why { left: .03rem; top: .87rem; display: flex; align-items: center; gap: .045rem; font-size: calc(.23 * var(--t)); line-height: 1; color: #7c8381; white-space: nowrap; }
+.slv__icon { width: .27rem; height: .255rem; }
+.slv__col--off { top: 9.6rem; width: 2rem; font-size: calc(.22 * var(--t)); line-height: 1.3; color: #ff8a5c; white-space: normal; }
+.slv__div { left: 5.09rem; top: 9.375rem; width: 2px; height: 1.05rem; background: rgba(214, 224, 220, .22); }
+.slv__div--2 { left: 7.905rem; }
+.slv__col--daily { left: 5.52rem; width: 2.2rem; overflow: hidden; }
+.slv__col--daily > * { left: .03rem; top: 0; width: 100%; height: 100%; }
+.slv__dlabel { position: absolute; left: 0; top: .15rem; font-size: calc(.26 * var(--t)); line-height: 1; color: #c9cfcd; white-space: nowrap; }
+.slv__dcount { position: absolute; left: 0; top: .58rem; font-family: var(--font-num); font-size: calc(.3 * var(--t)); line-height: 1; color: #7c8381; }
+.slv__dcount b { color: #f2f4f3; font-weight: 400; }
+.slv__dbar { position: absolute; left: 0; top: .93rem; width: 1.905rem; height: .18rem; background: rgb(55, 53, 56); }
+.slv__dbar i { display: block; height: 100%; background: #b4b4b4; }
+.slv__dgot { transform: translateY(-100%); }
+.slv__col--daily.is-swap .slv__dnow { animation: slv-down 200ms ease-in 130ms forwards; }
+.slv__col--daily.is-swap .slv__dgot { animation: slv-in 200ms ease-out 130ms forwards; }
+@keyframes slv-down { to { transform: translateY(100%); } }
+@keyframes slv-in { to { transform: none; } }
+.slv__lvg { left: 0; top: 0; width: 19.2rem; height: 10.8rem; }
+.slv.has-daily .slv__lvg { transform: translateX(2.79rem); }
+.slv__lvg .slv__lvimg { left: 5.535rem; top: 9.75rem; width: .615rem; height: .315rem; margin: 0; }
+small.slv__lvimg { font-family: var(--font-num); font-size: calc(.4 * var(--t)); color: #9aa5a2; height: auto; }
+.slv__num { left: 6.21rem; top: 9.33rem; min-width: 0; font-family: var(--font-num); font-size: calc(.9 * var(--t)); font-weight: 400; line-height: 1; color: #f4f7f6; }
+.slv__exp { right: 9.51rem; top: 9.82rem; display: flex; align-items: center; font-family: var(--font-num); font-size: calc(.3 * var(--t)); line-height: 1; color: #7c8381; }
+.slv__exp b { color: #22f0b8; font-weight: 400; }
+.slv__exp .slv__slash { width: .105rem; height: .27rem; margin: 0 .03rem; }
+.slv__track { left: 5.49rem; top: 10.245rem; width: 4.2rem; height: .195rem; padding: 0; display: block; box-sizing: border-box; gap: 0;
+  border-style: solid; border-width: 0 .09rem; border-image: url(/assets/ui/settle/progress_bg.png) 0 6 fill / 0 .09rem; filter: brightness(.22); }
+.slv__fill { left: 5.49rem; top: 10.215rem; min-width: .27rem; max-width: 4.2rem; height: .465rem; box-sizing: border-box;
+  border-style: solid; border-width: 0 .135rem; border-image: url(/assets/ui/settle/progress_green.png) 0 9 fill / 0 .135rem; }
+.slv__up, .slv__max { display: block; padding: 0; border: 0; background: none; color: #063426; animation: slv-wipe 100ms linear both; }
+.slv__up { left: 7.365rem; top: 9.255rem; width: 1.365rem; height: .57rem; }
+.slv__max { left: 8.685rem; top: 9.555rem; right: auto; width: 1.185rem; height: .585rem; }
+.slv__up > *, .slv__max > * { position: absolute; }
+.slv__flag { left: 0; top: 0; width: 100%; height: 100%; }
+.slv__up .slv__tagtxt { left: .225rem; top: .105rem; width: .9rem; height: .15rem; }
+.slv__max .slv__tagtxt { left: .2325rem; top: .09rem; width: .72rem; height: .255rem; }
+b.slv__tagtxt { width: auto; height: auto; font-family: var(--font-num); font-size: calc(.15 * var(--t)); font-weight: 700; white-space: nowrap; }
+@keyframes slv-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.slv.is-done.is-max .slv__exp { animation: slv-out 100ms linear forwards; }
+@keyframes slv-out { to { opacity: 0; } }
+
+.settle__next { position: absolute; left: 14.77rem; top: 9.42rem; width: 4rem; height: 1rem; isolation: isolate; display: flex; align-items: center; justify-content: center; gap: .28rem;
+  padding: 0; border: 0; cursor: pointer; color: #062a20; background: transparent; font-size: .4rem; font-weight: 700; letter-spacing: .06em;
+  animation: snext-in 460ms var(--ease-out) 1400ms both; }
+/* btn_next_bg.png is 297×86; the face (white frame + green) is rows 1–68, columns 1–268, with the machine at the
+   right and the shadow below. Fit only the official image to that face; the art-less fallback keeps the CSS button. */
+.settle__next img.settle__btnbg { inset: auto; left: -.3745%; top: -1.4706%; width: 111.236%; height: 126.4706%; }
+/* The official label is heavier than the installed CJK 700 face (800/900 resolve to the same on Windows); a thin
+   text-colour stroke adds the difference. */
+.settle__nextlabel { -webkit-text-stroke: .03em currentColor; }
+.settle__next:hover, .settle__next:focus-visible { filter: brightness(1.12); outline: none; }
+.settle__next:focus-visible { box-shadow: 0 0 0 3px #fff inset; }
+.settle__nexticon { width: .45rem; height: .45rem; }
+span.settle__nexticon { display: grid; place-items: center; border-radius: .08rem; background: #0b2d25; color: #44e6b8; }
+span.settle__nexticon .icon { width: .34rem; height: .34rem; }
+@keyframes snext-in { from { opacity: 0; transform: translateX(.6rem); } }
+
+/* ---- 同盟 ---- */
+/* 10-28 round 12, after ref f0263–f0270 (10 fps): a hard cut from 个人战报 — the bottom bar is there on the first frame;
+   the cards come in 100 ms apart: dim → teal wash → normal, the head with a line dropping from the top of the screen,
+   the title and 通过回合 ~200 ms after the art with their own wash. Timings and the wash colour are read off the footage
+   [OUR]; the client's curves were not exported (未验证). */
+.steam { position: absolute; inset: 0; animation: none; } /* result.css still fades .steam in (mpop-fade) */
+.steam__bg { position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 4px),
+    radial-gradient(42% 60% at 50% 46%, rgba(40, 120, 100, .14), transparent 70%),
+    linear-gradient(rgba(78, 216, 175, .035) 1px, transparent 1px) 0 0 / .6rem .6rem, linear-gradient(90deg, rgba(78, 216, 175, .035) 1px, transparent 1px) 0 0 / .6rem .6rem, #060808; }
+/* 10-28 round 13, measured on ref f0264/f0265 (1280×720, 20px grid, card 1 and the bottom bar masked out): on the cut the
+   background picture is not there yet (gaps ≈ rgb 7,7,9) and only faint teal blocks show; 100 ms later brighter teal
+   blocks; at f0266 the picture is in at ~80 %, f0267 settled. Block rects and colours are from those two frames; the
+   blocks are still plain rectangles — no original sprite for them was identified (未验证 whether the client uses one).
+   They live in a centred 19.2×10.8rem box so they keep their place on wide screens. */
+.steam__bg::before, .steam__bg::after { content: ''; position: absolute; inset: auto; left: 50%; top: 50%; width: 19.2rem; height: 10.8rem;
+  transform: translate(-50%, -50%); z-index: 1; opacity: 0; border: 0; border-radius: 0; } /* result.css still draws .steam__bg::after as a 7.2rem ring */
+.steam__bg::before { background: linear-gradient(rgba(40, 100, 95,0.12), rgba(40, 100, 95,0.12)) 7.8rem 0.6rem / 3.6rem 3.3rem no-repeat,
+    linear-gradient(rgba(40, 100, 95,0.14), rgba(40, 100, 95,0.14)) 0.3rem 2.1rem / 0.9rem 3.3rem no-repeat,
+    linear-gradient(rgba(40, 100, 95,0.1), rgba(40, 100, 95,0.1)) 5.1rem 5.7rem / 6.6rem 0.9rem no-repeat,
+    linear-gradient(rgba(40, 100, 95,0.12), rgba(40, 100, 95,0.12)) 6.6rem 7.8rem / 3.3rem 0.6rem no-repeat,
+    linear-gradient(rgba(40, 100, 95,0.12), rgba(40, 100, 95,0.12)) 12.9rem 7.8rem / 2.4rem 0.6rem no-repeat;
+  animation: steam-glitch 117ms steps(1, end) 33ms forwards; }
+.steam__bg::after { background: linear-gradient(rgba(50, 190, 150, 0.83), rgba(50, 190, 150, 0.83)) 7.8rem 0.9rem / 2.7rem 1.5rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.3), rgba(50, 190, 150, 0.3)) 10.5rem 0.9rem / 3rem 1.2rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.63), rgba(50, 190, 150, 0.63)) 9rem 2.4rem / 2.7rem 2.7rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.54), rgba(50, 190, 150, 0.54)) 0rem 0.9rem / 1.2rem 8.1rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.54), rgba(50, 190, 150, 0.54)) 5.1rem 4.8rem / 1.8rem 2.7rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.63), rgba(50, 190, 150, 0.63)) 9rem 6.6rem / 4.2rem 0.6rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.51), rgba(50, 190, 150, 0.51)) 6.6rem 7.2rem / 6.6rem 0.3rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.48), rgba(50, 190, 150, 0.48)) 5.1rem 8.4rem / 1.8rem 0.3rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.48), rgba(50, 190, 150, 0.48)) 5.1rem 8.7rem / 10.5rem 0.3rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.39), rgba(50, 190, 150, 0.39)) 6rem 9rem / 4.5rem 0.3rem no-repeat,
+    linear-gradient(rgba(50, 190, 150, 0.36), rgba(50, 190, 150, 0.36)) 12.6rem 8.4rem / 2.7rem 0.3rem no-repeat;
+  animation: steam-glitch 75ms steps(1, end) 150ms forwards; } /* forwards, not both: during the delay it must stay hidden */
+@keyframes steam-glitch { 0% { opacity: 1; } 100% { opacity: 0; } }
+.steam__bg .sprite { animation: steam-bg-in 300ms linear both; }
+@keyframes steam-bg-in { 0%, 66% { opacity: 0; } 78% { opacity: .8; } 89%, 100% { opacity: 1; } }
+/* 10-28 round 13: placed by landmarks in the 1280×720 footage (11:50 still; the rings, arrows, radial lines between the
+   cards and the orange RHODES ISLAND line under the time box) plus a masked correlation over the gaps: the 1020×960
+   original is drawn 1561×960 at 720p (×1.53 across, ×1.00 down), centred. The uneven stretch is what the footage shows,
+   not a guess at the client's RectTransform. */
+.steam__bg .sprite { position: absolute; left: 50%; top: 50%; width: 23.415rem; height: 14.4rem; max-width: none; transform: translate(-50%, -50%); object-fit: fill; }
+.steam .slogo { left: .45rem; top: .2rem; }
+.steam .slogo__img { height: .56rem; }
+.steam__cards { position: absolute; left: 0; right: 0; top: .66rem; display: flex; justify-content: center; gap: .95rem; }
+.tcard { position: relative; isolation: isolate; width: 3.47rem; flex: none; display: flex; flex-direction: column; --t0: calc(28ms + var(--i) * 90ms); animation: tcard-in 600ms linear var(--t0) both; }
+/* not there before its turn (round 13: cards 2–4 read black in f0264/f0265), dim at it (t0), full from t0 + 100 ms */
+@keyframes tcard-in { 0% { opacity: 0; filter: brightness(.45) saturate(.3); } 27.7% { opacity: .9; filter: brightness(.8) saturate(.5); } 27.8%, 100% { opacity: 1; filter: none; } }
+.tcard__art::before { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: #38e6b8; mix-blend-mode: color; opacity: 0; animation: tcard-wash 420ms linear calc(var(--t0) + 167ms) both; }
+@keyframes tcard-wash { 0% { opacity: .75; } 10%, 20% { opacity: .9; } 85% { opacity: .1; } 100% { opacity: 0; } }
+.tcard__img, .tcard__glyph { animation: tcard-tint 420ms linear calc(var(--t0) + 167ms) both; }
+/* grey + a colour-blend layer, so the fade back goes teal → full colour (a hue-rotate passes through yellow-green) */
+/* round 13: the teal stage overshoots — per-card peaks in f0266–f0269 are ~1.6–2× the settled brightness (f0270) */
+@keyframes tcard-tint { 0% { filter: grayscale(1) brightness(1.55); } 10%, 20% { filter: grayscale(1) brightness(1.8); } 85% { filter: grayscale(.1) brightness(1.08); } 100% { filter: none; } }
+.tcard__head { animation: tcard-show 1ms var(--t0) both; }
+@keyframes tcard-show { from { visibility: hidden; } }
+/* 10-28 round 13: in the footage the line reaches the top edge, flashes as its card arrives (f0266–f0269), then stays
+   at about a third of that brightness, ~4px and soft (still there at 11:50). It used to stop at .8rem and fade out. */
+.tcard__pin::before { content: ''; position: absolute; left: 50%; bottom: 100%; width: 2px; height: 3rem; margin-left: -1px; background: #4af2c4; box-shadow: 0 0 2px 1px rgba(74, 242, 196, .6); transform-origin: 50% 0; animation: tcard-drop 500ms linear calc(var(--t0) + 100ms) both; }
+@keyframes tcard-drop { 0% { transform: scaleY(0); } 15% { transform: none; opacity: 1; } 70% { opacity: 1; } 100% { opacity: .35; } }
+.tcard__rounds, .tcard__cut { animation: tcard-txt 250ms linear calc(var(--t0) + 167ms) both; }
+.tcard__title { animation: tcard-txt 250ms linear calc(var(--t0) + 330ms) both; }
+@keyframes tcard-txt { 0% { opacity: 0; } 1% { opacity: .7; filter: brightness(1.8) sepia(1) hue-rotate(115deg) blur(1px); } 100% { opacity: 1; filter: none; } }
+.tcard::before { content: ''; position: absolute; left: -.06rem; right: -.06rem; top: .36rem; bottom: .7rem; background: rgba(22, 27, 26, .78); box-shadow: 0 0 0 1px rgba(180, 196, 192, .14); z-index: -1; }
+.tcard__head { position: relative; height: .45rem; margin-top: .39rem; display: flex; align-items: center; gap: .1rem; padding: 0 .12rem; background: #32dcae; color: #0b3a2f; }
+.tcard__pin { position: absolute; left: 50%; top: -.39rem; width: .14rem; height: .14rem; margin-left: -.07rem; background: #32dcae; }
+.tcard__pin::after { content: ''; position: absolute; left: 50%; top: .14rem; width: 2px; height: .25rem; margin-left: -1px; background: #32dcae; }
+.tcard__code { display: flex; align-items: center; gap: .03rem; font-family: var(--font-display); font-size: calc(.1 * var(--t)); font-weight: 700; letter-spacing: .06em; white-space: nowrap; opacity: .85; }
+.tcard__code i { width: .1rem; height: .1rem; background: currentColor; }
+.tcard__code i:nth-child(2) { width: .2rem; }
+.tcard__seat { margin-left: auto; font-family: var(--font-display); font-size: calc(.16 * var(--t)); font-weight: 700; }
+.tcard__art { position: relative; height: 5.4rem; overflow: hidden; background: radial-gradient(70% 60% at 50% 35%, #29403b, #111716); box-shadow: inset 0 0 0 2px rgba(180, 196, 192, .16); }
+.tcard__art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2.4rem; background: linear-gradient(180deg, transparent, rgba(6, 10, 9, .86) 70%); pointer-events: none; }
+.tcard__img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.tcard__img.is-avatar { object-position: 50% 30%; filter: saturate(.9); }
+.tcard__glyph { position: absolute; inset: 0; display: grid; place-items: center; padding-bottom: 1.4rem; font-size: calc(1.6 * var(--t)); font-weight: 900; color: rgba(140, 220, 200, .25); }
+.tcard__title { position: absolute; left: 0; right: 0; top: 3.88rem; z-index: 1; display: flex; align-items: center; justify-content: center; gap: .08rem; }
+.tcard__ticon { width: .5rem; height: .5rem; object-fit: contain; color: #4af2c4; filter: drop-shadow(0 0 .06rem rgba(40, 230, 180, .7)); }
+.tcard__title b { font-size: calc(.36 * var(--t)); font-weight: 900; font-style: italic; color: #4af2c4; text-shadow: 0 0 .1rem rgba(20, 200, 150, .6), 0 .02rem 0 #04140f; white-space: nowrap; }
+.tcard__rounds { position: absolute; left: .42rem; right: .42rem; top: 4.52rem; height: .58rem; z-index: 1; display: flex; align-items: center; justify-content: center; gap: .14rem;
+  border-radius: .29rem; background: rgba(8, 44, 36, .86); box-shadow: inset 0 0 0 1px rgba(74, 242, 196, .3); }
+.tcard__rounds span { font-size: calc(.22 * var(--t)); color: #d4e6e1; white-space: nowrap; }
+.tcard__rounds b { font-family: var(--font-display); font-size: calc(.4 * var(--t)); font-weight: 600; color: #4af2c4; line-height: 1; }
+.tcard.is-fail .tcard__rounds { background: rgba(54, 10, 8, .86); box-shadow: inset 0 0 0 1px rgba(255, 90, 80, .32); }
+.tcard.is-fail .tcard__rounds b { color: #ff574a; }
+.tcard.is-left .tcard__img, .tcard.is-left .tcard__glyph { filter: grayscale(1) brightness(.45); }
+.tcard__cut { position: absolute; left: 50%; top: 3.3rem; z-index: 1; transform: translateX(-50%); padding: .02rem .14rem; font-size: calc(.2 * var(--t)); font-weight: 700; color: #fff; background: rgba(200, 40, 34, .85); white-space: nowrap; }
+.tcard__plate { position: relative; isolation: isolate; height: 1.02rem; margin-top: .1rem; display: flex; align-items: center; gap: .1rem; padding: .06rem; box-sizing: border-box;
+  background: linear-gradient(90deg, #1b2120, #232b2a 60%, #2b3433); box-shadow: 0 0 0 1px rgba(180, 196, 192, .12); }
+.tcard__platebg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; }
+.tcard__plate .pavatar.tcard__ava { --pa: .9rem; border: 1px solid rgba(220, 230, 226, .5); }
+.tcard__who { min-width: 0; display: flex; flex-direction: column; gap: .05rem; }
+.tcard__name { display: flex; align-items: baseline; gap: .04rem; min-width: 0; white-space: nowrap; font-size: calc(.24 * var(--t)); font-weight: 600; color: #f2f6f5; }
+.tcard__name > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.tcard__ai { font-size: calc(.12 * var(--t)); padding: 0 .04rem; background: #a9c3d8; color: #0b1520; font-weight: 700; }
+.tcard__band { display: flex; align-items: center; gap: .05rem; min-width: 0; font-size: calc(.16 * var(--t)); color: #c3d0cc; white-space: nowrap; }
+.tcard__band .bandicon { width: .26rem; height: .26rem; }
+.tcard__band .bandicon img { width: 100%; height: 100%; object-fit: contain; }
+.tcard__band > span { overflow: hidden; text-overflow: ellipsis; }
+.tcard.is-self { z-index: 1; }
+.tcard:not(.is-left) .tcard__art { outline: 3px solid #3ee6b6; outline-offset: -3px; box-shadow: 0 0 .16rem rgba(40, 230, 180, .35); }
+.tcard.is-self .tcard__plate { margin-left: -.22rem; margin-right: -.1rem; padding-left: .2rem; background: linear-gradient(100deg, rgba(36, 170, 136, .75), rgba(20, 96, 80, .55) 55%, rgba(120, 30, 40, .4));
+  box-shadow: 0 0 0 2px #4af2c4, 0 0 .2rem rgba(40, 230, 180, .4); }
+.tcard.is-self .tcard__plate::before { content: ''; position: absolute; left: -.26rem; top: 50%; margin-top: -.09rem; border: .09rem solid transparent; border-left: .13rem solid #4af2c4; }
+/* round 13 (R12 feedback 1): the two outer originals on the team card, 1 px of the 1280 × 720 footage = .015rem.
+   card_bg (164 × 268: an opaque 91 × 196 body at 35,37 inside a soft white glow) is the portrait's ground — light grey at
+   the top fading to black, two + marks 26 px in from the top corners, as behind the 4th card at 11:50. Unity stretches it
+   sliced (the + marks keep their size), so it is a 9-slice here: the glow lies outside .tcard__art and its overflow cuts
+   it; the slices (top 50, sides 45, bottom 40 of the body) hold the + marks. It sits under the portrait (.tcard__img is
+   in flow), over the old radial ground, under the wash/fade layers.
+   card_deco_self (291 × 87: ▶ at x 0–7, the frame's left edge at x 15, frame y 3–85, a 20 % dark fill inside) is the own
+   card's plate frame, 1:1 at 720 as at 11:50 (frame 58–333 × 463–548 round a 233-wide card): the self plate grows to the
+   frame (276 × 82, 24 px out on the left, 21 on the right, 6 up, 8 down — the chips below keep their place) and the
+   drawn ▶ and green box-shadow give way to it. The frame is above the plate art / namecard and under the avatar and
+   name (z-index -1 after .tcard__platebg in the plate's isolated stack). */
+.tcard__art { isolation: isolate; }
+.tcard__bg { position: absolute; left: -.525rem; right: -.57rem; top: -.555rem; bottom: -.525rem; z-index: -1; box-sizing: border-box; pointer-events: none;
+  border-style: solid; border-color: transparent; border-width: 1.305rem 1.245rem 1.125rem 1.2rem;
+  border-image: url("/ui-art/img/official/hub/ac/outer/card_bg.png") 87 83 75 80 fill / 1.305rem 1.245rem 1.125rem 1.2rem stretch; }
+.tcard.is-self .tcard__plate { height: 1.23rem; margin: .01rem -.315rem -.12rem -.36rem; padding-left: .18rem; box-shadow: none; }
+.tcard.is-self .tcard__plate::before { display: none; }
+.tcard__deco { position: absolute; z-index: -1; left: -.225rem; top: -.045rem; width: 4.365rem; height: 1.305rem; max-width: none; pointer-events: none; object-fit: fill; }
+.tcard__chips { height: .5rem; margin-top: .12rem; display: flex; justify-content: center; gap: .3rem; }
+.tchip { min-width: .98rem; height: .48rem; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: .06rem; padding: 0 .14rem; border-radius: .24rem;
+  background: #1a1f1e; box-shadow: inset 0 0 0 2px rgba(220, 230, 226, .22); color: #e2e8e6; font-size: calc(.2 * var(--t)); }
+.tchip .icon { width: .22rem; height: .22rem; }
+.tchip__cup { width: .21rem; height: .25rem; }
+.tchip--cup { color: #ffad3a; box-shadow: inset 0 0 0 2px rgba(255, 150, 40, .45); }
+.steam__none { position: absolute; left: 0; right: 0; top: 4rem; text-align: center; color: #7d8583; }
+/* the 结算 tab plugin slot (result.tab): a panel at the top right, over the last card when a plugin fills it */
+.steam__slot { position: absolute; right: .3rem; top: .2rem; z-index: 3; width: 3.2rem; max-height: 8.6rem; overflow: auto; }
+
+.steam__barbg { top: 9.15rem; }
+.steam__barbg .sprite { height: 1.65rem; }
+.steam__outcome { position: absolute; left: .42rem; top: 9.24rem; display: flex; flex-direction: column; align-items: flex-start; gap: .04rem; }
+.steam__tags { display: flex; align-items: center; gap: .1rem; }
+/* the 测试 mark of a 「测试」 match (0.3.1), beside the mode pill on both pages */
+.settle__test { display: inline-flex; align-items: center; gap: .06rem; color: #e8b84a; font-size: calc(.15 * var(--t)); white-space: nowrap; }
+.steam__title { width: 2.8rem; height: .9rem; font-size: calc(.66 * var(--t)); font-weight: 900; letter-spacing: .03em; line-height: 1.15; color: #f4f7f6; white-space: nowrap; }
+.steam__rounds { position: absolute; left: 3.45rem; top: 9.24rem; width: 2.7rem; height: 1.36rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-left: 2px solid rgba(200, 214, 210, .14); border-right: 2px solid rgba(200, 214, 210, .14); }
+.steam__rounds span { font-size: calc(.27 * var(--t)); color: #a9b3b0; white-space: nowrap; }
+.steam__rounds b { position: relative; font-family: var(--font-display); font-size: calc(.8 * var(--t)); font-weight: 600; line-height: 1; color: #4af2c4; text-shadow: 0 0 .16rem rgba(30, 240, 180, .45); }
+.steam.is-lose .steam__rounds b { color: #ff574a; text-shadow: 0 0 .16rem rgba(255, 60, 50, .4); }
+.steam__when { position: absolute; left: 6.5rem; top: 9.36rem; width: 4.9rem; display: flex; flex-direction: column; gap: .16rem; }
+.steam__row { position: relative; isolation: isolate; height: .48rem; display: flex; align-items: center; gap: .14rem; padding: 0 .16rem; border-radius: .24rem;
+  background: linear-gradient(90deg, rgba(220, 230, 226, .1), rgba(220, 230, 226, .02)); font-size: calc(.25 * var(--t)); color: #dfe6e3; white-space: nowrap; }
+.steam__rowbg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: fill; }
+.steam__ico { width: .28rem; height: .28rem; object-fit: contain; }
+.sbtn { position: absolute; isolation: isolate; top: 9.55rem; height: 1.03rem; display: flex; align-items: center; justify-content: center; gap: .16rem; padding: 0 .2rem; border: 0; cursor: pointer; white-space: nowrap; }
+.sbtn--ghost { left: 12.18rem; width: 2.57rem; background: transparent; color: #e2e8e6; font-size: calc(.3 * var(--t)); }
+.sbtn--ghost .icon { width: .3rem; height: .3rem; padding: .03rem; border-radius: .05rem; background: #e2e8e6; color: #2a2f2e; }
+.sbtn--primary { left: 15.12rem; width: 4.08rem; background: transparent; color: #062a20; font-size: calc(.38 * var(--t)); font-weight: 700; letter-spacing: .04em; }
+.sbtn__mark { width: .44rem; height: .38rem; }
+.sbtn--primary .icon { width: .34rem; height: .34rem; }
+.sbtn:hover, .sbtn:focus-visible { filter: brightness(1.14); outline: none; }
+.sbtn:focus-visible { box-shadow: inset 0 0 0 3px #fff; }
+/* the bottom bar is on the first frame of 同盟 (ref f0264); result.css still delays it (steam-bar) */
+.steam__outcome, .steam__rounds, .steam__when, .steam .sbtn { animation: none; }
+
+/* r16 item 9/11 (1:1 at 720p, 1px = .015rem): the pin is card_square_1 (20 px) on the head's top edge, the line drops onto
+   it (11:50 f0380); no seat number on the head. */
+.tcard__pin { top: -.105rem; width: .3rem; height: .3rem; margin-left: -.15rem; background: none; z-index: 1; }
+.tcard__pin::after { display: none; }
+.tcard__pinimg { display: block; width: 100%; height: 100%; }
+/* mine: icon_self_room (41 px, the square 8–33) over the avatar's top-left corner, 6 px out and 4 px up (f0380) */
+.tcard__me { position: absolute; z-index: 2; left: -.03rem; top: -.015rem; width: .615rem; height: .615rem; pointer-events: none; }
+/* a seat that left (12:18 f1124): grey head and pin, no line, no green frame; the portrait stays in colour; 中断连接 in red
+   where 通过回合 would be, no title */
+.tcard.is-left .tcard__head { background: #403e41; color: #8d8b8e; }
+.tcard.is-left .tcard__pinimg { filter: grayscale(1) brightness(.75); }
+.tcard.is-left .tcard__pin::before { display: none; }
+.tcard.is-left .tcard__img, .tcard.is-left .tcard__glyph { filter: none; }
+.tcard__cut { top: 4.52rem; height: .58rem; display: flex; align-items: center; padding: 0; background: none; font-size: calc(.28 * var(--t)); font-weight: 500;
+  color: #ff5a4c; text-shadow: 0 0 .12rem rgba(255, 50, 40, .7), 0 0 .3rem rgba(255, 40, 30, .35); }
+/* 同盟通过回合: round_glow (1:1 at 720p, as on 个人战报) and two arrow_02 (mirrored on the right) 42 px either side of the
+   number; with the hidden core cleared (11:49) it flashes at 0.85 s and stays, else (12:18) it fades in at 0.2 s.
+   result.css's line under the number is not in the footage. */
+.steam__rounds b::after { display: none; }
+.steam__glow { position: absolute; left: 50%; top: .92rem; width: 3.765rem; height: 1.065rem; margin: -.5325rem 0 0 -1.8825rem; pointer-events: none; mix-blend-mode: screen;
+  background: url(/assets/ui/settle/round_glow.png) 0 0 / 100% 100% no-repeat; filter: brightness(.55) sepia(1) hue-rotate(118deg) saturate(6) brightness(2.1);
+  animation: settle-fade 100ms linear 200ms both; }
+.steam__glow::before, .steam__glow::after, .sself__glow::before, .sself__glow::after { content: ''; position: absolute; top: 50%; width: .5rem; height: .5rem; margin-top: -.25rem; opacity: .9;
+  background: url(/assets/ui/settle/arrow_02.png) 50% 50% / contain no-repeat; }
+.steam__glow::before { left: calc(50% - .63rem - .25rem); }
+.steam__glow::after { left: calc(50% + .63rem - .25rem); transform: scaleX(-1); }
+.sself__glow::before { left: calc(50% - .87rem - .25rem); }
+.sself__glow::after { left: calc(50% + .87rem - .25rem); transform: scaleX(-1); }
+.steam.is-hid .steam__glow { animation: steam-glow-on 1ms linear 850ms both, steam-glow-flash 230ms ease-out 850ms; }
+@keyframes steam-glow-on { from { opacity: 0; } }
+@keyframes steam-glow-flash { 0%, 35% { transform: scale(1.15, 1.6); filter: brightness(.55) sepia(1) hue-rotate(118deg) saturate(6) brightness(4.5); } }
+/* the flash itself (f0276–f0281): an opaque cyan ellipse ~150 × 60 px over the number, 0.85–1.08 s */
+.steam__flash { position: absolute; left: 50%; top: .92rem; width: 2.25rem; height: .9rem; margin: -.45rem 0 0 -1.125rem; pointer-events: none; opacity: 0;
+  background: radial-gradient(closest-side, #5ffff0 0, #3cf5e0 55%, rgba(40, 240, 210, .5) 80%, transparent 100%); }
+.steam.is-hid .steam__flash { animation: steam-flash 230ms linear 850ms; }
+@keyframes steam-flash { 0% { opacity: .6; } 15%, 60% { opacity: 1; } 100% { opacity: 0; transform: scale(.8, .7); } }
+/* digit sizes from the footage's ink heights in Novecento Wide (scripts-r16/fontcmp.py, probe/font/num.png): 同盟 51 px
+   (Medium), the cards' 通过回合 24 px (Medium), 个人战报 74 px (Bold) */
+/* proportional figures, no tracking: the footage's "1" is narrow (tabular-nums opened a gap in 15 / 11) */
+.steam .steam__rounds b { font-size: calc(1.07 * var(--t)); font-weight: 500; font-variant-numeric: normal; letter-spacing: 0; top: -.1rem; }
+.steam .tcard__rounds b { font-size: calc(.5 * var(--t)); font-weight: 500; font-variant-numeric: normal; letter-spacing: 0; }
+.steam .steam__rounds span { color: #8f9694; font-weight: 500; }
+.steam__glow, .steam__flash { top: .82rem; }
+.steam__glow::before, .steam__glow::after { opacity: .6; }
+.steam.is-lose .steam__glow { filter: brightness(.55) sepia(1) hue-rotate(-30deg) saturate(6) brightness(1.4); }
+/* 未清隐藏核心（原片 12:18 那组）：没有青闪和左右箭头，只有一团更宽、偏绿的光晕，数字也偏绿 */
+.steam:not(.is-hid) .steam__glow { width: 4.8rem; margin-left: -2.4rem; opacity: 1; filter: brightness(.55) sepia(1) hue-rotate(100deg) saturate(5) brightness(2.3); }
+.steam:not(.is-hid) .steam__glow::before, .steam:not(.is-hid) .steam__glow::after { display: none; }
+.steam:not(.is-hid):not(.is-lose) .steam__rounds b { color: #3cf0b0; }
+/* 个人失败（原片 12:22 f1204–f1252）：雷达照常出现，座位方块亮起约 0.2 s 后红色故障块横扫一下，外圈转红；
+   随后的整屏闪光是红色（成功是青色），过渡到战报时外圈和十字线也是红的 */
+.sintro.is-lose .settle__stage::before { content: ''; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(rgba(120, 14, 22, .55), rgba(120, 14, 22, .55)) 0 .1rem / 15.4rem .8rem no-repeat,
+    linear-gradient(rgba(120, 14, 22, .4), rgba(120, 14, 22, .4)) 0 1.4rem / 4.8rem 8.2rem no-repeat,
+    linear-gradient(rgba(120, 14, 22, .5), rgba(120, 14, 22, .5)) 7.7rem 4.6rem / 4.3rem 3.4rem no-repeat,
+    linear-gradient(rgba(120, 14, 22, .5), rgba(120, 14, 22, .5)) 0 9.6rem / 12.9rem .9rem no-repeat;
+  animation: sintro-glitch 133ms steps(1, end) 980ms; }
+@keyframes sintro-glitch { 0% { opacity: 1; } 50% { opacity: .75; transform: translateX(.25rem); } }
+.sintro.is-lose .sintro__wash { animation-delay: 1300ms; }
+.sintro.is-lose .sintro__wash::after, .sself.is-lose .sself__wash { background: rgba(140, 20, 28, .32); }
+.sself.is-lose .sself__ring { filter: sepia(1) hue-rotate(-45deg) saturate(4) brightness(1.25); }
+.sself.is-lose .sself__carry .shud { --hc: rgba(190, 70, 64, .55); }
+/* 模拟中断没有勋章栏：原片（f1342）「通过回合」和数字居中在红框里，没有中间分隔线和青色光晕，左框线靠右约 .3rem */
+.sself.is-lose .sself__glow, .sself.is-lose .sself__div { display: none; }
+.sself.is-lose .sself__row > .sself__brk--l { left: .75rem; }
+.sself.is-lose .sself__rounds { left: .75rem; width: 3.52rem; }
+.sself.is-lose .sself__rounds span { left: 0; right: 0; text-align: center; }
+/* 个人页回合数：比例数字（等宽数字让「15」中间空一大块），成功页按原片 f0200 墨高 70px 缩到 1.25 */
+.sself .sself__rounds b { font-variant-numeric: normal; letter-spacing: 0; }
+.sself.is-win .sself__rounds b { font-size: calc(1.34 * var(--t)); top: .17rem; }
+/* 数完后的光晕和左右箭头在原片里很淡（f80–f170） */
+.sself.is-win .sself__glow { opacity: .6; animation: settle-fade 133ms linear var(--t-rend) both; }
+.sself__glow::before, .sself__glow::after { opacity: .5; }
+/* 框里的红色等高线是原版 round_fail_bg（281x115）；框线用原版 info_frame 染红；去掉旧版自绘的红框和波纹。
+   数字比原来大 1.3 倍，颜色取自原片（数字 #e02c45、标题 #ee4258，偏粉的红） */
+.sself.is-lose .sself__rounds { background: url(/assets/ui/settle/round_fail_bg.png) 50% 70% / 3.3rem 1.35rem no-repeat; }
+.sself.is-lose .sself__rounds::before { display: none; }
+.sself.is-lose .sself__row > .sself__brk { top: 4.2rem; height: 1.35rem; opacity: .8; filter: brightness(.5) sepia(1) hue-rotate(-62deg) saturate(7) brightness(.95); }
+.sself.is-lose .sself__row > .sself__brk--r { left: 4.12rem; }
+.sself.is-lose .sself__rounds { top: 4.08rem; }
+.sself.is-lose .sself__rounds b { font-size: calc(1.3 * var(--t)); color: #e02c45; text-shadow: 0 0 .14rem rgba(224, 44, 69, .3); }
+.sself.is-lose .sself__title { color: #ee4258; text-shadow: 0 0 .2rem rgba(238, 66, 88, .4), 0 .03rem 0 rgba(0, 0, 0, .5); }
+/* 难度标签的字是难度色（原片 11:41 险境橙字、12:22 绝境红字），不是白字；颜色取自原片 */
+.smode__name { color: var(--d-color); font-size: calc(.25 * var(--t)); font-weight: 500; text-shadow: none; }
+.smode--normal .smode__name { color: #e0561c; }
+.smode--hard .smode__name { color: #d42640; }
+/* 称号（原片 f0380）：图标按原尺寸 72px（≈.72rem），背后垫原版 card_matte 暗色渐变条，字更大并右斜 */
+.steam .tcard__title { left: 50%; right: auto; top: 3.44rem; transform: translateX(-50%); width: max-content; gap: .03rem; }
+.steam .tcard__title::before { content: ''; position: absolute; z-index: -1; left: -.06rem; top: 50%; width: 2.64rem; height: .66rem; margin-top: -.33rem;
+  background: url("/ui-art/img/official/hub/ac/outer/card_matte.png") 0 0 / 100% 100% no-repeat; opacity: .9; }
+.steam .tcard__ticon { width: 1.04rem; height: 1.04rem; margin-right: -.06rem; }
+.steam .tcard__title b { display: inline-block; font-size: calc(.38 * var(--t)); transform: skewX(-10deg); }
+.steam .tcard__rounds { left: .55rem; right: .55rem; background: rgba(8, 44, 36, .78); box-shadow: inset 0 0 0 1px rgba(74, 242, 196, .16); }
+.steam .tcard__rounds span { font-size: calc(.25 * var(--t)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .settle *, .settle *::before, .settle *::after { animation: none; }
+  .sintro, .sself__wash, .sself__carry { display: none; }
+}
+
+/* r16: 下一步 67 ms after the LV count ends (ref f0087) */
+.sself .settle__next { animation: settle-fade 67ms linear var(--t-next, 2300ms) both; }
+/* result.css draws a CSS box round .smedal__check; the official ✓ sprite carries its own */
+.smedal img.smedal__check { border: 0; background: none; }
+/* r16: the ray ends are solid white dots while the rays draw, rings from 0.27 s (ref f0021–f0030); the rays draw bright
+   and settle to the dimmer dashes of the finished page */
+.sray__end::before { content: ''; position: absolute; left: 50%; top: 50%; width: .2rem; height: .2rem; margin: -.1rem 0 0 -.1rem; border-radius: 50%; background: #eef3f1;
+  animation: sself-out-fade 67ms linear 267ms forwards; }
+.sray__end .sprite, .sray__end .sray__ring { animation: settle-fade 67ms linear 267ms both; }
+.sray__line { filter: brightness(1.15); }
+.sray > .sray__line { animation: sray-draw 240ms linear calc(67ms + var(--i) * 8ms) both, sray-hot 400ms ease-out calc(300ms + var(--i) * 8ms) both; }
+/* 原片 11:41: the line runs from the far dot in to the target with its arrow (pointing at the target) trailing behind, the arrow
+   stopping ~72% along; the target is a bare white dot + dashed ring until the yellow glow brings the dark disc / rings at ~0.33 s */
+.sray > .sray__arrow { left: 72%; transform: scaleX(-1); animation: sray-arrow 270ms var(--ease-out) calc(67ms + var(--i) * 8ms) both; }
+@keyframes sray-arrow { from { left: 0; opacity: 0; } 15% { opacity: 1; } }
+.starget .starget__disc { animation: settle-fade 133ms linear 333ms both; }
+.starget > .starget__ring { animation: starget-ring 500ms var(--ease-out) 300ms both; }
+.starget > .starget__arc { animation: settle-fade 133ms linear 333ms both, starget-spin 14s linear infinite; }
+.starget > .starget__dot { animation: settle-fade 100ms linear 33ms both; }
+.starget > .starget__mid { animation: starget-dot 300ms ease-out 233ms both; }
+@keyframes sray-hot { from { filter: brightness(2.2); } }
+
+/* r16: later blocks out-rank the reduced-motion reset above; this one comes last */
+@media (prefers-reduced-motion: reduce) {
+  .settle *, .settle *::before, .settle *::after { animation: none !important; }
+}

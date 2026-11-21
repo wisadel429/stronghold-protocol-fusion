@@ -1,0 +1,192 @@
+/* public/ui-themes/closure/css/screens/title.css — “全能的”可露希尔：标题页（主界面）皮肤。
+ *
+ * 为什么需要这个文件：主题包只提供了对局内 / 大厅 / 房间的组件，**没有** js/screens/title.js，
+ * 也没有任何 `.title-*` 规则；于是 `/ui-theme-closure.html` 的标题页一直是本仓原版的薄荷绿外观 ——
+ * 业主 2026-11-17 报的「UI 加载错了 / 主界面也是错的」就是这个：入口是可露希尔，主界面却和网页原版
+ * 一模一样，看不出进的是主题。
+ *
+ * 设计口径（跟 ac-theme-closure.css 同一套 token）：
+ *   --ac-cyan #59F3FE / --ac-panel #0a1218 / --ac-magenta #E45AC8
+ *   AC 终端 = 青蓝荧光 + 深色面板 + 直角括号框 + 细网格/扫描线，不用大圆角、不用薄荷渐变。
+ *
+ * 边界：**只改颜色、边框、面板底、装饰层**，不动任何布局尺寸（宽高/margin/字号沿用 title.css），
+ * 这样 1366×768 / 1920×1080 / 手机横屏的既有排版都不受影响。所有规则都挂在
+ * html[data-ui-theme="closure"] 下，网页原版与 initial 入口零影响。
+ */
+
+html[data-ui-theme="closure"] {
+  --sp-ac-cyan: #59f3fe;
+  --sp-ac-cyan-dim: #2c8f9c;
+  --sp-ac-cyan-soft: #b6f2ff;
+  --sp-ac-magenta: #e45ac8;
+  --sp-ac-panel: #08121a;
+  --sp-ac-line: rgba(89, 243, 254, .34);
+}
+
+/* ---------- 背景：压暗底色 + 青蓝网格 + 扫描线（装饰层，不拦点击） ---------- */
+html[data-ui-theme="closure"] .title-bg__haze {
+  background:
+    linear-gradient(180deg, rgba(4, 10, 14, .78) 0%, rgba(6, 14, 19, .34) 30%, rgba(5, 12, 17, .55) 72%, rgba(3, 8, 11, .9) 100%),
+    repeating-linear-gradient(0deg, rgba(89, 243, 254, .05) 0 1px, transparent 1px 3px),
+    radial-gradient(52% 46% at 50% 42%, rgba(9, 26, 34, .55), transparent 78%);
+}
+html[data-ui-theme="closure"] .title-bg__ridges .ridge { stroke: rgba(89, 243, 254, .30); }
+html[data-ui-theme="closure"] .title-bg__ridges .ridge--far { opacity: .55; }
+/* 十字准星：只换颜色，**不能**把 background 改成纯色（那会变成小方块） */
+html[data-ui-theme="closure"] .cross {
+  background:
+    linear-gradient(var(--sp-ac-cyan-dim), var(--sp-ac-cyan-dim)) center / 100% 1px no-repeat,
+    linear-gradient(var(--sp-ac-cyan-dim), var(--sp-ac-cyan-dim)) center / 1px 100% no-repeat;
+  opacity: .55;
+}
+
+/* ---------- 角标 / 徽记 ---------- */
+html[data-ui-theme="closure"] .title-corner__mark {
+  border-color: var(--sp-ac-cyan-dim);
+  background:
+    linear-gradient(var(--sp-ac-cyan), var(--sp-ac-cyan)) center / 42% 2px no-repeat,
+    linear-gradient(var(--sp-ac-cyan), var(--sp-ac-cyan)) center / 2px 42% no-repeat;
+  box-shadow: 0 0 .16rem rgba(89, 243, 254, .28);
+}
+html[data-ui-theme="closure"] .emblem__svg circle { fill: #d7f3fb; }
+html[data-ui-theme="closure"] .emblem__svg circle.is-accent {
+  fill: var(--sp-ac-cyan);
+  filter: drop-shadow(0 0 .06rem var(--sp-ac-cyan));
+}
+html[data-ui-theme="closure"] .emblem__svg { filter: drop-shadow(0 0 .14rem rgba(89, 243, 254, .22)); }
+html[data-ui-theme="closure"] .emblem__bracket { border-color: rgba(89, 243, 254, .5); }
+
+/* ---------- 标题字 ---------- */
+html[data-ui-theme="closure"] .title-en__a {
+  color: var(--sp-ac-cyan-soft);
+  text-shadow: 0 0 .16rem rgba(89, 243, 254, .28);
+}
+html[data-ui-theme="closure"] .title-en__b {
+  color: var(--sp-ac-cyan);
+  text-shadow: 0 0 .22rem rgba(89, 243, 254, .55);
+}
+html[data-ui-theme="closure"] .title-cn { color: #f2fbff; text-shadow: 0 .04rem .2rem rgba(0, 0, 0, .8); }
+html[data-ui-theme="closure"] .title-cn__colon { color: #f2fbff; }
+html[data-ui-theme="closure"] .title-cn em {
+  color: var(--sp-ac-cyan);
+  text-shadow: 0 0 .26rem rgba(89, 243, 254, .55);
+}
+html[data-ui-theme="closure"] .title-tag { color: #8db3c1; }
+
+/* ---------- 登录 / 开始面板：AC 终端面板 + 四角括号 ---------- */
+html[data-ui-theme="closure"] .title-login {
+  background:
+    linear-gradient(180deg, rgba(9, 22, 30, .92), rgba(4, 11, 16, .95));
+  border: 1px solid var(--sp-ac-line);
+  box-shadow:
+    0 .2rem .5rem rgba(0, 0, 0, .55),
+    inset 0 0 0 1px rgba(89, 243, 254, .06),
+    0 0 .4rem rgba(89, 243, 254, .10);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+html[data-ui-theme="closure"] .title-login::before {
+  background: linear-gradient(90deg, transparent, var(--sp-ac-cyan), transparent);
+  opacity: .9;
+}
+/* 四角直角括号（用两个伪元素叠四段渐变，纯装饰） */
+html[data-ui-theme="closure"] .title-login::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  --b: 10px;
+  --c: var(--sp-ac-cyan);
+  background:
+    linear-gradient(var(--c), var(--c)) 0 0 / var(--b) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 0 / 1px var(--b) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--b) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / 1px var(--b) no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--b) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / 1px var(--b) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--b) 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / 1px var(--b) no-repeat;
+  opacity: .85;
+}
+
+/* 主按钮（开始 / 登录 / 注册并进入）：青色终端条，替掉薄荷渐变 */
+html[data-ui-theme="closure"] .title-login .btn--primary {
+  background: linear-gradient(100deg, #0b2530 0%, #123a48 46%, #0a1f28 100%);
+  border-color: var(--sp-ac-cyan);
+  color: #d8f8ff;
+  text-shadow: 0 0 .18rem rgba(89, 243, 254, .5);
+  box-shadow: 0 0 .3rem rgba(89, 243, 254, .20), inset 0 0 0 1px rgba(89, 243, 254, .12);
+}
+html[data-ui-theme="closure"] .title-login .btn--primary::after {
+  background: repeating-linear-gradient(115deg, rgba(89, 243, 254, .22) 0 2px, transparent 2px 6px);
+}
+html[data-ui-theme="closure"] .title-login .btn--primary:hover { filter: brightness(1.14); }
+html[data-ui-theme="closure"] .title-login .btn--secondary {
+  border-color: rgba(89, 243, 254, .28);
+  color: var(--sp-ac-cyan-soft);
+  background: rgba(9, 26, 34, .6);
+}
+
+/* 登录卡里的输入框 / 小控件：青蓝描边 + 深底 */
+html[data-ui-theme="closure"] .title-login .field__input,
+html[data-ui-theme="closure"] .title-login .input {
+  background: rgba(4, 12, 17, .85);
+  border-color: rgba(89, 243, 254, .22);
+  color: #eafaff;
+}
+html[data-ui-theme="closure"] .title-login .field__input:focus,
+html[data-ui-theme="closure"] .title-login .input:focus {
+  border-color: var(--sp-ac-cyan);
+  box-shadow: 0 0 .18rem rgba(89, 243, 254, .22);
+}
+html[data-ui-theme="closure"] .title-login .field__label,
+html[data-ui-theme="closure"] .title-login .micro { color: var(--sp-ac-cyan-dim); }
+
+/* 连接状态 / 小按钮：青蓝 */
+html[data-ui-theme="closure"] .title-conn .status-dot { background: var(--sp-ac-cyan); box-shadow: 0 0 .1rem rgba(89, 243, 254, .8); }
+html[data-ui-theme="closure"] .title-conn { color: #86adba; }
+html[data-ui-theme="closure"] .title-settings,
+html[data-ui-theme="closure"] .title-fs,
+html[data-ui-theme="closure"] .title-guide {
+  border-color: rgba(89, 243, 254, .26);
+  color: var(--sp-ac-cyan-soft);
+  background: rgba(8, 22, 29, .55);
+}
+html[data-ui-theme="closure"] .title-settings:hover,
+html[data-ui-theme="closure"] .title-fs:hover,
+html[data-ui-theme="closure"] .title-guide:hover {
+  border-color: var(--sp-ac-cyan);
+  color: #eafcff;
+}
+
+/* 底部素材按钮 */
+html[data-ui-theme="closure"] .title-assets .btn {
+  border-color: rgba(89, 243, 254, .26);
+  color: var(--sp-ac-cyan-soft);
+  background: rgba(6, 18, 25, .62);
+}
+
+/* ---------- 顶右工具条：让「界面 · 可露希尔」按钮变成 AC 终端条 ---------- */
+html[data-ui-theme="closure"] .title-corner__tools .title-ui-theme.btn {
+  background: linear-gradient(100deg, rgba(11, 37, 48, .95), rgba(18, 58, 72, .95) 52%, rgba(10, 31, 40, .95));
+  border: 1px solid var(--sp-ac-cyan);
+  color: #dcf9ff;
+  text-shadow: 0 0 .16rem rgba(89, 243, 254, .45);
+  box-shadow: 0 0 .26rem rgba(89, 243, 254, .22);
+}
+html[data-ui-theme="closure"] .title-corner__tools .title-ui-theme.btn:hover { filter: brightness(1.12); }
+
+/* ---------- 底栏 ---------- */
+html[data-ui-theme="closure"] .title-foot { color: #5f8492; }
+html[data-ui-theme="closure"] .title-thanks__name { color: #d9f6ff; }
+html[data-ui-theme="closure"] .title-thanks__sep { color: rgba(89, 243, 254, .45); }
+html[data-ui-theme="closure"] .title-thanks__tag {
+  color: var(--sp-ac-cyan);
+  border-color: rgba(89, 243, 254, .32);
+  background: rgba(89, 243, 254, .08);
+}
+html[data-ui-theme="closure"] .title-thanks__dot { background: var(--sp-ac-cyan); box-shadow: 0 0 6px var(--sp-ac-cyan); }
+html[data-ui-theme="closure"] .title-repo:hover,
+html[data-ui-theme="closure"] .title-repo:focus-visible { color: var(--sp-ac-cyan-soft); }
+html[data-ui-theme="closure"] .title-egg:hover,
+html[data-ui-theme="closure"] .title-egg:focus-visible { color: var(--sp-ac-cyan-soft); }

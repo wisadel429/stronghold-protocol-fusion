@@ -1,0 +1,212 @@
+/* public/css/ui-theme-picker.css — 局外「界面主题」选择页（public/ui-theme.html）的样式。
+ *
+ * 独立页面：不加载任何屏幕样式（/css/screens/*），也不被主题替换 —— 三套界面下这一页长得都一样。
+ * 观感跟标题页同一套语言：深底、细网格、薄荷高光 + 等宽微标签。
+ */
+:root {
+  --uip-bg: #0a0d0c;
+  --uip-panel: #111614;
+  --uip-line: #24312c;
+  --uip-line-hi: #3a5148;
+  --uip-text: #e6ece9;
+  --uip-dim: #93a29c;
+  --uip-lo: #5d6b66;
+  --uip-mint: #17d9a0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--uip-bg);
+  color: var(--uip-text);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(23, 217, 160, .12), transparent 60%),
+    linear-gradient(transparent 0 24px, rgba(255, 255, 255, .022) 24px 25px),
+    linear-gradient(90deg, transparent 0 24px, rgba(255, 255, 255, .022) 24px 25px);
+  background-size: auto, 25px 25px, 25px 25px;
+  padding: 32px 20px 48px;
+}
+
+.uip {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+/* ---- 页头 ---------------------------------------------------------------- */
+.uip__head { margin-bottom: 26px; }
+
+.uip__micro {
+  margin: 0 0 8px;
+  font: 600 11px/1.2 Oxanium, "Rajdhani", monospace;
+  letter-spacing: .28em;
+  color: var(--uip-mint);
+  text-transform: uppercase;
+}
+
+.uip__title {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.uip__lead {
+  margin: 0;
+  max-width: 74ch;
+  color: var(--uip-dim);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.uip__lead b { color: var(--uip-text); font-weight: 700; }
+
+.uip__lead code {
+  font: 500 12px/1 ui-monospace, "Cascadia Code", monospace;
+  background: #ffffff10;
+  border: 1px solid var(--uip-line);
+  border-radius: 4px;
+  padding: 2px 5px;
+  color: var(--uip-mint);
+}
+
+/* ---- 卡片网格 ------------------------------------------------------------ */
+.uip__grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.uip-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #131917, var(--uip-panel));
+  border: 1px solid var(--uip-line);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.uip-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+  opacity: .55;
+}
+
+.uip-card:hover { transform: translateY(-2px); border-color: var(--uip-line-hi); }
+
+.uip-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset, 0 10px 30px -18px var(--accent);
+}
+
+.uip-card.is-locked { opacity: .55; }
+.uip-card.is-locked:hover { transform: none; }
+
+.uip-card__art {
+  aspect-ratio: 16 / 9;
+  background: #0d1211 center/cover no-repeat;
+  border-bottom: 1px solid var(--uip-line);
+  overflow: hidden;
+}
+
+.uip-card__art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.uip-card__art--plain {
+  display: grid;
+  place-items: center;
+  font: 700 13px/1 Oxanium, monospace;
+  letter-spacing: .4em;
+  color: #ffffff30;
+  background: repeating-linear-gradient(135deg, #141a18 0 10px, #101514 10px 20px);
+}
+
+.uip-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  flex: 1;
+}
+
+.uip-card__micro {
+  margin: 0;
+  font: 600 10px/1 Oxanium, monospace;
+  letter-spacing: .22em;
+  color: var(--uip-lo);
+}
+
+.uip-card__name { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .02em; }
+
+.uip-card__desc { margin: 0; flex: 1; font-size: 12.5px; line-height: 1.7; color: var(--uip-dim); }
+
+.uip-card__btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  font: 700 13px/1 inherit;
+  letter-spacing: .06em;
+  color: #07110d;
+  background: var(--accent);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter .15s ease, opacity .15s ease;
+}
+
+.uip-card__btn:hover:not(:disabled) { filter: brightness(1.08); }
+
+.uip-card__btn:disabled {
+  cursor: default;
+  color: var(--uip-dim);
+  background: #ffffff0f;
+  box-shadow: 0 0 0 1px var(--uip-line) inset;
+}
+
+/* ---- 提示与页脚 ---------------------------------------------------------- */
+.uip__note {
+  min-height: 20px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--uip-dim);
+}
+
+.uip__note.is-ok { color: var(--uip-mint); }
+.uip__note.is-warn { color: #ffcf5c; }
+
+.uip__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--uip-line);
+}
+
+.uip__back {
+  color: var(--uip-mint);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .04em;
+}
+
+.uip__back:hover { text-decoration: underline; }
+
+.uip__hint { color: var(--uip-lo); font-size: 12px; }
+
+@media (max-width: 560px) {
+  body { padding: 20px 14px 32px; }
+  .uip__grid { grid-template-columns: 1fr; }
+}

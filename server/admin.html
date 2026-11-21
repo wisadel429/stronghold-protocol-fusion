@@ -1,0 +1,1308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>卫戍协议：盟约 · 管理后台</title>
+<!-- 同源部署在 /admin 时,游戏自己的图标就在旁边;声明它,浏览器就不会再去请求 /favicon.ico(那条会 404)。 -->
+<link rel="icon" href="/icons/favicon.ico" sizes="16x16 32x32 48x48" />
+<style>
+  :root{
+    --bg:#0b0e0d; --panel:#121816; --panel-2:#0e1311; --line:#2f3a35; --line-2:#3e4b45;
+    --mint:#4ed8af; --mint-hi:#59f4ca; --mint-dim:#2a9e7f; --amber:#f6a329; --red:#ff5454;
+    --hi:#f2f2f2; --md:#c3cbc7; --lo:#8a948f; --dim:#5d6663;
+    --mono:'Bender','Rajdhani','Consolas','Menlo',monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(120% 80% at 50% -10%, rgba(23,249,183,.06), transparent 60%),
+      linear-gradient(180deg,#0b0e0d,#0a0d0c 60%,#0b0e0d);
+    color:var(--md);font:15px/1.6 'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;min-height:100vh}
+  a{color:var(--mint)}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+  header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+  header.top h1{margin:0;font-size:20px;color:var(--hi);letter-spacing:.08em}
+  header.top .micro{font:11px/1 var(--mono);color:var(--dim);letter-spacing:.22em}
+  header.top .spacer{flex:1}
+  .pill{border:1px solid var(--line-2);border-radius:99px;padding:3px 10px;font:12px/1.6 var(--mono);color:var(--md);background:rgba(0,0,0,.35)}
+  .pill b{color:var(--mint-hi)}
+  .card{margin-top:16px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(18,24,22,.9),rgba(10,13,12,.9));padding:14px 16px}
+  .card h2{margin:0 0 10px;font-size:15px;color:var(--hi);letter-spacing:.06em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .micro{font:11px/1 var(--mono);color:var(--dim);letter-spacing:.2em}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  textarea,input,select{background:rgba(0,0,0,.45);border:1px solid var(--line-2);color:var(--hi);padding:8px 10px;font:inherit;border-radius:2px}
+  textarea{width:100%;min-height:64px;resize:vertical}
+  button{background:rgba(78,216,175,.12);border:1px solid var(--mint-dim);color:var(--mint-hi);padding:7px 14px;font:inherit;cursor:pointer;border-radius:2px;transition:background .15s,border-color .15s}
+  button:hover{background:rgba(78,216,175,.22);border-color:var(--mint)}
+  button.ghost{background:transparent;border-color:var(--line-2);color:var(--md)}
+  button.ghost:hover{border-color:var(--mint-dim);color:var(--mint-hi)}
+  button.danger{background:rgba(255,84,84,.12);border-color:rgba(255,84,84,.5);color:#ffb3b3}
+  button.danger:hover{background:rgba(255,84,84,.22);border-color:var(--red)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(47,58,53,.7);vertical-align:middle}
+  th{font:11px/1.6 var(--mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase;white-space:nowrap}
+  td.num,th.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .code{font-family:var(--mono);font-size:17px;letter-spacing:.14em;color:var(--mint-hi)}
+  .t-hi{color:var(--hi)} .t-lo{color:var(--lo)} .t-dim{color:var(--dim)} .t-amber{color:var(--amber)} .t-red{color:var(--red)}
+  .tag{display:inline-block;border:1px solid var(--line-2);border-radius:2px;padding:1px 6px;font:11px/1.7 var(--mono);letter-spacing:.1em;color:var(--lo)}
+  .tag.on{border-color:var(--mint-dim);color:var(--mint-hi)}
+  .tag.warn{border-color:rgba(246,163,41,.5);color:var(--amber)}
+  .empty{color:var(--dim);padding:10px 2px}
+  .notice{border-left:3px solid var(--amber);background:rgba(246,163,41,.08);padding:8px 12px;margin-top:10px;color:var(--md);white-space:pre-wrap;word-break:break-word}
+  .gate{max-width:420px;margin:12vh auto 0;text-align:center}
+  .gate h1{font-size:22px;color:var(--hi);margin:0 0 6px}
+  .gate p{color:var(--lo);margin:0 0 18px}
+  .gate input{width:100%;text-align:center;letter-spacing:.24em;font-family:var(--mono)}
+  .gate__hint{margin:-8px 0 14px;font-size:12px;color:var(--dim)}
+  .gate__hint code{font-family:var(--mono);color:var(--mint-hi);background:rgba(78,216,175,.08);padding:1px 5px;border-radius:2px}
+  .msg{margin-top:10px;font-size:13px;min-height:20px}
+  .msg.err{color:#ff9d9d} .msg.ok{color:var(--mint-hi)}
+  .foot{margin-top:26px;color:var(--dim);font-size:12px;text-align:center}
+  .scroll{overflow-x:auto}
+  /* the 统计卡 at the top of the panel: 在线人数 / 房间数 / 后台访问次数 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:4px}
+  .stat{border:1px solid var(--line);background:rgba(0,0,0,.28);padding:10px 12px}
+  .stat .k{font:11px/1.6 var(--mono);letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+  .stat .v{font:26px/1.25 var(--mono);font-variant-numeric:tabular-nums;color:var(--mint-hi)}
+  .stat .n{font-size:12px;color:var(--dim)}
+  .stat.amber .v{color:var(--amber)}
+  /* a room whose 模拟 is running: the second row with 回合 / 阶段 / 玩家 */
+  tr.matchrow>td{background:rgba(255,255,255,.02);border-top:0;padding-top:0}
+  /* the third row: the room's players, also before a 模拟 has started */
+  tr.playrow>td{background:rgba(255,255,255,.01);border-top:0;padding-top:2px;padding-bottom:8px}
+  tr.playrow .plabel{font:11px/1.6 var(--mono);letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-right:6px}
+  .pchip{display:inline-block;margin:2px 4px 2px 0;padding:1px 7px;border:1px solid var(--line-2);border-radius:2px;
+    background:rgba(255,255,255,.02);color:var(--md);font-size:12px;white-space:nowrap}
+  .pchip b{color:var(--mint-hi);font-weight:600}
+  .pchip.host{border-color:rgba(246,163,41,.55)}
+  .pchip.host b{color:var(--amber)}
+  .pchip.ready{border-color:var(--mint-dim);background:rgba(78,216,175,.07)}
+  .pchip.dead{opacity:.55;text-decoration:line-through}
+  .pchip.off{border-style:dashed;color:var(--amber)}
+  .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mint-dim),var(--mint-hi));transition:width .3s}
+  .bar i.hot{background:linear-gradient(90deg,var(--amber),var(--red))}
+  @media (max-width:760px){ .stats{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:640px){ .hide-sm{display:none} th,td{padding:5px 6px} .stat .v{font-size:22px} }
+  /* default-password reminder (DEFAULT_ADMIN_PASSWORD): a banner while it is in use, a dialog after login */
+  .pwbanner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;border:1px solid rgba(255,84,84,.55);
+    border-left:3px solid var(--red);background:rgba(255,84,84,.10);padding:10px 14px;color:#ffd2d2;cursor:pointer}
+  .pwbanner b{color:#fff}
+  .pwbanner .micro{font:11px/1 var(--mono);letter-spacing:.18em;color:rgba(255,210,210,.7)}
+  .pwmodal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:18px;
+    background:rgba(3,5,4,.72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+  .pwmodal[hidden]{display:none}
+  .pwmodal__box{max-width:540px;width:100%;border:1px solid var(--line-2);border-top:3px solid var(--red);
+    background:linear-gradient(180deg,#1a201e,#0e1311);padding:22px 24px;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+  .pwmodal__box h2{margin:0 0 10px;font-size:19px;color:var(--hi)}
+  .pwmodal__box p{margin:0 0 10px;color:var(--md)}
+  .pwmodal__box code{font-family:var(--mono);color:var(--mint-hi);background:rgba(78,216,175,.08);padding:1px 5px;border-radius:2px}
+  .pwmodal__box .hint{font-size:12px;color:var(--dim)}
+  .pwmodal__box .row{justify-content:flex-end;margin-top:16px}
+  .pwmodal__box label{display:block;margin:0 0 10px;color:var(--lo);font-size:13px}
+  .pwmodal__box label input{display:block;width:100%;margin-top:4px;letter-spacing:.12em;font-family:var(--mono)}
+  /* 修改口令：顶部最显眼的一颗按钮（默认口令没改之前也要一眼看到） */
+  button.pwbtn{background:linear-gradient(180deg,rgba(246,163,41,.30),rgba(246,163,41,.14));border-color:rgba(246,163,41,.8);
+    color:#ffd899;font-weight:600;box-shadow:0 0 0 1px rgba(246,163,41,.16),0 0 14px rgba(246,163,41,.20)}
+  button.pwbtn:hover{background:linear-gradient(180deg,rgba(246,163,41,.44),rgba(246,163,41,.22));border-color:var(--amber);color:#fff2d2}
+  button.pwbtn:disabled{opacity:.5;box-shadow:none}
+  /* 还是初始口令时轻轻“呼吸”，让人一眼看到这里 */ 
+  button.pwbtn.is-default{animation:pwbeat 1.8s ease-in-out infinite}
+  @keyframes pwbeat{
+    0%,100%{box-shadow:0 0 0 1px rgba(255,84,84,.20),0 0 10px rgba(255,84,84,.20)}
+    50%{box-shadow:0 0 0 1px rgba(255,84,84,.55),0 0 20px rgba(255,84,84,.42)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>卫戍协议：盟约 · 管理后台</h1>
+      <div class="micro">STRONGHOLD PROTOCOL · ADMIN · <b id="s-server-name">–</b> · build <b id="s-admin-build">–</b></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill">连接 <b id="s-sockets">–</b></span>
+    <span class="pill">在线 <b id="s-humans">–</b></span>
+    <span class="pill">房间 <b id="s-rooms">–</b></span>
+    <span class="pill">对局 <b id="s-matches">–</b></span>
+    <span class="pill">运行 <b id="s-uptime">–</b></span>
+    <button class="pwbtn" id="btn-password" title="修改后台口令">修改口令</button>
+    <button class="ghost" id="btn-refresh">刷新</button>
+    <button class="ghost" id="btn-logout" title="忘记本机保存的口令">退出</button>
+  </header>
+
+  <!-- password gate -->
+  <section class="gate card" id="gate">
+    <h1>需要口令</h1>
+    <p>输入后台口令以查看在线玩家与房间</p>
+    <!-- 初始口令提示：server/admin.js 只在口令仍是 DEFAULT_ADMIN_PASSWORD 时去掉 hidden 属性 -->
+    <p class="gate__hint" id="gate-hint" hidden>初始口令是 <code>88888888</code>，登录后请尽快改成自己的口令</p>
+    <input type="password" id="pw" placeholder="口令" autocomplete="current-password" />
+    <div class="row" style="justify-content:center;margin-top:12px">
+      <button id="btn-login">进入后台</button>
+    </div>
+    <div class="msg err" id="gate-msg"></div>
+  </section>
+
+  <!-- panel -->
+  <div id="panel" hidden>
+    <!-- 默认口令提醒：还在用 DEFAULT_ADMIN_PASSWORD 时常驻，点开是修改说明（server/admin.js 的 defaultPassword） -->
+    <div class="pwbanner" id="pw-banner" hidden role="alert" title="查看怎么修改">
+      <span class="micro">PASSWORD</span>
+      <span>正在使用<b>默认口令 88888888</b>，拿到整合包的人都能进这个后台；点这里看怎么改。</span>
+    </div>
+    <!-- 统计卡：在线人数（不算断线重连的会话）/ 房间数 / 后台访问次数 -->
+    <section class="card" id="stats-card">
+      <h2>当前状态 <span class="micro">LIVE · 在线人数（不含断线重连）/ 房间数 / 后台访问次数</span></h2>
+      <div class="stats">
+        <div class="stat">
+          <div class="k">在线人数</div>
+          <div class="v" id="stats-players">–</div>
+          <div class="n" id="stats-players-note">只数在线连接</div>
+        </div>
+        <div class="stat">
+          <div class="k">房间数</div>
+          <div class="v" id="stats-rooms">–</div>
+          <div class="n" id="stats-rooms-note">含大厅与模拟中</div>
+        </div>
+        <div class="stat amber">
+          <div class="k">后台访问次数</div>
+          <div class="v" id="stats-visits">–</div>
+          <div class="n" id="stats-visits-note">服务端累计</div>
+        </div>
+        <div class="stat">
+          <div class="k">模拟中 / 连接</div>
+          <div class="v" id="stats-matches">–</div>
+          <div class="n" id="stats-matches-note">对局数 / WebSocket 连接</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 资源检测（server/admin-monitor.js）：CPU / 内存 / 带宽 / 游戏网站访问量 -->
+    <section class="card" id="resource-card">
+      <h2>资源检测 <span class="micro">RESOURCE · CPU / 内存 / 带宽 / 访问量</span>
+        <span class="tag" id="res-tag">–</span></h2>
+      <div class="stats">
+        <div class="stat">
+          <div class="k">CPU 占用率</div>
+          <div class="v" id="res-cpu">–</div>
+          <div class="bar"><i id="res-cpu-bar"></i></div>
+          <div class="n" id="res-cpu-note">整机 / 本进程</div>
+        </div>
+        <div class="stat">
+          <div class="k">内存使用量</div>
+          <div class="v" id="res-mem">–</div>
+          <div class="bar"><i id="res-mem-bar"></i></div>
+          <div class="n" id="res-mem-note">系统已用 / 总量</div>
+        </div>
+        <div class="stat">
+          <div class="k">带宽</div>
+          <div class="v" id="res-net">–</div>
+          <div class="n" id="res-net-note">本服务 HTTP+WS · 发送 / 接收</div>
+        </div>
+        <div class="stat amber">
+          <div class="k">游戏访问量</div>
+          <div class="v" id="res-visits">–</div>
+          <div class="n" id="res-visits-note">首页打开次数</div>
+        </div>
+      </div>
+      <div class="t-dim" id="res-foot" style="margin-top:8px;font-size:12px"></div>
+    </section>
+
+    <section class="card" id="server-card">
+      <h2>服务器 <span class="micro">SERVER · 开 / 关 + 闪断更新预警</span>
+        <span class="tag" id="gate-tag">–</span></h2>
+      <div class="row" style="margin-top:6px">
+        <button id="btn-gate">关闭服务器</button>
+        <input type="text" id="gate-text" maxlength="60" placeholder="关闭时给玩家的提醒（留空用默认文案）" style="flex:1;min-width:180px" />
+        <span class="msg" id="gate-state-msg"></span>
+      </div>
+      <div class="t-dim" id="gate-note" style="margin-top:6px;font-size:12px"></div>
+
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0" />
+
+      <div class="row">
+        <label class="t-lo">闪断更新预警
+          <select id="warn-sec">
+            <option value="60">1 分钟</option>
+            <option value="180" selected>3 分钟</option>
+            <option value="300">5 分钟</option>
+            <option value="600">10 分钟</option>
+          </select>
+        </label>
+        <label class="t-lo" style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="warn-close" checked style="width:auto" /> 倒计时结束后关闭服务器
+        </label>
+        <button id="btn-warn">发布预警</button>
+        <button class="ghost" id="btn-warn-clear">取消预警</button>
+        <span class="msg" id="warn-msg"></span>
+      </div>
+      <input type="text" id="warn-text" maxlength="60" placeholder="预警文案（留空用默认：即将闪断更新，请尽快结束当前对局）"
+        style="margin-top:8px;width:100%" />
+      <div id="warn-now" style="margin-top:6px"></div>
+    </section>
+
+    <section class="card" id="update-card">
+      <h2>热更 <span class="micro">HOT UPDATE · 上传 zip 覆盖到安装目录，服务器不停</span>
+        <span class="tag" id="update-tag">–</span></h2>
+      <div class="row" style="margin-top:6px">
+        <input type="password" id="update-lock" placeholder="热更锁（专用密钥，或后台口令）" autocomplete="off"
+          style="min-width:200px" />
+        <span class="t-dim" style="font-size:12px">热更 / 重启都必须先填这把锁；专用锁与后台口令都认</span>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="update-file" accept=".zip,application/zip" style="flex:1;min-width:220px" />
+        <button id="btn-update">上传并应用</button>
+        <button class="ghost" id="btn-restart">重启服务器</button>
+        <span class="msg" id="update-msg"></span>
+      </div>
+      <div class="t-dim" id="update-note" style="margin-top:6px;font-size:12px">
+        只覆盖文件、不重启服务器：客户端脚本 / 素材 / data 立刻生效，在线玩家约 1 分钟内收到「页面已过期」提示
+        （对局中不打断，这一局和结算页走完再自动刷新）。含 server/ 或 shared/ 的包要重启服务器才真正生效，上传结果里会标出来。
+      </div>
+    </section>
+
+    <section class="card" id="feedback-card">
+      <h2>问题反馈 <span class="micro">BUG REPORTS · 玩家从启动器提交，含版本与诊断信息 · 可回复、可标记已解决（已解决自动折叠）</span>
+        <span class="tag" id="fb-count">–</span></h2>
+      <div class="row" style="margin-top:6px">
+        <button class="ghost" id="fb-reload">刷新</button>
+        <span class="msg" id="fb-msg"></span>
+      </div>
+      <div id="fb-list" style="margin-top:8px;max-height:360px;overflow:auto"></div>
+    </section>
+
+    <section class="card" id="accounts-card">
+      <h2>账号 <span class="micro">ACCOUNTS · 按 QQ 号 / 昵称 / #tag 搜索 · 封禁 / 重置密码</span>
+        <span class="tag" id="acc-tag">–</span></h2>
+      <div class="row" style="margin-top:6px">
+        <input type="text" id="acc-q" placeholder="搜 QQ 号 / 昵称 / #tag（留空列出最近登录的账号）" style="flex:1;min-width:220px" />
+        <button id="btn-acc-search">搜索</button>
+        <span class="msg" id="acc-msg"></span>
+      </div>
+      <div id="acc-list" style="margin-top:10px;max-height:min(70vh,640px);overflow:auto"></div>
+    </section>
+
+    <section class="card">
+      <h2>公告 <span class="micro">ANNOUNCEMENT · 在线玩家客户端弹窗</span></h2>
+      <textarea id="notice-text" maxlength="200" placeholder="输入要发布的内容（最多 200 字），留空并点“清除公告”即撤下"></textarea>
+      <div class="row" style="margin-top:8px">
+        <label class="t-lo">持续
+          <select id="notice-ttl">
+            <option value="0">常驻（手动清除）</option>
+            <option value="5">5 分钟</option>
+            <option value="15">15 分钟</option>
+            <option value="30">30 分钟</option>
+            <option value="60">1 小时</option>
+          </select>
+        </label>
+        <button id="btn-notice">发布公告</button>
+        <button class="ghost" id="btn-notice-clear">清除公告</button>
+        <span class="msg" id="notice-msg"></span>
+      </div>
+      <div id="notice-now"></div>
+
+      <!-- 弹窗公告（业主 2026-11-21）：每次连接服务器都弹一次；内容写进 data/announcement.json -->
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <h3 style="margin:0 0 6px;font-size:13px">弹窗公告 <span class="micro">POPUP · 玩家每次连接都会弹一次（主页/大厅），可写标题与正文</span></h3>
+        <input id="ap-title" placeholder="标题（可空，最多 80 字）" maxlength="80" style="width:100%" />
+        <textarea id="ap-text" maxlength="500" placeholder="正文……（留空保存 = 撤下弹窗公告）" style="width:100%;min-height:72px;margin-top:6px"></textarea>
+        <div class="row" style="margin-top:8px">
+          <label class="t-lo">级别
+            <select id="ap-level">
+              <option value="info">普通</option>
+              <option value="warning">警告</option>
+              <option value="urgent">紧急</option>
+            </select>
+          </label>
+          <label class="t-lo">持续
+            <select id="ap-hours">
+              <option value="720">30 天</option>
+              <option value="168">7 天</option>
+              <option value="24">1 天</option>
+              <option value="6">6 小时</option>
+            </select>
+          </label>
+          <button id="btn-ap">保存弹窗公告</button>
+          <button class="ghost" id="btn-ap-clear">撤下</button>
+          <span class="msg" id="ap-msg"></span>
+        </div>
+        <div class="t-dim" id="ap-now" style="font-size:11.5px;margin-top:6px"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>在线玩家 <span class="micro">PLAYERS</span> <span class="tag" id="p-count">0</span></h2>
+      <div class="scroll"><table>
+        <thead><tr>
+          <th>代号</th><th class="hide-sm">编号</th><th class="hide-sm">地址</th><th>房间</th><th>状态</th><th class="num hide-sm">空闲</th><th></th>
+        </tr></thead>
+        <tbody id="players"></tbody>
+      </table></div>
+      <div class="empty" id="players-empty" hidden>当前没有在线玩家</div>
+    </section>
+
+    <section class="card">
+      <h2>房间 <span class="micro">ROOMS · 席位 / 回合剩余 / 房内玩家（未开局也显示）</span> <span class="tag" id="r-count">0</span></h2>
+      <div class="scroll"><table>
+        <thead><tr>
+          <th>密钥</th><th>模式</th><th>难度</th><th class="num">席位</th><th class="num hide-sm">观战</th>
+          <th class="num">回合剩余</th><th>状态</th><th class="hide-sm">房主</th><th></th>
+        </tr></thead>
+        <tbody id="rooms"></tbody>
+      </table></div>
+      <div class="empty" id="rooms-empty" hidden>当前没有房间</div>
+    </section>
+
+    <div class="foot">后台与游戏同端口 /admin · 口令用环境变量 ADMIN_PASSWORD 设置 · 页面每 2 秒自动刷新</div>
+  </div>
+</div>
+
+<!-- 默认口令弹窗：登录后第一次 /api/state 说 defaultPassword 为 true 时弹出（server/admin.js） -->
+<div class="pwmodal" id="pw-modal" hidden>
+  <div class="pwmodal__box" role="dialog" aria-modal="true" aria-labelledby="pw-modal-title">
+    <h2 id="pw-modal-title">请先把后台默认口令改掉</h2>
+    <p>你正在使用<b>默认口令 <code>88888888</code></b>。这个口令写在整合包里，任何拿到它的人都能进入这个后台：查看在线玩家、
+      关闭房间、关闭服务器。</p>
+    <p class="hint">点下面的「现在去改」，在这里直接改掉即可：新口令会存到服务器的 <code>admin-password.json</code>，重启后仍然有效。</p>
+    <p class="hint">也可以不改、继续用默认口令——但那就等于把这个后台公开给所有拿到整合包的人。</p>
+    <div class="row">
+      <button class="ghost" id="pwm-later">稍后再说</button>
+      <button id="pwm-ok">现在去改</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改口令（server/admin.js 的 POST /api/password）：当前口令 + 新口令 + 确认，失败原因显示在框内 -->
+<div class="pwmodal" id="pwchg-modal" hidden>
+  <div class="pwmodal__box" role="dialog" aria-modal="true" aria-labelledby="pwchg-title">
+    <h2 id="pwchg-title">修改后台口令</h2>
+    <p class="hint">新口令至少 6 个字符，不能再用初始口令 88888888；保存后立即生效，旧口令马上失效。</p>
+    <p class="hint" id="pwchg-env" hidden>当前口令由环境变量 <code>ADMIN_PASSWORD</code> 指定，这里改不了：请改启动脚本里的那一行，
+      然后重启服务器。</p>
+    <label>当前口令
+      <input type="password" id="pwchg-current" autocomplete="current-password" />
+    </label>
+    <label>新口令
+      <input type="password" id="pwchg-next" autocomplete="new-password" placeholder="6–64 个字符" />
+    </label>
+    <label>再输一次新口令
+      <input type="password" id="pwchg-confirm" autocomplete="new-password" />
+    </label>
+    <div class="msg err" id="pwchg-msg"></div>
+    <div class="row">
+      <button class="ghost" id="pwchg-cancel">取消</button>
+      <button id="pwchg-save">保存新口令</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PW_KEY = 'sp.admin.pw';
+const DIFF = { FUNNY: ['标准', '#f6a329'], NORMAL: ['险境', '#e85a1a'], HARD: ['绝境', '#e73118'], ABYSS: ['终极', '#ff0024'] };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/** 取第一个不是 undefined/null 的值（0 与 false 都算有效值：0 房间 / 0 在线 是真实数据）。 */
+const pick = (...vals) => vals.find((v) => v !== undefined && v !== null);
+/** 有限数字，否则 null（容忍 JSON 里的数字字符串）。 */
+const num = (v) => {
+  if (v === null || v === undefined || v === '' || typeof v === 'boolean') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+/** 秒 → mm:ss（超过一小时给 h:mm:ss，负数按 0）。拿不到就 null。 */
+function fmtMMSS(sec) {
+  const n = num(sec);
+  if (n === null) return null;
+  const t = Math.max(0, Math.round(n));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  const pad = (x) => String(x).padStart(2, '0');
+  return (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s);
+}
+let password = localStorage.getItem(PW_KEY) || '';
+let state = null;
+let timer = null;
+let visits = null;        // 服务端累计的后台访问次数（拿得到就显示服务端的）
+let localVisits = 0;      // 服务端没给这个字段时，至少把本页本次的刷新次数显示出来
+let clockSkew = 0;        // 服务端时间 - 本地时间（"回合剩余"按服务端时钟算）
+
+// 后台挂在该服务的主端口 /admin 路径上（同源），API 是 /admin/api/*：页面里所有 fetch 都走这里，因此天然没有
+// CORS，页面也不需要知道主端口是多少。把这份文件放到独立端口托管时，API_BASE 会退回 /api（后台自己的端口）。
+const API_BASE = /^\/admin(\/|$)/.test(location.pathname) ? '/admin/api' : '/api';
+
+async function api(path, body) {
+  const headers = { 'x-admin-password': password };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const target = API_BASE + path.replace(/^\/api/, '');
+  const res = await fetch(target, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error(data.error || ('HTTP ' + res.status)); e.status = res.status; throw e; }
+  return data;
+}
+
+function flash(el, text, kind) {
+  el.textContent = text || '';
+  el.className = 'msg ' + (kind || '');
+  if (text) setTimeout(() => { if (el.textContent === text) { el.textContent = ''; el.className = 'msg'; } }, 4000);
+}
+
+function fmtUptime(sec) {
+  if (!Number.isFinite(sec)) return '–';
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  if (d) return d + '天' + h + '时';
+  if (h) return h + '时' + m + '分';
+  if (m) return m + '分' + (sec % 60) + '秒';
+  return sec + '秒';
+}
+
+/** 需求 4：后台访问次数。服务端给了数字就直接用；给了对象（{pageViews,apiHits,todayPageViews,...}）就取页面访问数，
+ *  并把「今天 / 接口调用」写进副标题。都没有时退回本页本次的刷新次数。 */
+function visitCounter(stats) {
+  const v = pick(stats.visits, stats.adminVisits, stats.visitsTotal, stats.visitCount);
+  if (v && typeof v === 'object') {
+    const n = num(pick(v.pageViews, v.total, v.count, v.views, v.hits));
+    const extra = [];
+    if (num(v.todayPageViews) !== null) extra.push('今日 ' + num(v.todayPageViews) + ' 次');
+    if (num(v.apiHits) !== null) extra.push('接口调用 ' + num(v.apiHits) + ' 次');
+    if (num(v.days) !== null && num(v.days) > 1) extra.push('累计 ' + num(v.days) + ' 天');
+    return { n, extra };
+  }
+  return { n: num(v), extra: [] };
+}
+
+/** 需求 3：在线人数只数「在线」的会话（连着但正在断线重连的会话不算人）；服务端给了 stats.playersOnline 就信它。 */
+function playersOnline(data, stats) {
+  // 注意：不要用 stats.humans —— 那是「房间里坐着的真人席位」，不是在线人数
+  const fromStats = num(pick(stats.playersOnline, stats.players));
+  if (fromStats !== null) return { n: fromStats, note: '只数在线连接（不含断线重连）' };
+  const sessions = Array.isArray(data.players) ? data.players : null;
+  if (!sessions) return { n: null, note: '只数在线连接' };
+  const online = sessions.filter((p) => p && p.connected !== false).length;
+  const reconnecting = sessions.length - online;
+  return {
+    n: online,
+    note: reconnecting > 0
+      ? '另有 ' + reconnecting + ' 个断线重连的会话未计入'
+      : '只数在线连接（不含断线重连）',
+  };
+}
+
+/** 房间已占席位（真人 + 人机，未开局也算得出来）；rooms[].seats 是数组时按数组数，是数字时退回旧字段。 */
+function occupiedSeats(room) {
+  const seats = Array.isArray(room.seats) ? room.seats.filter((s) => s && (s.playerId || s.name)) : null;
+  if (seats && seats.length) return { n: seats.length, bots: seats.filter((s) => s.isBot).length };
+  const humans = num(room.humans), bots = num(room.bots);
+  if (humans === null && bots === null) return { n: null, bots: 0 };
+  return { n: (humans || 0) + (bots || 0), bots: bots || 0 };
+}
+
+/** 需求 6：房间上限人数。solo 时服务端给 1（rooms[].seats 是数字），拿不到就按模式推。 */
+function seatCap(room) {
+  const cap = num(room.seats);
+  if (cap !== null) return cap;
+  const max = num(pick(room.maxSeats, room.capacity, room.limit));
+  if (max !== null) return max;
+  return room.mode === 'solo' ? 1 : 4;
+}
+
+/** 需求 5：房间里的玩家 chip（未开局也显示；没有 players 就退回 seats 数组）。 */
+function playerChips(room) {
+  const list = Array.isArray(room.players) ? room.players.filter((p) => p && (p.playerId || p.name)) : [];
+  const src = list.length ? list : (Array.isArray(room.seats) ? room.seats.filter((s) => s && (s.playerId || s.name)) : []);
+  if (!src.length) return '<span class="t-dim">房间里还没有人</span>';
+  return src.map((p) => {
+    const seat = num(p.seat);
+    const isHost = p.host === true || p.isHost === true || (p.playerId && room.hostId && p.playerId === room.hostId);
+    const off = p.connected === false;
+    // 服务端如果没在 rooms[].players 里带 isBot，就按它的约定（人机 playerId 以 ai_ 开头）认出来
+    const bot = p.isBot === true || p.bot === true || (typeof p.playerId === 'string' && p.playerId.startsWith('ai_'));
+    const ready = p.ready === true;
+    const marks = [];
+    if (isHost) marks.push('房主');
+    if (bot) marks.push('人机');
+    else marks.push(ready ? '已准备' : '未准备');
+    if (off) marks.push('断线');
+    marks.push(room.mode === 'solo' ? '独立模拟' : '同盟');
+    return '<span class="pchip' + (isHost ? ' host' : '') + (ready && !bot ? ' ready' : '') + (off ? ' off' : '') + '">'
+      + '<b class="num">' + (seat !== null && seat >= 0 ? 'P' + (seat + 1) : 'P?') + '</b> ' + esc(p.name || p.playerId)
+      + ' <span class="t-lo">· ' + marks.join(' / ') + '</span>'
+      + '</span>';
+  }).join('');
+}
+
+/** 需求 8：回合剩余时间。服务端给的是「本阶段截止时间 deadline」+「剩余秒 remainingSec」，页面按本地时间算更跟手：
+ *  有 deadline 就 deadline-now（到点显示 00:00），没有 deadline 才用 remainingSec；两者都没有（未开局的房间）返回 null。 */
+function matchRemaining(match, serverNow) {
+  if (!match) return null;
+  const deadline = num(pick(match.deadline, match.endsAt));
+  if (deadline !== null && deadline > 0) {
+    const now = Number.isFinite(serverNow) ? serverNow : (Date.now() + clockSkew);
+    return fmtMMSS((deadline - now) / 1000);
+  }
+  const sec = num(pick(match.remainingSec, match.remainSec, match.turnRemainingSec, match.remaining));
+  if (sec === null) return null;
+  return sec > 0 ? fmtMMSS(sec) : null;
+}
+
+/** 字节数 → 人类可读（KB/MB/GB，保留 1 位小数）。 */
+function fmtBytes(n) {
+  if (!Number.isFinite(n)) return '–';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i += 1; }
+  return (i ? n.toFixed(1) : Math.round(n)) + ' ' + u[i];
+}
+function fmtRate(n) { return Number.isFinite(n) ? fmtBytes(n) + '/s' : '–'; }
+function setMeter(el, pct) {
+  if (!el) return;
+  const p = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+  el.style.width = p + '%';
+  el.className = p >= 85 ? 'hot' : '';
+}
+
+/** 资源检测卡（server/admin-monitor.js 的 snapshot）。没有任何字段时整卡提示"未启用"，不假装有数据。 */
+function renderResource(r) {
+  const tag = $('res-tag');
+  if (!r) {
+    tag.textContent = '未启用';
+    tag.className = 'tag warn';
+    $('res-foot').textContent = '后端没有接入资源检测器（server/admin-monitor.js）';
+    return;
+  }
+  tag.textContent = '采样中';
+  tag.className = 'tag on';
+  const cpu = r.cpu || {};
+  $('res-cpu').textContent = Number.isFinite(cpu.systemPct) ? cpu.systemPct + '%' : '–';
+  setMeter($('res-cpu-bar'), cpu.systemPct);
+  $('res-cpu-note').textContent = '整机 · 本进程 ' + (Number.isFinite(cpu.processPct) ? cpu.processPct + '%' : '–')
+    + (Number.isFinite(cpu.cores) ? ' · ' + cpu.cores + ' 核' : '')
+    + (cpu.model ? ' · ' + (String(cpu.model).replace(/\s+/g, ' ').length > 30
+      ? String(cpu.model).replace(/\s+/g, ' ').slice(0, 29) + '…'
+      : String(cpu.model).replace(/\s+/g, ' ')) : '');
+  const mem = r.memory || {};
+  $('res-mem').textContent = Number.isFinite(mem.usedPct) ? mem.usedPct + '%' : '–';
+  setMeter($('res-mem-bar'), mem.usedPct);
+  const procMem = mem.process || {};
+  $('res-mem-note').textContent = '已用 ' + fmtBytes(mem.usedBytes) + ' / ' + fmtBytes(mem.totalBytes)
+    + ' · 进程 RSS ' + fmtBytes(procMem.rssBytes)
+    + (Number.isFinite(procMem.rssPctOfSystem) ? '（' + procMem.rssPctOfSystem + '%）' : '');
+  const b = r.bandwidth;
+  if (b) {
+    $('res-net').textContent = '↑ ' + fmtRate(b.outBytesPerSec);
+    $('res-net-note').textContent = '↓ ' + fmtRate(b.inBytesPerSec) + ' · 累计发送 ' + fmtBytes(b.outBytes)
+      + ' / 接收 ' + fmtBytes(b.inBytes) + (b.windowSec ? ' · 窗口 ' + b.windowSec + ' 秒' : '');
+  } else {
+    $('res-net').textContent = '不可用';
+    $('res-net-note').textContent = '没有流量计数器（server/http/traffic.js）';
+  }
+  const site = r.site || {};
+  $('res-visits').textContent = Number.isFinite(site.pageViews) ? site.pageViews : '–';
+  const bits = [];
+  if (Number.isFinite(site.todayPageViews)) bits.push('今日 ' + site.todayPageViews);
+  if (Number.isFinite(site.uniqueVisitors)) bits.push('独立访客 ' + site.uniqueVisitors);
+  if (Number.isFinite(site.wsConnections)) bits.push('WS 累计 ' + site.wsConnections);
+  if (Number.isFinite(site.onlinePlayers)) bits.push('在线 ' + site.onlinePlayers + ' 人');
+  if (Number.isFinite(site.roomsOnline)) bits.push('在线房间 ' + site.roomsOnline);
+  $('res-visits-note').textContent = bits.length ? bits.join(' · ') : '首页 GET / 的打开次数';
+  const p2 = r.process || {};
+  $('res-foot').textContent = '采样 ' + new Date(r.at).toLocaleTimeString('zh-CN')
+    + ' · 进程运行 ' + fmtUptime(p2.uptimeSec)
+    + (p2.node ? ' · Node ' + p2.node : '')
+    + (p2.platform ? ' · ' + p2.platform + '/' + (p2.arch || '') : '');
+}
+
+function render(data) {
+  state = data;
+  maybeRemindDefaultPassword(data);
+  const st = data.stats || {};
+  // 服务端时间与本地时间的差（后台和服务器不同机时，"回合剩余"按服务端时钟算才准）
+  if (Number.isFinite(data.now)) clockSkew = data.now - Date.now();
+  $('s-sockets').textContent = st.sockets ?? '–';
+  $('s-rooms').textContent = st.rooms ?? '–';
+  $('s-matches').textContent = st.matches ?? '–';
+  $('s-uptime').textContent = fmtUptime(st.uptimeSec);
+  // 头部版本信息（ADMIN-DESIGN §10.4）：后台自身的 build 与 SERVER_NAME，避免"改了没生效"的误判
+  const serverName = typeof data.serverName === 'string' && data.serverName ? data.serverName : (st.serverName || '–');
+  $('s-server-name').textContent = serverName;
+  if (typeof data.adminBuild === 'string') $('s-admin-build').textContent = data.adminBuild;
+
+  const notice = data.notice;
+  $('notice-now').innerHTML = notice && notice.text
+    ? '<div class="notice"><b class="t-amber">正在播放：</b>' + esc(notice.text)
+      + '<div class="t-dim" style="margin-top:4px;font-size:12px">发布 ' + new Date(notice.at).toLocaleString('zh-CN')
+      + (notice.until ? ' · ' + new Date(notice.until).toLocaleTimeString('zh-CN') + ' 自动清除' : ' · 常驻') + '</div></div>'
+    : '<div class="t-dim" style="margin-top:8px">当前没有公告</div>';
+  if (document.activeElement !== $('notice-text')) $('notice-text').value = notice && notice.text ? notice.text : '';
+
+  // ---- 统计卡（需求 3 / 4）：在线人数（不含断线重连）/ 房间数 / 后台访问次数 ---------------------------
+  const online = playersOnline(data, st);
+  $('stats-players').textContent = online.n === null ? '–' : online.n;
+  $('stats-players-note').textContent = online.note;
+  const roomCount = num(pick(st.rooms, Array.isArray(data.rooms) ? data.rooms.length : null));
+  $('stats-rooms').textContent = roomCount === null ? '–' : roomCount;
+  const vis = visitCounter(st);
+  visits = vis.n;
+  $('stats-visits').textContent = vis.n === null ? localVisits : vis.n;
+  const visNote = [];
+  if (vis.n === null) visNote.push('本页本次刷新 ' + localVisits + ' 次（服务端未提供访问计数）');
+  else visNote.push('服务端累计页面访问数' + (vis.extra.length ? ' · ' + vis.extra.join(' · ') : ''));
+  if (vis.n !== null) visNote.push('本页本次刷新 ' + localVisits + ' 次');
+  $('stats-visits-note').textContent = visNote.join(' · ');
+  const matches = num(pick(st.matches, st.matchesCount));
+  const sockets = num(st.sockets);
+  $('stats-matches').textContent = (matches === null ? '–' : matches) + (sockets === null ? '' : ' / ' + sockets);
+  $('stats-matches-note').textContent = '模拟中的房间数 / WebSocket 连接数';
+
+  // ---- 资源检测 ---------------------------------------------------------------------------------------
+  renderResource(data.resource);
+
+  // ---- 服务器开关 + 闪断预警 -------------------------------------------------------------------------
+  const gate = data.gate || { open: true, text: '' };
+  $('gate-tag').textContent = gate.open ? '运行中' : '已关闭';
+  $('gate-tag').className = 'tag ' + (gate.open ? 'on' : 'warn');
+  $('btn-gate').textContent = gate.open ? '关闭服务器' : '重新开启服务器';
+  $('btn-gate').className = gate.open ? 'danger' : '';
+  // 0.3.3 没有测试车道：关服时所有人（包括运维自己）都走同一道门，重开后再从本页进入
+  $('gate-note').textContent = gate.open
+    ? '玩家可正常连入'
+    : '已停止接入：新连接会被提醒并挡在标题界面；在线玩家已提示「' + (gate.text || '服务器已关闭') + '」并断开';
+
+  const warn = data.warn;
+  if (warn) {
+    const mm = String(Math.floor(warn.remainingSec / 60)).padStart(2, '0');
+    const ss = String(warn.remainingSec % 60).padStart(2, '0');
+    const ends = warn.closeOnExpire ? '结束后关闭服务器' : '结束后仅取消预警';
+    $('warn-now').innerHTML = '<div class="notice"><b class="t-amber">预警进行中：</b>' + esc(warn.text)
+      + ' <span class="num">' + mm + ':' + ss + '</span>'
+      + '<div class="t-dim" style="margin-top:4px;font-size:12px">发布 ' + new Date(warn.at).toLocaleTimeString('zh-CN')
+      + ' · ' + ends + '</div></div>';
+  } else {
+    $('warn-now').innerHTML = '<div class="t-dim">当前没有预警</div>';
+  }
+
+  const players = data.players || [];
+  $('p-count').textContent = players.length;
+  $('players-empty').hidden = players.length > 0;
+  $('s-humans').textContent = players.filter((p) => p && p.connected !== false).length;
+  $('players').innerHTML = players.map((p) => `
+    <tr>
+      <td class="t-hi">${esc(p.name)}</td>
+      <td class="num hide-sm t-dim">${esc(p.playerId)}</td>
+      <td class="hide-sm t-lo">${esc(p.addr)}</td>
+      <td>${p.roomCode ? '<span class="code">' + esc(p.roomCode) + '</span>' : '<span class="t-dim">大厅</span>'}</td>
+      <td>${p.connected ? '<span class="tag on">在线</span>' : '<span class="tag warn">断线重连中</span>'}</td>
+      <td class="num hide-sm t-dim">${p.idleSec}s</td>
+      <td style="text-align:right"><button class="danger" data-kick="${esc(p.playerId)}" data-name="${esc(p.name)}">${p.inRoom ? '踢出房间' : '断开连接'}</button></td>
+    </tr>`).join('');
+
+  const rooms = data.rooms || [];
+  $('r-count').textContent = rooms.length;
+  $('rooms-empty').hidden = rooms.length > 0;
+  // 细节行（matchrow / playrow）横跨整张表的列数，按表头实际列数算，列增删不用改这里
+  const cols = document.querySelectorAll('#rooms').length
+    ? document.getElementById('rooms').closest('table').tHead.rows[0].cells.length : 9;
+  $('rooms').innerHTML = rooms.map((r) => {
+    const d = DIFF[r.difficulty] || [r.difficulty || '–', 'var(--lo)'];
+    const m = r.match;
+    const cap = seatCap(r);
+    const occ = occupiedSeats(r);
+    // 需求 8：回合剩余时间（rooms[].match.deadline / remainingSec → mm:ss，未开局或本阶段没有计时就 —）
+    const remain = matchRemaining(m, data.now);
+    const roomPlayers = Array.isArray(r.players) ? r.players.filter((p) => p && (p.playerId || p.name)) : [];
+    const detailPlayers = (m && Array.isArray(m.players) && m.players.length) ? m.players : roomPlayers;
+
+    // 模拟中的房间：第二行是回合 / 阶段 / 场上玩家
+    const detail = m ? `
+    <tr class="matchrow">
+      <td colspan="${cols}">
+        <span class="tag ${m.kind === 'combat' ? 'warn' : 'on'}">${esc(m.group || m.phaseLabel || '模拟中')}</span>
+        <span class="t-lo" style="margin-left:6px">${esc(m.phaseLabel || m.phase || '–')}</span>
+        <span class="num" style="margin-left:8px">回合 ${esc(m.round ?? '–')}<span class="t-dim">/${esc(m.lastRound ?? '–')}</span></span>
+        <span class="num" style="margin-left:8px">剩余 ${remain || '—'}</span>
+        ${m.paused ? '<span class="tag warn" style="margin-left:6px">已暂停</span>' : ''}
+        <span class="t-dim" style="margin-left:10px">${detailPlayers.map((p) =>
+          '<span class="pchip' + (p.alive === false ? ' dead' : '') + (p.connected === false ? ' off' : '') + '">'
+          + '<b class="num">P' + (num(p.seat) !== null ? num(p.seat) + 1 : '?') + '</b> ' + esc(p.name || p.playerId) + (p.isBot ? ' 🤖' : '')
+          + (p.alive === false ? ' 已淘汰' : '')
+          + (p.connected === false ? ' 断线' : '')
+          + (Number.isFinite(p.lp) ? ' <span class="t-lo">HP ' + esc(p.lp) + '</span>' : '')
+          + '</span>').join('')}</span>
+      </td>
+    </tr>` : '';
+
+    // 需求 5：房内玩家一览——未开局（没有 match）也列出来
+    const playrow = m ? '' : `
+    <tr class="playrow">
+      <td colspan="${cols}">
+        <span class="plabel">房内玩家</span>
+        ${playerChips(r)}
+        <span class="t-dim" style="margin-left:6px">· 席位 <span class="num">${occ.n === null ? '–' : occ.n}</span>/<span class="num">${cap}</span></span>
+      </td>
+    </tr>`;
+
+    return `
+    <tr>
+      <td><span class="code">${esc(r.code)}</span>${r.private || r.isPrivate ? ' <span class="tag warn">私密</span>' : ''}</td>
+      <td>${r.mode === 'solo' ? '独立' : '同盟'}</td>
+      <td style="color:${d[1]}">${esc(d[0])}</td>
+      <td class="num t-hi">${occ.n === null ? '–' : occ.n}<span class="t-dim">/${cap}</span>${occ.bots ? ' <span class="t-lo">🤖' + occ.bots + '</span>' : ''}</td>
+      <td class="num hide-sm t-dim">${r.spectators != null ? (Array.isArray(r.spectators) ? r.spectators.length : r.spectators) : '0'}</td>
+      <td class="num ${remain ? 't-hi' : 't-dim'}">${remain || '—'}</td>
+      <td>${r.inMatch ? '<span class="tag warn">模拟中</span>' : '<span class="tag on">大厅</span>'}</td>
+      <td class="hide-sm t-lo">${esc(r.hostName || '–')}</td>
+      <td style="text-align:right"><button class="danger" data-close="${esc(r.code)}">关闭房间</button></td>
+    </tr>${detail}${playrow}`;
+  }).join('');
+}
+
+async function refresh() {
+  try {
+    const data = await api('/api/state');
+    localVisits += 1;
+    showPanel(true);
+    render(data);
+  } catch (e) {
+    if (e.status === 401 || e.status === 429) {
+      localStorage.removeItem(PW_KEY);
+      password = '';
+      showPanel(false);
+      $('gate-msg').textContent = e.message;
+    } else {
+      flash($('notice-msg'), '刷新失败：' + e.message, 'err');
+    }
+  }
+}
+
+function showPanel(on) {
+  $('gate').hidden = on;
+  $('panel').hidden = !on;
+  if (on && !timer) timer = setInterval(() => { if (!document.hidden) refresh(); }, 2000);
+  if (!on && timer) { clearInterval(timer); timer = null; }
+  if (on) { loadAccounts(); loadFeedback(); }
+}
+
+// ---- 账号管理（账号系统第二期）--------------------------------------------
+/** 时间戳 → 「2026-11-14 22:03」。 */
+function fmtTime(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return '—';
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// 账号列表折叠（业主 2026-11-14：「账号一多就容易出问题」）：默认只渲染前 20 条，
+// 「显示全部」再展开 —— 避免几千个账号一次性铺满 DOM。
+let accExpanded = false;
+const ACC_PAGE = 20;
+async function loadAccounts() {
+  const box = $('acc-list');
+  if (!box) return;
+  const q = ($('acc-q') && $('acc-q').value || '').trim();
+  try {
+    const data = await api('/api/accounts' + (q ? '?q=' + encodeURIComponent(q) : ''));
+    const rows = Array.isArray(data.accounts) ? data.accounts : [];
+    // 业主 2026-11-14：管理员**置顶**展示（同级再按昵称排），翻页也不会被挤到后面
+    rows.sort((a, b) => ((b.admin ? 1 : 0) - (a.admin ? 1 : 0))
+      || String(a.nickname || '').localeCompare(String(b.nickname || ''), 'zh-Hans-CN'));
+    if ($('acc-tag')) $('acc-tag').textContent = rows.length + ' 个';
+    if (!rows.length) { box.innerHTML = '<p class="t-dim" style="font-size:12px">没有匹配的账号。</p>'; return; }
+    const shown = accExpanded ? rows : rows.slice(0, ACC_PAGE);
+    const more = rows.length > ACC_PAGE
+      ? `<div style="margin-top:8px;text-align:center"><button class="ghost" id="acc-more" style="font-size:12px">
+          ${accExpanded ? `收起（只显示前 ${ACC_PAGE} 个）` : `显示全部（共 ${rows.length} 个）`}</button></div>`
+      : '';
+    box.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr class="t-lo">
+        <th style="text-align:left;padding:6px 4px">QQ 号</th>
+        <th style="text-align:left;padding:6px 4px">昵称#tag</th>
+        <th style="text-align:left;padding:6px 4px">注册</th>
+        <th style="text-align:left;padding:6px 4px">最后登录</th>
+        <th style="text-align:left;padding:6px 4px">状态</th>
+        <th style="text-align:left;padding:6px 4px">操作</th>
+      </tr></thead><tbody>
+      ${shown.map((a) => `<tr style="border-top:1px solid var(--line)">
+        <td style="padding:6px 4px;font-family:var(--mono)">${escapeHtml(a.qq || '')}</td>
+        <td style="padding:6px 4px">${a.admin ? `<span style="color:#f2c94c;font-weight:600" title="管理员">★ ${escapeHtml(a.nickname || '')}</span>#${escapeHtml(String(a.tag || ''))}` : `${escapeHtml(a.nickname || '')}#${escapeHtml(String(a.tag || ''))}`}${a.protected ? ' <span class="tag" title="固定账号：不可修改 / 删除 / 封禁 / 登录 / 撤销管理员 / 重置密码">🔒 固定</span>' : ''}</td>
+        <td style="padding:6px 4px" class="t-dim">${fmtTime(a.createdAt)}</td>
+        <td style="padding:6px 4px" class="t-dim">${fmtTime(a.lastSeenAt)}</td>
+        <td style="padding:6px 4px">${a.ban ? `<span style="color:#ff8a7a">已封禁</span><br><span class="t-dim">${escapeHtml(a.ban.reason || '')}</span>` : '<span class="t-dim">正常</span>'}</td>
+        <td style="padding:6px 4px">
+          ${a.protected ? '<span class="t-dim" style="font-size:11.5px" title="固定账号：封禁 / 重置密码 / 取消管理员一律被服务端拒绝">固定账号 · 不可操作</span>' : `
+          <button class="ghost" data-acc-ban="${escapeHtml(a.id)}" data-acc-banned="${a.ban ? '1' : ''}" style="font-size:11.5px">${a.ban ? '解封' : '封禁'}</button>
+          <button class="ghost" data-acc-reset="${escapeHtml(a.id)}" style="font-size:11.5px">重置密码</button>
+          <button class="ghost" data-acc-rename="${escapeHtml(a.id)}" data-acc-cur="${escapeHtml(a.nickname || '')}" style="font-size:11.5px">改名</button>
+          <button class="ghost" data-acc-delete="${escapeHtml(a.id)}" data-acc-qq="${escapeHtml(a.qq || '')}" style="font-size:11.5px;color:#ff8a7a;border-color:#ff8a7a55">删除账号</button>
+          <button class="ghost" data-acc-admin="${escapeHtml(a.id)}" data-acc-isadmin="${a.admin ? '1' : ''}" style="font-size:11.5px;${a.admin ? 'color:#f2c94c;border-color:#f2c94c55' : ''}">${a.admin ? '★ 取消管理员' : '设为管理员'}</button>`}
+        </td>
+      </tr>`).join('')}
+      </tbody></table>${more}`;
+    const moreBtn = $('acc-more');
+    if (moreBtn) moreBtn.onclick = () => { accExpanded = !accExpanded; loadAccounts(); };
+  } catch (e) {
+    box.innerHTML = `<p class="t-dim" style="font-size:12px">读取账号失败：${escapeHtml(e.message)}</p>`;
+  }
+}
+
+// ---- 问题反馈（server/feedback.js）：玩家从启动器提交 · 业主 2026-11-21 加回复 / 已解决折叠 ----
+let fbAt = 0;
+/** 一条反馈的头部：时间 · 反馈人 · IP · 状态标签 */
+function fbHead(it) {
+  const done = it.status === 'resolved';
+  const tag = done
+    ? '<span class="tag" style="font-size:11px;opacity:.8">已解决</span>'
+    : '<span class="tag" style="font-size:11px;background:#1d4b3a;color:#9fe6c4">未解决</span>';
+  return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span class="t-dim" style="font-size:11.5px">${fmtTime(it.at)} · <b style="color:#9fe6c4">${escapeHtml(it.name || '未署名')}</b>${it.ip ? ' · ' + escapeHtml(it.ip) : ''}</span>
+    ${tag}</div>`;
+}
+/** 一条反馈的正文 + 回复框 + 操作按钮 */
+function fbBody(it) {
+  const done = it.status === 'resolved';
+  const id = escapeHtml(it.id);
+  return `<div style="margin-top:4px;white-space:pre-wrap;word-break:break-word">${escapeHtml(it.text || '（无描述）')}</div>
+    ${it.reply ? `<div style="margin-top:6px;padding:6px 8px;border-left:2px solid #2f7a5c;background:rgba(47,122,92,.12);font-size:12px;white-space:pre-wrap">管理员回复：${escapeHtml(it.reply)}</div>` : ''}
+    ${it.diag ? `<details style="margin-top:6px"><summary class="t-dim" style="font-size:11.5px;cursor:pointer">诊断信息</summary><pre class="t-dim" style="white-space:pre-wrap;font-size:11.5px;margin:6px 0 0">${escapeHtml(it.diag)}</pre></details>` : ''}
+    <div style="margin-top:8px">
+      <textarea data-fb-reply="${id}" placeholder="回复这条反馈…（留空保存即清除回复）" style="width:100%;min-height:54px;font-size:12px">${escapeHtml(it.reply || '')}</textarea>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="ghost" data-fb-save="${id}" style="font-size:11.5px">保存回复</button>
+        <button class="ghost" data-fb-status="${id}" data-to="${done ? 'open' : 'resolved'}" style="font-size:11.5px">${done ? '标记未解决' : '标记已解决'}</button>
+        <button class="ghost" data-fb-del="${id}" style="font-size:11.5px">删除</button>
+      </div>
+    </div>`;
+}
+async function loadFeedback(force = false) {
+  const box = $('fb-list');
+  if (!box) return;
+  if (!force && Date.now() - fbAt < 8000) return;   // 2 秒轮询里不必每次都拉
+  fbAt = Date.now();
+  try {
+    const data = await api('/api/feedback');
+    const items = Array.isArray(data.items) ? data.items : [];
+    if ($('fb-count')) $('fb-count').textContent = (data.count || 0) + ' 条';
+    if (!items.length) { box.innerHTML = '<p class="t-dim" style="font-size:12px">还没有反馈。</p>'; return; }
+    const open = items.filter((it) => it.status !== 'resolved');
+    const done = items.filter((it) => it.status === 'resolved');
+    // 已解决的一律折叠成 <details>，不再占版面（业主 2026-11-21）
+    const openHtml = open.length
+      ? `<div class="t-dim" style="font-size:11.5px;margin-bottom:6px">未解决 ${open.length} 条</div>` +
+        open.map((it) => `<article style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px">${fbHead(it)}${fbBody(it)}</article>`).join('')
+      : '<p class="t-dim" style="font-size:12px">没有未解决的反馈 🎉</p>';
+    const doneHtml = done.length
+      ? `<div class="t-dim" style="font-size:11.5px;margin:12px 0 6px">已解决 ${done.length} 条（点击展开）</div>` +
+        done.map((it) => `<details style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;opacity:.9"><summary style="cursor:pointer">${fbHead(it)}</summary>${fbBody(it)}</details>`).join('')
+      : '';
+    box.innerHTML = openHtml + doneHtml;
+  } catch (e) {
+    box.innerHTML = '<p class="t-dim" style="font-size:12px">读取失败：' + escapeHtml(e.message) + '</p>';
+  }
+}
+if ($('fb-reload')) $('fb-reload').onclick = () => loadFeedback(true);
+document.addEventListener('click', async (ev) => {
+  const save = ev.target.closest('[data-fb-save]');
+  if (save) {
+    const id = save.getAttribute('data-fb-save');
+    const ta = document.querySelector(`[data-fb-reply="${CSS.escape ? CSS.escape(id) : id}"]`);
+    try {
+      await api('/api/feedback/update', { id, reply: ta ? ta.value : '' });
+      flash($('fb-msg'), '回复已保存', 'ok');
+      loadFeedback(true);
+    } catch (e) { flash($('fb-msg'), '保存失败：' + e.message, 'err'); }
+    return;
+  }
+  const st = ev.target.closest('[data-fb-status]');
+  if (st) {
+    const id = st.getAttribute('data-fb-status');
+    const to = st.getAttribute('data-to');
+    try {
+      await api('/api/feedback/update', { id, status: to });
+      flash($('fb-msg'), to === 'resolved' ? '已标记为已解决（自动折叠）' : '已重新打开', 'ok');
+      loadFeedback(true);
+    } catch (e) { flash($('fb-msg'), '操作失败：' + e.message, 'err'); }
+    return;
+  }
+  const b = ev.target.closest('[data-fb-del]');
+  if (!b) return;
+  if (!confirm('删除这条反馈？')) return;
+  try {
+    await api('/api/feedback/delete', { id: b.getAttribute('data-fb-del') });
+    flash($('fb-msg'), '已删除', 'ok');
+    loadFeedback(true);
+  } catch (e) { flash($('fb-msg'), '删除失败：' + e.message, 'err'); }
+});
+
+/** 极简 HTML 转义（账号昵称是玩家输入，直接拼进 innerHTML 不安全）。 */
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function accToggleBan(id, banned) {
+  try {
+    if (banned) {
+      await api('/api/accounts/unban', { id });
+      flash($('acc-msg'), '已解封', 'ok');
+    } else {
+      const reason = prompt('封禁原因（会显示给玩家）', '违规操作') || '';
+      await api('/api/accounts/ban', { id, reason });
+      flash($('acc-msg'), '已封禁并踢下线', 'ok');
+    }
+    await loadAccounts();
+  } catch (e) { flash($('acc-msg'), e.message, 'err'); }
+}
+
+async function accResetPassword(id) {
+  const pw = prompt('输入新的临时密码（8–128 位，请通过私聊发给玩家）');
+  if (!pw) return;
+  try {
+    await api('/api/accounts/reset', { id, password: pw });
+    flash($('acc-msg'), '已重置密码，玩家需要用新密码重新登录', 'ok');
+    await loadAccounts();
+  } catch (e) { flash($('acc-msg'), e.message, 'err'); }
+}
+
+/** 后台重命名（业主 2026-11-17）：直接改昵称，不受玩家侧改名冷却限制。 */
+async function accRename(id, current) {
+  const nickname = prompt(`输入新的昵称（当前：${current || '（空）'}）`, current || '');
+  if (nickname == null) return;
+  const name = nickname.trim();
+  if (!name) { flash($('acc-msg'), '昵称不能为空', 'err'); return; }
+  if (name === current) { flash($('acc-msg'), '昵称没有变化', 'err'); return; }
+  try {
+    await api('/api/accounts/rename', { id, nickname: name });
+    flash($('acc-msg'), `已重命名为「${name}」，玩家下次进入即生效`, 'ok');
+    await loadAccounts();
+  } catch (e) { flash($('acc-msg'), e.message, 'err'); }
+}
+
+/** 删除账号（业主 2026-11-17）：账号 + 云存档 + 会话 + 好友关系一起删；要求手打 QQ 号二次确认。 */
+async function accDelete(id, qq) {
+  if (!confirm(`删除这个账号？\n\n账号本体、云存档、登录会话、好友/黑名单关系都会一起删除，**不可恢复**。\n\n确定继续？`)) return;
+  const typed = prompt(`再确认一次：输入该账号的 QQ 号（${qq || '空'}）以删除`, '');
+  if (typed == null) return;
+  if (String(typed).trim() !== String(qq || '').trim()) { flash($('acc-msg'), 'QQ 号不一致，已取消删除', 'err'); return; }
+  try {
+    const r = await api('/api/accounts/delete', { id });
+    const soc = r && r.social ? `（社交关系清理 ${Object.values(r.social).reduce((a, b) => a + b, 0)} 条）` : '';
+    flash($('acc-msg'), '账号已删除' + soc, 'ok');
+    await loadAccounts();
+  } catch (e) { flash($('acc-msg'), e.message, 'err'); }
+}
+
+$('btn-acc-search') && ($('btn-acc-search').onclick = () => { accExpanded = false; loadAccounts(); });
+$('acc-q') && $('acc-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { accExpanded = false; loadAccounts(); } });
+$('acc-list') && $('acc-list').addEventListener('click', (e) => {
+  const banBtn = e.target.closest('[data-acc-ban]');
+  if (banBtn) { accToggleBan(banBtn.getAttribute('data-acc-ban'), banBtn.getAttribute('data-acc-banned') === '1'); return; }
+  const adminBtn = e.target.closest('[data-acc-admin]');
+  if (adminBtn) { accToggleAdmin(adminBtn.getAttribute('data-acc-admin'), adminBtn.getAttribute('data-acc-isadmin') === '1'); return; }
+  const resetBtn = e.target.closest('[data-acc-reset]');
+  if (resetBtn) { accResetPassword(resetBtn.getAttribute('data-acc-reset')); return; }
+  const renameBtn = e.target.closest('[data-acc-rename]');
+  if (renameBtn) { accRename(renameBtn.getAttribute('data-acc-rename'), renameBtn.getAttribute('data-acc-cur') || ''); return; }
+  const deleteBtn = e.target.closest('[data-acc-delete]');
+  if (deleteBtn) { accDelete(deleteBtn.getAttribute('data-acc-delete'), deleteBtn.getAttribute('data-acc-qq') || ''); }
+});
+
+// 管理员开关（业主 2026-11-14）：被设为管理员的账号在游戏里头像右上角显示金标
+async function accToggleAdmin(id, isAdmin) {
+  try {
+    await api('/api/accounts/setAdmin', { id, admin: !isAdmin });
+    flash($('acc-msg'), isAdmin ? '已取消管理员' : '已设为管理员（客户端显示金标）', 'ok');
+    await loadAccounts();
+  } catch (e) { flash($('acc-msg'), e.message, 'err'); }
+}
+
+async function login() {
+  const pw = $('pw').value;
+  if (!pw) { $('gate-msg').textContent = '请输入口令'; return; }
+  password = pw;
+  $('gate-msg').textContent = '';
+  try {
+    await api('/api/state').then((d) => { localStorage.setItem(PW_KEY, pw); localVisits += 1; render(d); });
+    $('pw').value = '';
+    showPanel(true);
+  } catch (e) {
+    password = '';
+    $('gate-msg').textContent = e.message;
+  }
+}
+
+$('btn-login').onclick = login;
+$('pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+$('btn-refresh').onclick = refresh;
+$('btn-logout').onclick = () => { localStorage.removeItem(PW_KEY); password = ''; showPanel(false); $('gate-msg').textContent = ''; };
+
+$('btn-notice').onclick = async () => {
+  const text = $('notice-text').value.trim();
+  flash($('notice-msg'), '', '');
+  try {
+    await api('/api/notice', { text, ttlMin: Number($('notice-ttl').value) || 0 });
+    flash($('notice-msg'), text ? '已发布，所有客户端即时显示' : '内容为空 = 已清除公告', 'ok');
+    refresh();
+  } catch (e) { flash($('notice-msg'), '发布失败：' + e.message, 'err'); }
+};
+$('btn-notice-clear').onclick = async () => {
+  try { await api('/api/notice', { text: '' }); flash($('notice-msg'), '公告已清除', 'ok'); refresh(); }
+  catch (e) { flash($('notice-msg'), '清除失败：' + e.message, 'err'); }
+};
+
+// ---- 弹窗公告（业主 2026-11-21）：写 data/announcement.json，玩家每次连接都弹 ----
+/** 把当前弹窗公告回填到表单（打开后台时调一次）。 */
+async function loadPopupAnnouncement() {
+  try {
+    const r = await api('/api/announcement');
+    const row = r && r.doc && Array.isArray(r.doc.announcements) ? r.doc.announcements[0] : null;
+    if (row) {
+      if ($('ap-title')) $('ap-title').value = row.title || '';
+      if ($('ap-text')) $('ap-text').value = row.text || '';
+      if ($('ap-level') && row.level) $('ap-level').value = row.level;
+      if ($('ap-now')) {
+        const end = row.startAt && row.durationSeconds ? new Date(Date.parse(row.startAt) + row.durationSeconds * 1000) : null;
+        $('ap-now').textContent = '当前生效中，截止 ' + (end ? end.toLocaleString() : '未知');
+      }
+    } else if ($('ap-now')) {
+      $('ap-now').textContent = '当前没有弹窗公告。';
+    }
+  } catch (e) {
+    if ($('ap-now')) $('ap-now').textContent = '读取失败：' + e.message;
+  }
+}
+if ($('btn-ap')) $('btn-ap').onclick = async () => {
+  const text = $('ap-text').value.trim();
+  const title = $('ap-title').value.trim();
+  flash($('ap-msg'), '', '');
+  try {
+    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours: Number($('ap-hours').value) || 720 });
+    flash($('ap-msg'), (r && r.note) || '已保存', 'ok');
+    loadPopupAnnouncement();
+  } catch (e) { flash($('ap-msg'), '保存失败：' + e.message, 'err'); }
+};
+if ($('btn-ap-clear')) $('btn-ap-clear').onclick = async () => {
+  try {
+    await api('/api/announcement', { text: '' });
+    if ($('ap-text')) $('ap-text').value = '';
+    if ($('ap-title')) $('ap-title').value = '';
+    flash($('ap-msg'), '弹窗公告已撤下', 'ok');
+    loadPopupAnnouncement();
+  } catch (e) { flash($('ap-msg'), '撤下失败：' + e.message, 'err'); }
+};
+void loadPopupAnnouncement();
+
+// ---- 开 / 关服务器 -----------------------------------------------------------------------------------
+$('btn-gate').onclick = async () => {
+  const open = !(state && state.gate && state.gate.open === false);
+  const text = $('gate-text').value.trim();
+  if (open) {
+    if (!confirm('关闭服务器？\n\n· 新连接会被挡下并提示原因（关闭码 4004）\n· 在线玩家会先收到提醒，约 0.3 秒后断开\n· 后台页面本身不受影响，可随时重新开启')) return;
+  } else if (!confirm('重新开启服务器？玩家可以重新进入。')) return;
+  $('btn-gate').disabled = true;
+  try {
+    const r = await api('/api/gate', open ? { open: false, text } : { open: true });
+    flash($('gate-state-msg'), r.gate.open ? '服务器已开启' : '服务器已关闭', 'ok');
+  } catch (e) { flash($('gate-state-msg'), '操作失败：' + e.message, 'err'); }
+  $('btn-gate').disabled = false;
+  refresh();
+};
+
+// ---- 闪断更新预警 ------------------------------------------------------------------------------------
+$('btn-warn').onclick = async () => {
+  const sec = Number($('warn-sec').value) || 180;
+  const mins = Math.round(sec / 60);
+  if (!confirm('发布闪断更新预警？\n\n· 所有客户端顶部会出现红色倒计时（' + mins + ' 分钟）\n'
+    + ($('warn-close').checked ? '· 倒计时结束时自动关闭服务器（玩家被提示并踢回标题界面）' : '· 倒计时结束只取消预警，不关服务器'))) return;
+  try {
+    await api('/api/warn', { seconds: sec, text: $('warn-text').value.trim(), closeOnExpire: $('warn-close').checked });
+    flash($('warn-msg'), '预警已发布', 'ok');
+  } catch (e) { flash($('warn-msg'), '发布失败：' + e.message, 'err'); }
+  refresh();
+};
+$('btn-warn-clear').onclick = async () => {
+  try { await api('/api/warn', { seconds: 0 }); flash($('warn-msg'), '预警已取消', 'ok'); }
+  catch (e) { flash($('warn-msg'), '取消失败：' + e.message, 'err'); }
+  refresh();
+};
+
+// ---- 热更：上传 zip 覆盖到安装目录，服务器不重启 ------------------------------------------------------
+// 传的是原始 zip 字节（不走 JSON）；服务端解压后重算 build 标记，在线客户端的 buildGuard 轮询到新 build
+// 就会提示刷新（对局中等这局结束再刷，不会打断玩家）。
+// ---- 远程自重启：没有守护进程时也安全（服务端先做语法自检，不通过就不重启）------------------------------
+// ---- 热更锁（业主 2026-11-15）：热更与重启都必须带上。当前口径是「专用热更锁 或 当前后台口令」都认 ——
+//      专用锁存在 admin-update-key.json（scrypt 密文），和后台口令解耦；两把钥匙等价，方便起见可以只填口令。
+const lockOf = () => (($('update-lock') && $('update-lock').value) || '').trim();
+$('btn-restart').onclick = async () => {
+  if (!lockOf()) { flash($('update-msg'), '先填热更锁（专用密钥或后台口令）', 'err'); $('update-lock').focus(); return; }
+  if (!confirm('重启服务器？\n\n'
+    + '· 会先对 server/ 与 shared/ 的代码做语法自检，不通过就**不会**重启\n'
+    + '· 通过后旧进程退出、新进程约 2 秒内接管\n'
+    + '· 在线玩家会短暂断线并自动重连')) return;
+  $('btn-restart').disabled = true;
+  flash($('update-msg'), '正在重启…');
+  try {
+    const res = await fetch(API_BASE + '/restart', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-admin-password': password, 'x-update-key': lockOf() },
+      body: '{}',
+    });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(r.message || r.error || ('HTTP ' + res.status));
+    flash($('update-msg'), `自检 ${r.checked} 个文件通过，等待新进程…`);
+    let up = false;
+    for (let i = 0; i < 40; i++) {
+      await new Promise((ok) => setTimeout(ok, 500));
+      try {
+        const h = await fetch('/healthz', { cache: 'no-store' });
+        if (h.ok) {
+          const b = await h.json().catch(() => ({}));
+          flash($('update-msg'), `新进程已就绪：v${b.version || '?'} · build ${b.build || '?'}`, 'ok');
+          up = true;
+          break;
+        }
+      } catch { /* 正在重启，继续等 */ }
+    }
+    if (!up) flash($('update-msg'), '20 秒内没等到新进程，请看 .cache/restart.log（必要时手动开启动器）', 'err');
+  } catch (e) {
+    flash($('update-msg'), '重启失败：' + e.message, 'err');
+  } finally {
+    $('btn-restart').disabled = false;
+  }
+};
+
+$('btn-update').onclick = async () => {
+  const file = $('update-file').files && $('update-file').files[0];
+  if (!file) { flash($('update-msg'), '先选一个 zip', 'err'); return; }
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  if (!confirm('上传并覆盖到安装目录？\n\n' + file.name + '（' + mb + ' MB）\n'
+    + '· 服务器不会重启\n'
+    + '· 在线玩家约 1 分钟内收到刷新提示（对局中不打断）\n'
+    + '· 这一步会直接改磁盘上的文件')) return;
+  $('btn-update').disabled = true;
+  flash($('update-msg'), '上传中（' + mb + ' MB）…');
+  try {
+    const res = await fetch(API_BASE + '/update', {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream', 'x-admin-password': password, 'x-update-key': lockOf() },
+      body: file,
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.ok !== true) throw new Error((data && (data.error || data.message)) || ('HTTP ' + res.status));
+    const c = data.changed || {};
+    const parts = [];
+    if (c.public) parts.push('客户端 ' + c.public);
+    if (c.data) parts.push('数据 ' + c.data);
+    if (c.shared) parts.push('共享 ' + c.shared);
+    if (c.server) parts.push('服务端 ' + c.server);
+    if (c.other) parts.push('其他 ' + c.other);
+    $('update-tag').textContent = data.build || '–';
+    flash($('update-msg'), '已应用 ' + data.files + ' 个文件（' + (parts.join(' / ') || '无变化') + '）', 'ok');
+    if (Array.isArray(data.warnings) && data.warnings.length) alert('已应用，但请注意：\n\n' + data.warnings.join('\n'));
+    $('update-file').value = '';
+  } catch (e) {
+    flash($('update-msg'), '失败：' + e.message, 'err');
+  } finally {
+    $('btn-update').disabled = false;
+  }
+};
+
+document.addEventListener('click', async (ev) => {
+  const kick = ev.target.closest('[data-kick]');
+  if (kick) {
+    const name = kick.getAttribute('data-name');
+    if (!confirm('把「' + name + '」' + (kick.textContent.includes('房间') ? '踢出房间（他会回到大厅，可以再加入）？' : '断开连接（需重新输入代号才能进来）？'))) return;
+    kick.disabled = true;
+    try { const r = await api('/api/kick', { playerId: kick.getAttribute('data-kick') }); flash($('notice-msg'), (r.kicked.action === 'room' ? '已踢出房间：' : '已断开：') + r.kicked.name, 'ok'); }
+    catch (e) { alert('操作失败：' + e.message); }
+    refresh();
+    return;
+  }
+  const close = ev.target.closest('[data-close]');
+  if (close) {
+    const code = close.getAttribute('data-close');
+    if (!confirm('关闭房间 ' + code + '？房间里的人会被请出，正在进行的模拟也会结束。')) return;
+    close.disabled = true;
+    try { await api('/api/close-room', { code }); flash($('notice-msg'), '房间 ' + code + ' 已关闭', 'ok'); }
+    catch (e) { alert('操作失败：' + e.message); }
+    refresh();
+  }
+});
+
+// ---- 默认口令提醒（server/admin.js 的 defaultPassword：口令仍是 DEFAULT_ADMIN_PASSWORD 时 /api/state 会说 true）----
+// 登录后第一次拿到 state 就弹一次窗；面板顶部另有一条常驻的红色横幅。两处都能直接跳到「修改口令」对话框。
+// 「稍后再说」只对这次打开的页面生效（刷新后还会提醒），因为口令没改之前这个风险一直在。
+let pwReminderShown = false;
+// 本次页面里刚改过口令：2 秒轮询拿到的旧响应可能仍是 defaultPassword:true，会把横幅又亮起来
+// （业主 2026-11-14「改了口令仍提示未修改」）。改成功后整个会话不再提醒。
+let pwChanged = false;
+function showPwModal() { $('pw-modal').hidden = false; }
+function hidePwModal() { $('pw-modal').hidden = true; }
+function maybeRemindDefaultPassword(data) {
+  const isDefault = !!(data && data.defaultPassword) && !pwChanged;
+  $('pw-banner').hidden = !isDefault;
+  $('btn-password').classList.toggle('is-default', isDefault);
+  if (isDefault && !pwReminderShown) { pwReminderShown = true; showPwModal(); }
+}
+
+// ---- 修改口令（POST /api/password；口令写到 admin-password.json，scrypt 哈希，不是明文）----
+function openPasswordDialog() {
+  hidePwModal();
+  const envLocked = !!(state && state.passwordFromEnv);
+  $('pwchg-env').hidden = !envLocked;
+  $('pwchg-current').value = password || '';
+  $('pwchg-next').value = '';
+  $('pwchg-confirm').value = '';
+  pwMsg('');
+  $('pwchg-save').disabled = envLocked;
+  $('pwchg-modal').hidden = false;
+  setTimeout(() => $(envLocked ? 'pwchg-cancel' : 'pwchg-next').focus(), 0);
+}
+function closePasswordDialog() { $('pwchg-modal').hidden = true; }
+function pwMsg(text) {
+  const el = $('pwchg-msg');
+  el.textContent = text || '';
+  el.className = 'msg ' + (text ? 'err' : '');
+}
+async function savePassword() {
+  const current = $('pwchg-current').value;
+  const next = $('pwchg-next').value;
+  const confirm = $('pwchg-confirm').value;
+  if (next.length < 6) return pwMsg('新口令至少 6 个字符');
+  if (next !== confirm) return pwMsg('两次输入的新口令不一样');
+  if (next === '88888888') return pwMsg('新口令不能继续用初始口令 88888888');
+  $('pwchg-save').disabled = true;
+  try {
+    await api('/api/password', { current, next });
+  } catch (e) {
+    $('pwchg-save').disabled = false;
+    return pwMsg(e.message);
+  }
+  // the new password is live: keep the saved one in step so the 2 s poll does not log the page out
+  password = next;
+  localStorage.setItem(PW_KEY, next);
+  pwChanged = true;
+  if (state) state.defaultPassword = false;
+  $('pw-banner').hidden = true;
+  $('btn-password').classList.remove('is-default');
+  closePasswordDialog();
+  flash($('notice-msg'), '口令已修改，下次打开后台请用新口令', 'ok');
+  refresh();
+}
+$('btn-password').onclick = openPasswordDialog;
+$('pwm-ok').onclick = openPasswordDialog;
+$('pwm-later').onclick = () => { hidePwModal(); pwReminderShown = true; };
+$('pw-banner').onclick = openPasswordDialog;
+$('pwchg-cancel').onclick = closePasswordDialog;
+$('pwchg-save').onclick = savePassword;
+$('pwchg-confirm').addEventListener('keydown', (e) => { if (e.key === 'Enter') savePassword(); });
+$('pw-modal').addEventListener('click', (e) => { if (e.target === $('pw-modal')) hidePwModal(); });
+$('pwchg-modal').addEventListener('click', (e) => { if (e.target === $('pwchg-modal')) closePasswordDialog(); });
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('pwchg-modal').hidden) closePasswordDialog();
+  else if (!$('pw-modal').hidden) hidePwModal();
+});
+
+if (password) { $('pw').value = password; refresh(); } else { showPanel(false); }
+</script>
+</body>
+</html>

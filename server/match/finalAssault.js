@@ -1,0 +1,206 @@
+// server/match/finalAssault.js — 最终攻势 (R14 / solo FUNNY R9) and 隐秘核心 (R15) helpers (DESIGN §6.1, research
+// 00-INDEX §5, 06 §10).
+//
+//   * Merged LP: teamLp = Σ LP of the alive players at the start of the Final Assault (no cap); the Hidden Core
+//     continues with what is left.
+//   * Pairing: shuffled once per match before Final Assault prep; Hidden Core keeps those pairs. If players leave,
+//     intact pairs stay together and the remaining single players pair up. An odd player uses the `_s` template
+//     (solo modes always use `_s`). Field ids 'b1', 'b2'. In a pair the first player is the LEFT side, the second the
+//     RIGHT side (the sim mirrors the right side: board col c → field col 20 − c with the piece direction RIGHT ↔
+//     LEFT, UP / DOWN unchanged (DESIGN §3, research 09 §1.2 ConvertChessPositionInfoToBossMap); board rows 9–12 →
+//     boss rows 2–5, sim/constants BOSS_ROW_OFFSET). `bossFieldPlacement` gives that mapping for UIs / tools.
+//   * Shared boss HP pool (DESIGN §20.10, §25.13.4, gamedata.js bossPoolShareOf): one pool shared by every boss field
+//     (official tip "所有人将一起对敌方领袖造成伤害"; notice 5114's "敌方领袖的总生命值不变" is about the mirrored copies of
+//     a pair field sharing it) = bloodPoint[difficulty] × the players alive when the fight starts (bots and AI 托管 seats
+//     count, eliminated and departed seats do not; solo × 1) — the owner's decision of 2026-10-06, adopting PR #209 by
+//     @qingjingshenghuo, which replaces the fixed pool of 「保持固定血量」 (config bossHpScale perPlayer false / solo 0.25
+//     restores it); × the tuning bossHpMul when data/tuning.json still has one (docs/BALANCE.md); bosses are never scaled
+//     by enemyScale and their parts / escorts keep their own HP.
+//     炸惊模拟 (ZHAJING, 2026-11-14): its bloodPoint column does not exist in data/bosses.json, so the mode's own
+//     `bossHpScale` block supplies the column to borrow (`bloodPointKey`), the pool multiplier (`hpMul`) and — for the
+//     Hidden Core's `hidden` leaders — `hiddenBossHpMul`. Without it the lookup fell through to the SMALLEST column (FUNNY)
+//     and a 炸惊 leader was squishier than a normal-mode one (the report "炸惊内 boss 血量没有增长").
+//   * Overtime: bossTurnHpReduceTime counts REAL seconds like the level's 120 s maxPlayTime (which runs out first; the
+//     battle goes on): from 150 real s (300 game s on the 2× field clock) the team loses bossOvertimeDrainPerSec (1) LP
+//     per real second (gamedata.js bossOvertimeDue); m.public.deadline = the 120 s countdown, m.public.overtimeAt = the
+//     drain start. Minion / boss leaks cost their `lpr`; team LP 0 ⇒ defeat (all fields force-ended; PRTS 卫戍协议：盟约 下半
+//     "…使目标生命值扣除至0，则无视倒计时直接失败"); pool 0 ⇒ victory. The first of the two the server registers decides
+//     (Match._finalEnding): a report that arrives after the team LP ran out credits nothing (user playtest #6 item 5).
+//   * Pool HP is a float that never keeps float dust: the hit that would leave less than BOSS_POOL_MIN_HP (1) takes the
+//     rest, so the pool is 0 or ≥ 1 and a leader shown at 0 HP is down (sim/constants.js; the browser's LocalBossPool
+//     follows the same rule, server/sim/spec.js). Before, the per-player crediting of a report could leave 3.6e-12 that
+//     the browser could never deal (user playtest #6 item 5).
+//   * No IN_BATTLE layer gains (flags.layerGainsEnabled = false).
+//   * BOSS_HIT tickers (BOSS_HIT_STEPS 20 / 50 / 80 %): a player's damage to the round's pool (SharedBossPool.byPlayer)
+//     over its size, each threshold once per boss round — the Hidden Core never counts the Final Assault's damage
+//     (player report after 0.1.0: "隐藏boss还没打就出了造成50%伤害播报").
+//   * Hidden Core eligibility (after an R14 win): difficulty in hiddenCore.difficulties, the mode has a hidden round,
+//     Σ activated layers of the alive players measured at the end of the boss round's prep > threshold (solo 350 /
+//     co-op 1200) and team LP > minTeamLpExclusive (1, so at least 2 left: PRTS's user-contributed 「剩余生命值 > 1」,
+//     which the community's measurement 路标月报#2 matches — GitHub #645).
+
+import { BOSS_ROW_OFFSET, COLS, BOSS_POOL_MIN_HP } from '../sim/constants.js';
+import { getInfiniteBossHp } from '../../shared/infiniteMode.js';
+import { mirrorDir, normDir } from '../sim/dir.js';
+import { bossPoolShareOf } from './gamedata.js';
+
+/**
+ * BOSS_HIT ticker thresholds (activity_table autoChessData.broadcastList comment_boss_hit_1..3, paramList 0.2 / 0.5 /
+ * 0.8: "{0}博士对敌方领袖造成的伤害超过20%!"): a player's damage to the current leader's pool over that pool
+ * (SharedBossPool.byPlayer — one pool per boss round, so the Final Assault and the Hidden Core count apart).
+ */
+export const BOSS_HIT_STEPS = [0.2, 0.5, 0.8];
+
+/**
+ * Where a board piece (board row / col / dir) stands on a boss field for side 'L' | 'R' — the same mapping as the
+ * sim (Battle.mapTile / mapDir): rows 9–12 → 2–5; the right side mirrored col c → 20 − c, RIGHT ↔ LEFT.
+ * @returns {{ row: number, col: number, dir: 'UP'|'RIGHT'|'DOWN'|'LEFT' }}
+ */
+export function bossFieldPlacement(side, row, col, dir = 'RIGHT') {
+  const d = normDir(dir);
+  const r = row >= 7 ? row + BOSS_ROW_OFFSET : row;
+  return side === 'R' ? { row: r, col: COLS - 1 - col, dir: mirrorDir(d) } : { row: r, col, dir: d };
+}
+
+/**
+ * The seed salt of a boss round's pairing draw: the Final Assault's 'boss-pairs' (unchanged since 0.2.5), the Hidden
+ * Core its own `boss-pairs:<round>` — it draws pairs and sides anew (GitHub #845, DESIGN §35.27).
+ */
+export function bossPairSalt(gd, round) {
+  return round === gd.hiddenRound && round !== gd.bossRound ? `boss-pairs:${round}` : 'boss-pairs';
+}
+
+/** Seeded pairing; `previous` carries player-id pairs from a round's plan through its prep and combat. */
+export function pairPlayers(alive, rng, previous = null) {
+  const sorted = alive.slice().sort((a, b) => a.seat - b.seat);
+  const groups = [];
+  let singles;
+  if (Array.isArray(previous)) {
+    const remaining = new Map(sorted.map(p => [p.playerId, p]));
+    singles = [];
+    for (const ids of previous) {
+      const group = [];
+      for (const id of ids) if (remaining.has(id)) { group.push(remaining.get(id)); remaining.delete(id); }
+      if (group.length === 2) groups.push(group); else singles.push(...group);
+    }
+    singles.push(...remaining.values());
+  } else singles = sorted.length > 1 ? rng.shuffle(sorted) : sorted;
+  for (let i = 0; i < singles.length; i += 2) groups.push(singles.slice(i, i + 2));
+  return groups;
+}
+
+/** 一个「正数才生效」的倍率（缺失 / 非正数 / 非数字 ⇒ 1）。炸惊模式配置里的 hpMul / hiddenBossHpMul 用。 */
+const posMul = (v) => (Number.isFinite(v) && v > 0 ? v : 1);
+
+/** Shared boss HP for a boss id with `aliveCount` alive players (GameData.bossPoolShare / bossPoolShareOf; omitted ⇒ a full team). */
+export function bossPoolHp(gd, bossId, aliveCount, round) {
+  const boss = gd.boss(bossId);
+  const diff = gd.difficulty;
+  /**
+   * 炸惊模拟 (ZHAJING) 的 Boss 血点（业主 2026-11-14 报「炸惊内 boss 血量没有增长」）。
+   *
+   * `data/bosses.json` 的 bloodPoint 只有官方那几列（FUNNY / NORMAL / HARD / ABYSS / ANNIHILATION），**没有 ZHAJING**，
+   * 于是一个炸惊局走到下面那句兜底 —— `Object.values(bloodPoint)[0]`，也就是血点表里**最小的那一档**（FUNNY，
+   * boss_1 = 247500）：炸惊的 Boss 反而比普通难度还脆，等于「血量完全没长」。
+   *
+   * 模式自己的 `modes.<id>.bossHpScale` 早就写好了口径，只是从来没人读：
+   *   `bloodPointKey: 'bloodPointAbyss'` → 借终极档那一列；`hpMul` → 血池倍率；`hiddenBossHpMul`（模式级）→
+   *   隐秘核心那一场的倍率。其它模式读不到这一块（`gd.zhajing` 为假），下面的取数与乘区逐字节不变。
+   * 想再调，改 data/config.json 的 `hpMul` 即可，不用动代码。
+   */
+  const zjScale = gd.zhajing === true && gd.mode && gd.mode.bossHpScale && typeof gd.mode.bossHpScale === 'object'
+    ? gd.mode.bossHpScale : null;
+  let base = boss && boss.bloodPoint && Number.isFinite(boss.bloodPoint[diff]) ? boss.bloodPoint[diff] : null;
+  if (base == null && zjScale) {
+    // 'bloodPointAbyss' → 'ABYSS'（官方原始字段名 → 本仓归一化后的难度键）
+    const col = String(zjScale.bloodPointKey || '').replace(/^bloodPoint/, '').toUpperCase();
+    if (col && boss && boss.bloodPoint && Number.isFinite(boss.bloodPoint[col])) base = boss.bloodPoint[col];
+  }
+  if (base == null && boss && boss.bloodPoint) base = Object.values(boss.bloodPoint).find((v) => Number.isFinite(v)) ?? null;
+  if (base == null) base = 500000;
+  const tune = typeof gd.bossHpMul === 'function' ? gd.bossHpMul(bossId) : 1;
+  const share = typeof gd.bossPoolShare === 'function' ? gd.bossPoolShare(aliveCount)
+    : bossPoolShareOf(gd.mode && gd.mode.bossHpScale, gd.config && gd.config.bossHpScale, !!gd.isSolo, aliveCount);
+  // 超限模拟：Boss 池每 5 轮复利成长（shared/infiniteMode.js 的 getInfiniteBossHp，之前只被 import、
+  // 从没被调用过 —— 于是 R20 之后的 Boss 血量一直是 R15 的数值）。乘的是 bossPoolHp 这一个出口，
+  // 普通单机 / 同盟拿不到这一项（round 传不进来就没有），作用域仍只在超限局内（2026-10-17）。
+  const grown = Number.isInteger(round) && round > 15 ? getInfiniteBossHp(1, round) : 1;
+  // 炸惊：模式自己的血量倍率；`hidden: true` 的首领（隐秘核心的 boss_8/9/10）再乘 hiddenBossHpMul。
+  const zjMul = zjScale
+    ? posMul(zjScale.hpMul) * (boss && boss.hidden === true ? posMul(gd.mode.hiddenBossHpMul) : 1)
+    : 1;
+  return Math.max(1, Math.round(base * share * tune * grown * zjMul));
+}
+
+/**
+ * The one HP pool every boss field damages. `damage(playerId, amount)` is called by the sim (server-run fields) and by
+ * Match._creditBoss (client reports, per player); the hit that would leave less than BOSS_POOL_MIN_HP takes the rest.
+ */
+export class SharedBossPool {
+  constructor(hp, { onHit = null } = {}) {
+    this.maxHp = Math.max(1, hp);
+    this.hp = this.maxHp;
+    /** playerId → damage dealt to this pool (this boss round only; the BOSS_HIT tickers' share) */
+    this.byPlayer = new Map();
+    this.onHit = onHit;
+  }
+
+  damage(playerId, amount) {
+    const a = Number(amount);
+    if (!Number.isFinite(a) || a <= 0 || this.hp <= 0) return 0;
+    const dealt = this.hp - a < BOSS_POOL_MIN_HP ? this.hp : a;
+    this.hp -= dealt; // exactly 0 when the rest is taken (x − x): no float dust
+    if (playerId != null) this.byPlayer.set(playerId, (this.byPlayer.get(playerId) || 0) + dealt);
+    if (this.onHit) {
+      try { this.onHit(playerId, dealt); } catch { /* reported by the caller */ }
+    }
+    return dealt;
+  }
+}
+
+/**
+ * Hidden-core eligibility.
+ * @param {import('./gamedata.js').GameData} gd
+ * @param {{ layerSum: number, teamLp: number }} s
+ */
+export function hiddenEligible(gd, { layerSum, teamLp }) {
+  const hc = gd.hiddenCore;
+  if (!gd.hiddenRound || !hc.difficulties.includes(gd.difficulty)) return false;
+  const threshold = gd.isSolo ? hc.single : hc.multi;
+  return layerSum > threshold && teamLp > hc.minTeamLpExclusive;
+}
+
+/**
+ * A boss field the server takes over mid-fight (its client left, DESIGN §14) re-simulates its spec from t = 0. The
+ * damage its client already reported (`acked`, cumulative, per player in `ackedBy`) is in the shared pool, so this
+ * wrapper credits the real pool only with what the re-simulation deals beyond it. Reads (hp, maxHp) go to the pool.
+ */
+export class CreditPool {
+  /**
+   * @param {SharedBossPool} pool
+   * @param {{ acked?: number, ackedBy?: Record<string, number>, onCredit?: (playerId: string|null, amount: number) => void }} [o]
+   */
+  constructor(pool, { acked = 0, ackedBy = {}, onCredit = null } = {}) {
+    this.pool = pool;
+    this.acked = Math.max(0, Number(acked) || 0);
+    this.ackedBy = { ...ackedBy };
+    this.cum = 0;
+    this.onCredit = onCredit;
+  }
+
+  get hp() { return this.pool.hp; }
+  set hp(v) { /* the sim's fallback path writes hp only when damage() threw; the real pool is never written here */ void v; }
+  get maxHp() { return this.pool.maxHp; }
+
+  damage(playerId, amount) {
+    const a = Number(amount);
+    if (!Number.isFinite(a) || a <= 0) return 0;
+    const before = this.cum;
+    this.cum += a;
+    const credit = Math.max(0, this.cum - Math.max(before, this.acked));
+    if (credit <= 0) return 0;
+    const dealt = this.pool.damage(playerId, credit);
+    if (dealt > 0 && this.onCredit) { try { this.onCredit(playerId, dealt); } catch { /* reported by the caller */ } }
+    return dealt;
+  }
+}

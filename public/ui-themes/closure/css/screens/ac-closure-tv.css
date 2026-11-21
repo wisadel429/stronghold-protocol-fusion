@@ -1,0 +1,140 @@
+/* 「全能的」可露希尔 CRT. Design pixels on the 1280×720 grid.
+   07-04-02 at 368.5 s: video/design = 1.35. Body ~ (1682,-11), front (1659,-31).
+   Use the official lit front, with its glass aperture; don't paint a white quad over the bezel.
+   Existing title / gear / loading sprites already have perspective. */
+.spov--closure { --cp: calc(1rem / 66.6667); }
+.spov.spov--closure > .ctv { z-index: 4; }
+.spov.spov--closure .spov__head { padding-right: calc(var(--cp) * 250); }
+.spov.spov--closure .spov__turn { min-width: 0; flex-wrap: wrap; justify-content: flex-end; max-width: calc(var(--cp) * 260); }
+html[data-ac-terminal-theme] .gtop--closure .gtop__clock { position: static; padding-top: calc(var(--cp) * 162); }
+.ctv { position: absolute; right: calc(var(--cp) * 4.5); top: calc(var(--cp) * -8); width: calc(var(--cp) * 172); height: calc(var(--cp) * 173);
+  pointer-events: none; z-index: 1; transition: opacity 130ms linear, filter 130ms linear, visibility 0s; }
+.ctv.is-away { opacity: 0; visibility: hidden; filter: blur(calc(var(--cp) * 1.2)) brightness(1.4);
+  transition: opacity 170ms linear, filter 170ms linear, visibility 0s 170ms; }
+.ctv > i, .ctv > div { position: absolute; display: block; }
+.ctv i { font-style: normal; background-repeat: no-repeat; background-size: 100% 100%; }
+.ctv__back { left: calc(var(--cp) * -54); top: calc(var(--cp) * -28); width: calc(var(--cp) * 240); height: calc(var(--cp) * 165);
+  background: radial-gradient(ellipse at 75% 0%, #3535d5b3, #282dc668 38%, #22258225 65%, transparent 80%); }
+.ctv__dots { left: calc(var(--cp) * -44); top: calc(var(--cp) * 5); width: calc(var(--cp) * 220); height: calc(var(--cp) * 130); opacity: .13;
+  background: radial-gradient(circle, #6771c9 0 24%, transparent 30%) 0 0 / calc(var(--cp) * 4) calc(var(--cp) * 4);
+  clip-path: polygon(0 35%, 10% 35%, 10% 85%, 0 85%, 0 35%, 30% 0, 50% 0, 50% 23%, 30% 23%, 30% 0, 94% 65%, 100% 65%, 100% 100%, 94% 100%, 94% 65%); }
+.ctv__cube { left: calc(var(--cp) * -67); top: calc(var(--cp) * 22); width: calc(var(--cp) * 69); height: calc(var(--cp) * 62);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/desc_3.png") 0 0 / 100% 100% no-repeat; animation: ctv-bob 2s ease-in-out infinite; }
+.ctv__cube-light { position: absolute; left: calc(var(--cp) * 28); top: calc(var(--cp) * 17); width: calc(var(--cp) * 34); height: calc(var(--cp) * 44);
+  background: #779dff; mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/desc_3_light.png") 0 0 / 100% 100% no-repeat; mix-blend-mode: screen; animation: ctv-cube-light 2s ease-in-out infinite; }
+.ctv__small { left: calc(var(--cp) * 1); top: calc(var(--cp) * 23.5); width: calc(var(--cp) * 25); height: calc(var(--cp) * 22);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/tv_cube_small.png"); animation: ctv-bob 2s ease-in-out -.35s infinite; }
+.ctv__lower { left: calc(var(--cp) * -27); top: calc(var(--cp) * 93.5); width: calc(var(--cp) * 26); height: calc(var(--cp) * 22);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/tv_cube_lower.png"); animation: ctv-bob 2s ease-in-out -.2s infinite; }
+.ctv__body { inset: 0; background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv_com.png"); }
+.ctv__front { left: calc(var(--cp) * -17); top: calc(var(--cp) * -15); width: calc(var(--cp) * 179.5); height: calc(var(--cp) * 179.5);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv.png"); }
+.ctv.is-warn .ctv__front { background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv_last.png"); }
+/* This is a content clip only. The glass, inset edge and light come from the front plate above. */
+.ctv__screen { inset: 0; }
+.ctv__glass { position: absolute; inset: 0; overflow: hidden;
+  clip-path: polygon(24% 18.9%, 66.1% 30.6%, 58.8% 67.4%, 18.4% 53%); }
+.ctv__glass::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .13;
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_screen_line_hori.png") 0 0 / calc(var(--cp) * 64) calc(var(--cp) * 64); }
+.ctv__in { position: absolute; inset: 0; animation: ctv-in 180ms linear both; }
+.ctv__in > * { position: absolute; display: block; }
+.ctv__gear { left: calc(var(--cp) * 36); top: calc(var(--cp) * 43); width: calc(var(--cp) * 71); height: calc(var(--cp) * 65);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv_single.png"); }
+.ctv__load { left: calc(var(--cp) * 35); top: calc(var(--cp) * 75); width: calc(var(--cp) * 64); height: calc(var(--cp) * 27);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/ready_continue.png"); }
+.ctv__arrow { left: calc(var(--cp) * 44); top: calc(var(--cp) * 35); width: calc(var(--cp) * 80); height: calc(var(--cp) * 64);
+  transform: rotate(15.5deg); background: linear-gradient(180deg, #36b8ee, #218dd4);
+  -webkit-mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/ready_arrow.png") 0 0 / 100% 100% no-repeat,
+    url("/ui-art/img/official/hub/ac/theme/almighty_closure/ready_arrow_mask.png") 0 0 / 100% 100% repeat-x;
+  -webkit-mask-composite: source-in;
+  mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/ready_arrow.png") 0 0 / 100% 100% no-repeat,
+    url("/ui-art/img/official/hub/ac/theme/almighty_closure/ready_arrow_mask.png") 0 0 / 100% 100% repeat-x;
+  mask-composite: intersect; animation: ctv-sweep 900ms linear infinite; }
+.ctv__desc { left: calc(var(--cp) * 44); top: calc(var(--cp) * 38.5); width: calc(var(--cp) * 67); height: calc(var(--cp) * 35);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv_desc.png"); }
+.ctv__num { left: calc(var(--cp) * 37); top: calc(var(--cp) * 61.5); width: calc(var(--cp) * 65); height: calc(var(--cp) * 28); display: flex !important;
+  justify-content: center; gap: calc(var(--cp) * 3); transform: rotate(15.5deg); }
+.ctv__num:has(> :nth-child(3)) { gap: calc(var(--cp) * 1.5); transform: rotate(15.5deg) scaleX(.78); }
+.ctv__d { height: 100%; flex: none; }
+.ctv.is-warn .ctv__d { filter: brightness(0); opacity: .85; }
+.ctv.is-warn .ctv__desc { filter: brightness(0); opacity: .7; }
+.ctv__d--0 { width: calc(var(--cp) * 26.1); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/0.png"); }
+.ctv__d--1 { width: calc(var(--cp) * 12.6); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/1.png"); }
+.ctv__d--2 { width: calc(var(--cp) * 27); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/2.png"); }
+.ctv__d--3 { width: calc(var(--cp) * 25.2); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/3.png"); }
+.ctv__d--4 { width: calc(var(--cp) * 21.6); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/4.png"); }
+.ctv__d--5 { width: calc(var(--cp) * 26.1); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/5.png"); }
+.ctv__d--6 { width: calc(var(--cp) * 26.1); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/6.png"); }
+.ctv__d--7 { width: calc(var(--cp) * 25.2); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/7.png"); }
+.ctv__d--8 { width: calc(var(--cp) * 26.1); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/8.png"); }
+.ctv__d--9 { width: calc(var(--cp) * 26.1); background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/9.png"); }
+.ctv__bar { left: calc(var(--cp) * 39); top: calc(var(--cp) * 86.5); width: calc(var(--cp) * 57); height: calc(var(--cp) * 6); box-sizing: border-box;
+  transform: rotate(15.5deg); transform-origin: 0 0; border: calc(var(--cp) * 1) solid #688f92; background: #e4fffa80; }
+.ctv__bar i { position: absolute; inset: calc(var(--cp) * 1); width: calc((100% - var(--cp) * 2) * var(--f, 1));
+  background: repeating-linear-gradient(90deg, #537779 0 calc(var(--cp) * 1), transparent calc(var(--cp) * 1) calc(var(--cp) * 2)); transition: width 200ms linear; }
+.ctv.is-warn .ctv__bar { border-color: #543815; background: #ffe2b44d; }
+.ctv.is-warn .ctv__bar i { filter: brightness(.4); }
+.ctv__star { width: calc(var(--cp) * 28); height: calc(var(--cp) * 28); margin: calc(var(--cp) * -14) 0 0 calc(var(--cp) * -14);
+  animation: ctv-star 2s ease-in-out infinite; }
+.ctv__star::before, .ctv__star::after { content: ""; position: absolute; inset: 0; }
+.ctv__star::before { background: #00e7ff;
+  mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/tv_star_mask.png") center / contain no-repeat; animation: ctv-star-color 2s linear infinite; }
+.ctv__star::after { background: #2731ed;
+  mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_fx_star_outline2.png") center / contain no-repeat; }
+.ctv__star--a { left: calc(var(--cp) * 129); top: calc(var(--cp) * 42); }
+.ctv__star--b { left: calc(var(--cp) * 1); top: calc(var(--cp) * 92); animation-delay: -.15s; }
+.ctv__star--c { left: calc(var(--cp) * 114); top: calc(var(--cp) * 52); width: calc(var(--cp) * 20); height: calc(var(--cp) * 20); animation-delay: -.5s; }
+.ctv__star--b::before { animation-delay: -.15s; }
+.ctv__star--d { left: calc(var(--cp) * 18); top: calc(var(--cp) * 101); width: calc(var(--cp) * 20); height: calc(var(--cp) * 20); animation-delay: -.55s; }
+.ctv__star--d::before { animation-delay: -.55s; }
+.ctv__star--c::before { animation-delay: -.5s; }
+/* ---- 准备就绪 / 取消准备 (hud.js ReadyToggle with .cready) ---- */
+html[data-ac-terminal-theme] .gtop--closure .readywrap.creadywrap { position: absolute; right: calc(var(--cp) * 23); top: calc(var(--cp) * 91.1);
+  width: calc(var(--cp) * 142); align-items: flex-end; gap: calc(var(--cp) * 4); z-index: 2; }
+html[data-ac-terminal-theme] .gtop--closure .creadywrap > .tooltip-anchor,
+html[data-ac-terminal-theme] .gtop--closure .creadywrap > span:has(> .cready) { width: 100%; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready {
+  position: relative; width: 100%; min-width: 0; height: calc(var(--cp) * 46.5); margin: 0;
+  padding: calc(var(--cp) * 8) calc(var(--cp) * 10) 0 calc(var(--cp) * 13); gap: calc(var(--cp) * 6); justify-content: center;
+  border-style: none !important; border-width: 0 !important; background: none !important; box-shadow: none !important; color: #fff !important;
+  border-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/btn_ready.png") 2 30 2 46 fill / calc(var(--cp) * 1.7) calc(var(--cp) * 25.5) calc(var(--cp) * 1.7) calc(var(--cp) * 39);
+  filter: drop-shadow(0 0 calc(var(--cp) * 4) rgba(255, 60, 110, .55)); transition: filter 120ms; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready::after { content: ""; position: absolute; inset: calc(var(--cp) * -7) calc(var(--cp) * -8);
+  border-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/btn_ready_light.png") 10 38 10 54 fill / calc(var(--cp) * 8) calc(var(--cp) * 30) calc(var(--cp) * 8) calc(var(--cp) * 42);
+  pointer-events: none; animation: ctv-glow 1.6s ease-in-out infinite; }
+/* the icon on .readybtn__box (::before is the touch-target expander of devices.css) */
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready .readybtn__box { display: block !important; flex: none; width: calc(var(--cp) * 26) !important;
+  height: calc(var(--cp) * 26) !important; margin: 0 !important; border: 0 !important;
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/icon_ready.png") 0 0 / 100% 100% no-repeat !important; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready .readybtn__box > * { display: none !important; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready .readybtn__key { display: none !important; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready .readybtn__label { flex: none; text-align: center; color: #fff !important;
+  font: 900 calc(var(--cp) * 17.5) / 1 ArkCN, sans-serif; letter-spacing: calc(var(--cp) * .6); text-shadow: 0 calc(var(--cp) * 1) 0 rgba(120, 0, 30, .55); }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready:hover:not(:disabled) { filter: drop-shadow(0 0 calc(var(--cp) * 6) rgba(255, 80, 130, .8)) brightness(1.06); }
+/* pressed: 取消准备 on btn_cancel with icon_cancel */
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready.is-on {
+  border-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/btn_cancel.png") 9 38 9 54 fill / calc(var(--cp) * 7) calc(var(--cp) * 30) calc(var(--cp) * 7) calc(var(--cp) * 42);
+  border-image-outset: calc(var(--cp) * 6) calc(var(--cp) * 7); filter: none; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready.is-on .readybtn__box { background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/icon_cancel.png") !important; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready.is-on::after { display: none; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready.is-on .readybtn__label { color: #2b2b30 !important; text-shadow: none; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready:disabled { filter: grayscale(.8) brightness(.8); cursor: not-allowed; }
+html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready:disabled::after { display: none; }
+html[data-ac-terminal-theme] .gtop--closure .creadywrap .readywrap__why,
+html[data-ac-terminal-theme] .gtop--closure .creadywrap .readywrap__count { padding: calc(var(--cp) * 2) calc(var(--cp) * 8); background: rgba(14, 11, 58, .82);
+  color: #e6e4ff; font-size: calc(var(--cp) * 13); }
+
+@keyframes ctv-in { from { opacity: .3; } to { opacity: 1; } }
+@keyframes ctv-bob { 0%, 100% { transform: translate(calc(var(--cp) * -1.1), calc(var(--cp) * -2.6)); }
+  50% { transform: translate(calc(var(--cp) * 1.1), calc(var(--cp) * 2.6)); } }
+@keyframes ctv-cube-light { 0%, 75%, 100% { opacity: .03; } 25% { opacity: .32; } 50% { opacity: .08; } }
+@keyframes ctv-sweep { from { -webkit-mask-position: 0 0, 0 0; mask-position: 0 0, 0 0; }
+  to { -webkit-mask-position: 0 0, calc(var(--cp) * 80) 0; mask-position: 0 0, calc(var(--cp) * 80) 0; } }
+@keyframes ctv-star { 0%, 100% { opacity: .5; transform: scale(.4); } 25%, 45% { opacity: 1; transform: scale(1); }
+  75% { opacity: .45; transform: scale(.3); } }
+@keyframes ctv-star-color { 0%, 25%, 100% { background: #00e7ff; } 50%, 65% { background: #f414ed; } 80% { background: #3937ff; } }
+@keyframes ctv-glow { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ctv *, .ctv *::before, .ctv *::after, html[data-ac-terminal-theme] .gtop.gtop--closure .readybtn.cready::after { animation: none !important; }
+  .ctv__cube-light { opacity: .12; }
+}

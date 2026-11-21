@@ -1,0 +1,38 @@
+#!/bin/sh
+# pre-commit：拦住一切美术资源 / 媒体 / 大二进制（业主 2026-11-22 铁律）
+# 安装：git config core.hooksPath .githooks
+# 设计成**单次扫描**，2400 个文件也能在 1 秒内跑完。
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+banned='\.(png|jpe?g|webp|gif|bmp|ico|svg|ttf|otf|woff2?|mp3|ogg|wav|m4a|mp4|webm|pptx?|zip|rar|7z|apk|psd|ai|fbx|glb|gltf|atlas|skel|exe|dll)$'
+bad=$(printf '%s\n' "$staged" | grep -Ei "$banned" || true)
+if [ -n "$bad" ]; then
+  echo ""
+  echo "  [x] 提交被拒绝：暂存区里有美术资源 / 媒体 / 二进制文件"
+  echo "      铁律：本仓库绝不二次分发美术资源"
+  echo ""
+  printf '%s\n' "$bad" | sed 's/^/        /'
+  echo ""
+  echo "  处理：git restore --staged <文件>，并确认它已被 .gitignore 覆盖。"
+  echo ""
+  exit 1
+fi
+
+# 敏感文件兜底（路径级）
+secret=$(printf '%s\n' "$staged" | grep -E '(^|/)(data/|packed/)|admin-password|admin-update-key|launcher-config\.json' || true)
+if [ -n "$secret" ]; then
+  echo ""
+  echo "  [x] 提交被拒绝：暂存区里有玩家数据或密钥文件"
+  printf '%s\n' "$secret" | sed 's/^/        /'
+  echo ""
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,498 @@
+/* public/css/ui-theme-bridge.css — 主题接入用的「补丁样式」（只在 html[data-ui-theme] 下生效）。
+ *
+ * 为什么需要：分享包的屏是照**作者自己的 App 外壳**写的 ——
+ *   · 整页屏（S.W.E.E.P.报告 `.sw`）靠外层 `.screen` 提供 `position:fixed; inset:0`，本仓没有那层；
+ *   · 大厅标题是几张图叠出来的，其中一张 EN 图与主题自己的英文行重复（观感上的"幽灵标题"）；
+ *   · 右上角那一簇控件在大厅里挤在一起；
+ *   · 房间座位卡的「更换立绘」按钮飘在立绘中间，业主希望它贴卡片最上方。
+ * 这里只补「定位 / 层级 / 隐藏重复层」这类结构性修补，不改配色与主题自己的尺寸。
+ * 层级约定沿用本仓：内容 < 200，主题整页屏 300，弹层 9999+，提示条 100001+。
+ */
+
+/* ---- S.W.E.E.P.报告：整页层 ------------------------------------------------- */
+html[data-ui-theme] .sw {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  background: #050807;
+}
+html[data-ui-theme] .sw > .sw__bg { position: absolute; inset: 0; z-index: 0; }
+html[data-ui-theme] .sw > .sw-body { position: absolute; inset: 0; z-index: 1; }
+html[data-ui-theme] .sw > .sw-top { z-index: 3; }
+html[data-ui-theme] body.sw-open { overflow: hidden; }
+
+/* ---- 大厅：去掉重复的 EN 标题层（"幽灵标题"） --------------------------------
+ * 标题栈：season_logo.png（三角）+ `.oh-logo__l1`（实心 STRONGHOLD PROTOCOL）
+ *        + `.oh-logo__l2`（同一条 EN 的淡影，在 1600×900 下压住下一行）+ 中文行。
+ * 逐个隐藏实测（截图 .cache/shots/layers-hide-*.png）：只有 `.oh-logo__l2` 会让那条淡影消失，
+ * 而实心 EN 与中文都保留 —— 所以隐藏它。`.oh-logo__en` 实测不可见，不动。 */
+html[data-ui-theme] .lobby-hub .oh-logo__l2 { display: none; }
+
+/* ---- 大厅：右上角那一簇控件不再挤 --------------------------------------------
+ * 主题的 `.oh-topbar` 是「右上、纵向排列、gap = p*6」的容器；但本仓在大厅里还多塞了
+ * 一颗「界面 · 可露希尔」按钮（.ui-theme-friend-stack，标题页已有同一入口），它挤在同一行。
+ * 注意：**只隐藏那颗「界面」按钮，保留 FriendsTile（好友入口）** —— 之前整块隐藏把好友入口
+ * 也一起藏了，业主报「好友键无反应」（2026-11-14）。 */
+html[data-ui-theme] .lobby-hub .ui-theme-friend-stack .title-ui-theme { display: none; }
+html[data-ui-theme] .lobby-hub > .oh-topbar { gap: calc(var(--p, 1) * 10); }
+
+/* 大厅「无限火力 1.1」入口：业主 2026-11-14 要求去掉（本仓的无限火力走的是各自的模式卡，不走这条）。
+   注意排除我们自己的两颗入口（「拓展模式」/「超限模拟」，都复用同一个 `.oh-fire` 外观类）。 */
+html[data-ui-theme] .lobby-hub .oh-fire:not(.hub-ext-entry):not(.hub-inf-entry) { display: none; }
+
+/* 业主 2026-11-17「超限玩法不见了」：主题大厅补一颗「超限模拟」入口，摆在「拓展模式」左边。
+   `.oh-fire` 是绝对定位（right: --p*262），这里把它往左挪一个 pill 的宽度。 */
+html[data-ui-theme] .lobby-hub .oh-fire.hub-inf-entry {
+  right: calc(var(--p, 1px) * 470);
+  border-color: rgba(168, 85, 247, .55);
+}
+html[data-ui-theme] .lobby-hub .oh-fire.hub-inf-entry b {
+  background: #a855f7;
+  color: #14061f;
+}
+
+/* ---- 主题大厅的「拓展模式」入口（js/ui/extensionEntry.js） ---------------------
+ * 按钮沿用分享包 `.oh-fire` 的外观，点开后在 body 上挂一层自己的浮层，里面渲染本仓的 ExtensionHall。 */
+html[data-ui-theme] .sp-ext-entry-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: block;
+}
+html[data-ui-theme] .sp-ext-entry-layer .sp-ext-entry-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 6, 5, .55);
+}
+html[data-ui-theme] .sp-ext-entry-layer > .sp-ext-entry-veil > * {
+  position: relative;
+}
+
+/* ---- 主题入口：从主页自动进来时的一次性出口（public/ui-theme-gate.js） --------
+ * 只在「上次选了主题 → 打开 `/` 被自动带进主题入口」时出现，点「留在网页原版」后
+ * 记住 sp.ui-theme.v1 = 'web'，以后不再自动跳；不点 15 秒后自己收起。
+ * 层级：提示条 100001+（见文件头约定），压在主题界面之上、不挡对局操作。 */
+html[data-ui-theme] .sp-theme-gate-exit {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 9px 14px;
+  border: 1px solid rgba(23, 217, 160, .45);
+  border-radius: 999px;
+  background: rgba(6, 12, 10, .92);
+  color: #cfeee2;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .55);
+  pointer-events: auto;
+}
+html[data-ui-theme] .sp-theme-gate-exit__btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #17d9a0;
+  color: #04110c;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+html[data-ui-theme] .sp-theme-gate-exit__btn:hover { filter: brightness(1.08); }
+html[data-ui-theme] .sp-theme-gate-exit__btn:focus-visible { outline: 2px solid #bffce9; outline-offset: 2px; }
+
+/* ---- 房间：把「更换立绘」挪到座位卡最上方 ------------------------------------ */
+html[data-ui-theme] .rseat__pick {
+  position: absolute;
+  top: calc(var(--p, 1) * 6);
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  z-index: 6;
+}
+
+/* ---- 业主 2026-11-14 要求去掉的两个按钮 ---------------------------------------
+ * ① 大厅顶栏「娱乐小游戏」（分享包 lobby.js 里直接 window.open 小游戏页，本仓没有这个需求）：
+ *    它在大厅里是一个无专属 class 的 `button.btn.btn--secondary.btn--sm`，是 `.topbar__right` 的
+ *    直接子级；同级的 VersionSwitch 包在 .verchip-wrap 里、账号胶囊是 .me-chip，所以这个选择器只命中它。
+ * ② 房间界面的「禁止 / 允许倒转」开关（分享包 room.js 的 `.rs-reverse`，带 × / ✓ 标记）：
+ *    房间玩法偏好，业主不需要这颗开关。 */
+html[data-ui-theme] .lobby-hub .topbar__right > button.btn.btn--secondary.btn--sm:not(.verchip):not(.me-chip) { display: none; }
+html[data-ui-theme] .rs-reverse { display: none; }
+
+/* ---- 成就统计面板：整页层 -----------------------------------------------------
+ * 与 `.proto` 同源问题：分享包的成就面板根 `.ach` 自身不写 position/inset，靠作者 App 的整页包裹撑开；
+ * 本仓没有那层 → 实测 `.ach` 内容高 2317px、可视区只有 906px，成就条目直接排在大厅背景上，
+ * 也就是业主说的「成就统计显示出现了问题」。给它整页定位 + 内部滚动 + 不透明底。 */
+html[data-ui-theme] .lobby-hub .ach {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: auto;
+  background: #050807;
+}
+/* 成就卡片里 LV 角标（.ach-card__lv）是 `left:-9; top:-12` 的绝对定位，本该相对头像容器
+   `.ach-card__ava`；但那个容器的 `display` / `position: relative` 也来自作者的 base 样式表，本仓没有 →
+   `<span>` 按 inline 排（width/height 不生效），LV 角标作为行内元素排到头像右侧，
+   和名字连成「1LvMon3tr」（业主报的「名字轻微乱码」）。补回块级盒子并把首字母居中。 */
+html[data-ui-theme] .lobby-hub .ach .ach-card__ava {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+}
+html[data-ui-theme] .lobby-hub .ach .ach-card__ava > .ach-card__glyph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+/* 成就面板的关闭（返回）按钮：主题 CSS 给了 `right:-22; top:-18; 40×40`，本意就是钉在面板右上角，
+   但 `position: absolute` / `.ach__box` 的 relative 也在作者 base 样式表里 → 实测按钮按文档流
+   掉到面板最底下（业主：「最底下返回按钮挪上来」）。补回定位，它自然会回到右上角。
+   底部那行脚注 `.ach__foot` 用的是同一套写法，一并补。 */
+html[data-ui-theme] .lobby-hub .ach .ach__box { position: relative; }
+/* 面板底部那行脚注（「账号数据 · 三服通用 · 每局结束后更新」）：业主 2026-11-14 要求去掉。 */
+html[data-ui-theme] .lobby-hub .ach .ach__foot { display: none; }
+/* 关闭按钮：作者写的是相对面板的 `right:-22; top:-18`，但本仓的 `.ach__box` 是整屏（0,0 起），
+   算出来 y=-27 → 按钮一半被视口顶端裁掉（实测 60×60 只有下半截可见）。改成钉在视口右上角内侧。 */
+html[data-ui-theme] .lobby-hub .ach .ach__close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  z-index: 320;
+}
+html[data-ui-theme] .lobby-hub .ach .ach__close .icon { width: 100%; height: 100%; }
+/* 面板本身（.ach__box）也要能滚：内容 2317px 高，按钮固定在右上角不随滚动跑掉 */
+html[data-ui-theme] .lobby-hub .ach .ach__body {
+  overflow: auto;
+  max-height: calc(100vh - 180px);
+}
+
+html[data-ui-theme] .lobby-hub .ach .ach-card {
+  display: flex;
+  align-items: center;
+}
+/* LV 角标同理：主题 CSS 只给了 left/top/width/height，`position: absolute` 在作者的 base 样式表里，
+   本仓缺失 → 实测 computed position 是 static，left/top 全失效，角标掉到头像下方（截图里看不到）。 */
+html[data-ui-theme] .lobby-hub .ach .ach-card__lv { position: absolute; }
+
+
+/* ---- 「选择同盟方式」面板：模拟邀约按钮 ---------------------------------------
+ * 作者的设计（hub-official.css）：
+ *   .ally-links { height: 50p; margin: 25p -12p -25p 0; gap: 10p; }  ← 有 gap，本应是 flex 容器
+ *   .ally-pill  { height: 50p; padding: 0 18p 0 28p; gap: 10p; }    ← 有 padding/gap，本应是 flex 项
+ * 两处都只写了「量」（gap/padding），`display: flex` 在作者的基础样式表里，本仓缺失 →
+ * gap 不生效、按钮退化成 inline-block，文字靠左不居中，和上下两张大卡片视觉不齐。
+ * 这里只补 display / 对齐，**不强制撑满**：作者没给 .ally-pill 写 width，它本来就该按内容宽度。 */
+html[data-ui-theme] .lobby-hub .ally-links {
+  display: flex;
+  align-items: center;
+  /* 作者用 `margin-bottom: -25p` 把「加入同盟」卡片往上拉，但那套间距在作者的 base 样式里；
+     本仓缺失时实测胶囊底边 646 与卡片顶边 608 重叠 38px（业主：「模拟邀约位置感觉不对劲」）。
+     这里去掉负边距，让三块入口依次排开不重叠。 */
+  margin-bottom: 0;
+}
+html[data-ui-theme] .lobby-hub .ally-links > .ally-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+/* ---- 对局准备页（确认本局信息）的盟约条 -------------------------------------
+ * 业主 2026-11-14：「盟约堆叠起来了，右边的看不见」。
+ * 主题 CSS 只给了 `.brief-bonds__row { gap: 22p 0; padding: … }`（两个值的 gap = 行距/列距），
+ * 说明它本应是 `display: flex; flex-wrap: wrap` 的多行布局；但 display / flex-wrap 在作者的
+ * base 样式表里，本仓缺失 → 盟约图标被挤在一行、互相重叠、右边溢出被裁。
+ * 对局内的「本局信息」弹窗（.minfo-dlg）用的是同一套行，一并补。 */
+html[data-ui-theme] .brief .brief-bonds__row,
+html[data-ui-theme] .minfo-dlg .brief-bonds__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+html[data-ui-theme] .brief .brief-bond,
+html[data-ui-theme] .minfo-dlg .brief-bond {
+  flex: 0 0 auto;
+}
+/* 「本局禁用干员」那个网格同理：主题只给了 grid-template-columns / gap，display: grid 缺失 */
+html[data-ui-theme] .brief .brief-banned__grid,
+html[data-ui-theme] .minfo-dlg .brief-banned__grid {
+  display: grid;
+  align-content: flex-start;
+}
+
+/* ---- 好友入口：不要悬浮按钮 ------------------------------------------------
+ * 业主 2026-11-14：「好友的入口也是」。本仓 main.js 在非标题页挂了一颗 `.social-dock`
+ * （`position: fixed; right/top; z-index: 60`）悬浮在右上角；主题界面已经有自己的「好友」入口
+ * （分享包顶栏的 `.soc__btn`，内嵌在页面布局里），两者的悬浮那颗在这里统一去掉，
+ * 让「入口」也属于页面 UI 而不是浮在页面上的按钮。 */
+html[data-ui-theme] .social-dock { display: none; }
+
+/* ---- 好友面板：从「悬浮小窗」改成整页 UI --------------------------------------
+ * 业主 2026-11-14：「好友的UI不再作为悬浮窗出现，而是作为浏览器内的UI」。
+ * 原实现（screens/social.js 的 .soc）是 `position: fixed` 全屏 + 半透明遮罩(α .62) + 560×215 居中卡片，
+ * 视觉上就是「大厅上浮着一个小窗」。这里在主题界面下把它铺成整页：不透明底、卡片按视口宽度铺开、
+ * 内容超高时内部滚动 —— 打开好友就是「一页 UI」，不再是盖在大厅上的浮层。 */
+html[data-ui-theme] .soc {
+  background: #050807;
+  align-items: flex-start;
+  padding: calc(var(--p, 1.5) * 24) 0;
+  overflow: auto;
+}
+html[data-ui-theme] .soc .soc__card {
+  width: min(94vw, 1180px);
+  max-width: none;
+  max-height: none;
+  min-height: calc(100vh - 48px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+html[data-ui-theme] .soc .soc__body {
+  min-height: 0;
+}
+
+/* ---- 难度卡上的「N 人匹配中」-----------------------------------------------
+ * 业主 2026-11-14：「匹配人数可以去了」。分享包 ProtoCard / DifficultyCard 里的
+ * `<MatchmakingCount>`（本仓 js/ui/matchmaking.js 渲染的 span.matchmaking-count）显示排队人数，
+ * 主题界面下隐藏；网页原版大厅用它显示房间列表人数，不受影响。 */
+html[data-ui-theme] .matchmaking-count { display: none; }
+
+/* ---- 搜寻中面板（.mf-search）--------------------------------------------------
+ * 业主 2026-11-14：「搜寻队友 UI 错位」。
+ * 主题 CSS 只给了 `.mf-search { gap: 0; padding: … }` 和 `.mf-search__tags { gap: … }`，
+ * 意图是纵向 flex 居中的面板；`display: flex` / `flex-direction` 在作者 base 样式表里，本仓缺失 →
+ * 标题、标签、插画、提示、停止按钮全部按 block 堆叠，位置全乱。大厅与房间两个入口的同一面板一并补。 */
+html[data-ui-theme] :is(.lobby-hub, .rs) .mf-search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* 面板撑满所在的侧栏：.mf-stop 是 `position: absolute; bottom: 15p` 相对面板定位的，
+   面板高度不撑满时按钮会落在内容中部、压住提示文字（业主截图里「停止搜寻」压在 tip 右边）。 */
+html[data-ui-theme] .lobby-hub .proto-side--search .mf-search {
+  height: 100%;
+  box-sizing: border-box;
+}
+/* 「停止搜寻」对齐侧栏右边缘：.mf-search 自己带 `margin-right: -39p`（作者 App 里它要铺到屏幕右沿），
+   面板因此一直伸到视口最右（实测 right=1920，而侧栏 right=1862）；按钮 `right: 0` 跟着贴屏幕边，
+   看起来比标题/提示都偏出一截（业主：「停止搜寻按钮还有点错位」）。往回收 39p，和侧栏对齐。 */
+html[data-ui-theme] .lobby-hub .proto-side--search .mf-stop {
+  right: calc(var(--p, 1) * 39);
+}
+html[data-ui-theme] :is(.lobby-hub, .rs) .mf-search__tags {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+html[data-ui-theme] :is(.lobby-hub, .rs) .mf-scene {
+  display: block;
+  flex: 0 0 auto;
+}
+html[data-ui-theme] :is(.lobby-hub, .rs) .mf-search__tip,
+html[data-ui-theme] :is(.lobby-hub, .rs) .mf-search__note {
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+/* ---- 选择策略界面（BAND_DRAFT）的布局基座 --------------------------------------
+ * 业主 2026-11-14：「选择策略界面 UI 有误」。主题的 css/screens/draft.css 是**增量**文件，
+ * 它替掉了本仓 css/screens/draft.css 的整份样式，于是这些「只给数量、不给 display」的规则失去基座：
+ *   .draft__main（grid-template-columns）、.dorder（grid-template-columns + gap）、
+ *   .dorder__card（gap）、.draft-detail__btns（子元素 flex:1）、.dturn.is-turn（flex-direction）。
+ * 这里按本仓基线把 display 补回来；位置/尺寸仍由主题自己的规则决定。 */
+html[data-ui-theme] .draft__main {
+  position: relative;
+  display: grid;
+}
+html[data-ui-theme] .dorder {
+  position: relative;
+  display: grid;
+}
+html[data-ui-theme] .dorder__card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+html[data-ui-theme] .dorder__name { display: flex; align-items: center; min-width: 0; }
+html[data-ui-theme] .draft-detail__btns { display: flex; }
+html[data-ui-theme] .dturn { display: flex; align-items: center; }
+html[data-ui-theme] .dturn.is-turn { display: flex; }
+html[data-ui-theme] .dturn__go { display: flex; align-items: center; }
+html[data-ui-theme] .dturn__txt { display: flex; flex-direction: column; align-items: flex-end; }
+html[data-ui-theme] .draft-order__tip { display: block; }
+html[data-ui-theme] .dband__name { position: absolute; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 选择策略页还有几处「只给数量不给 display」的基座（同样被主题增量样式吃掉） */
+html[data-ui-theme] .draft-detail__off .icon,
+html[data-ui-theme] .draft-detail__status .icon { display: inline-block; }
+html[data-ui-theme] .draft-done .draft-detail__status { display: flex; align-items: center; }
+html[data-ui-theme] .dorder__ai { display: inline-flex; align-items: center; }
+html[data-ui-theme] .dorder__name .acct-tag { display: inline; }
+html[data-ui-theme] .minfo-dlg .modal__actions { display: flex; }
+html[data-ui-theme] .minfo-dlg .brief-bonds__row { display: flex; flex-wrap: wrap; }
+html[data-ui-theme] .minfo-dlg .brief-banned__grid { display: grid; }
+
+/* ---- 结算页：卡片分层 / 背景箭头（业主 2026-11-14）------------------------------
+ * ① 背景箭头：`.srays` 是绝对定位的射线层，要和卡片分层，否则箭头会横穿卡片正面。
+ * ② 卡内分层：名牌行的底图 `.tcard__platebg` 是 `position:absolute; inset:0` 的图层，**绝对不能**
+ *    被抬进文档流——一旦它变成 relative，就会在 flex 行里吃掉整行宽度，把头像和名字挤出卡片
+ *    （业主 2026-11-14「这个卡片尺寸有误」的真实成因）。所以只抬「名字/头像」这两个正常流元素。 */
+html[data-ui-theme] .settle .srays {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+html[data-ui-theme] .settle .steam__cards,
+html[data-ui-theme] .settle .tcard { z-index: 2; }
+html[data-ui-theme] .settle .tcard { overflow: visible; }
+/* 名牌行（头像 + 名字）：整行铺满卡片，底图自己铺满，内容按从左到右排 */
+html[data-ui-theme] .settle .tcard__plate {
+  width: 100%;
+  max-width: none;
+  overflow: visible;
+}
+html[data-ui-theme] .settle .tcard__plate > .pavatar {
+  position: relative;
+  z-index: 2;
+}
+html[data-ui-theme] .settle .tcard__who {
+  position: relative;
+  z-index: 3;
+  color: #eaf6f2;
+  text-shadow: 0 0 .06rem rgba(0, 0, 0, .85);
+}
+
+/* ---- 独立模拟停放：继续游戏 / 结束模拟（业主 2026-11-14）----------------------
+ * 两个按键**保持在原位**：继续游戏占独立模拟的位置、结束模拟占联合模拟的位置，
+ * 搜寻队友的位置保留但禁用；剩余时间用圆胶囊压在「继续游戏」按键上。 */
+html[data-ui-theme] .oh-parked__pill {
+  position: absolute;
+  top: calc(var(--p, 1) * 10);
+  right: calc(var(--p, 1) * 10);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(var(--p, 1) * 96);
+  height: calc(var(--p, 1) * 30);
+  padding: 0 calc(var(--p, 1) * 14);
+  border-radius: 999px;                       /* 圆胶囊 */
+  background: rgba(5, 8, 7, .82);
+  border: 1px solid rgba(23, 217, 160, .55);
+  color: #6bf7cd;
+  font-size: max(12px, calc(var(--p, 1) * 16));
+  font-weight: 800;
+  letter-spacing: .06em;
+  box-shadow: 0 0 12px -2px rgba(23, 217, 160, .5);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+html[data-ui-theme] .oh-entry--resume { position: relative; }
+/* 当前阶段（第 N 回合 · 选择策略）压在「继续游戏」按键左下角 */
+html[data-ui-theme] .oh-parked__phase {
+  position: absolute;
+  left: calc(var(--p, 1) * 12);
+  bottom: calc(var(--p, 1) * 8);
+  z-index: 3;
+  padding: calc(var(--p, 1) * 2) calc(var(--p, 1) * 8);
+  border-radius: 999px;
+  background: rgba(5, 8, 7, .78);
+  border: 1px solid rgba(23, 217, 160, .35);
+  color: #c8e9de;
+  font-size: max(10px, calc(var(--p, 1) * 12));
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* 结束模拟：沿用联合模拟按键，红色 + 等比放大（业主 2026-11-14：
+   之前用 scale: 1 1.18 只拉纵向，把按键比例压变形了，现改为等比） */
+html[data-ui-theme] .oh-entry--end {
+  filter: hue-rotate(-140deg) saturate(1.6) brightness(1.05);
+  transform: scale(1.08);
+  transform-origin: 50% 50%;
+}
+html[data-ui-theme] .oh-entry--end:hover { filter: hue-rotate(-140deg) saturate(1.8) brightness(1.12); }
+html[data-ui-theme] .oh-entry--end .oh-entry__label { letter-spacing: .06em; }
+/* 停放期间「搜寻队友」的位置保留但不可点 */
+html[data-ui-theme] .oh-entry--disabled { opacity: .32; cursor: not-allowed; filter: grayscale(.7); }
+
+/* ---- 大厅：模拟选择面板（独立模拟 / 联合模拟 / 搜寻队友）的整页层 --------------
+ * 业主 2026-11-14 报「三个模拟打开后遮盖关系全部错误、主界面背景仍在、确认选择难度按键消失」。
+ * 原因与 S.W.E.E.P. 同一类：分享包的 `.proto`（选择模拟协议面板的根）自身不写 position/inset ——
+ * 它靠作者 App 那层整页包裹撑开；本仓的屏是路由组件，没有那层，于是它按文档流排在大厅里：
+ * 实测 `.proto-body` 在 y=105、高 1526～1585（视口才 1080），底部「开始模拟 / 确认」按钮被推到
+ * y≈1437～1474，也就是业主说的「按键消失」；同时没有遮罩，大厅背景全露出来。
+ * 这里给它整页定位 + 纵向 flex（top 固定、body 占满剩余并可滚动、foot 固定），层级沿用本仓约定 300。 */
+html[data-ui-theme] .lobby-hub .proto {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 兜底底色：分享包的 .proto__bg 是带淡入动画的半透明层，动画中途/资源未到位时
+     大厅背景会透出来（业主报「主界面背景仍在」）；面板本身铺满视口，直接给不透明底色。 */
+  background: #050807;
+}
+html[data-ui-theme] .lobby-hub .proto > .proto__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+html[data-ui-theme] .lobby-hub .proto > .proto-top {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+/* 右列是「难度卡列表 + 底部开始按钮」；`.proto-body` 的 display:grid 也来自作者的 base 样式表，
+   本仓没有 → 只补 grid-template-columns 不生效，预览图与卡片列表会上下堆叠，右列被挤出视口。
+   这里一并补上 display，再让列表自己滚、按钮固定在列底。 */
+html[data-ui-theme] .lobby-hub .proto > .proto-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(var(--p, 1) * 476);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+html[data-ui-theme] .lobby-hub .proto-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+html[data-ui-theme] .lobby-hub .proto-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+html[data-ui-theme] .lobby-hub .proto-foot {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+/* 面板打开时页面本身不滚（作者 App 里由 `hub-dialog-open` 表达，源码确实加了这个 body 类） */
+html[data-ui-theme] body.hub-dialog-open { overflow: hidden; }
+/* 本仓的社交浮层（main.js 的 .social-dock，fixed + z-index:60）挂在 body 层，
+   层级高于整个大厅屏，而 .proto 的 z-index:300 只在屏内部有效 —— 登录后它就会压住面板标题
+   （业主截图：右上角「好友」盖住「选择模拟协议」）。面板打开时让位。 */
+html[data-ui-theme] body.hub-dialog-open .social-dock { display: none; }
+

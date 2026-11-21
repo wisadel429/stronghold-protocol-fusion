@@ -1,0 +1,90 @@
+/* public/ui-themes/closure/css/screens/briefing.css — 可露希尔：确认本局信息（BRIEFING / INFO_CHECK）的补位。
+ *
+ * 问题（业主 2026-11-17 的「对局内 UI 错位」）：本仓 .brief-reroll（重刷本局）是
+ * `position: absolute`、按**本仓** brief 版式定位在页头中部；closure 主题用的是分享包那套
+ * `brief--split` 版式，页头右侧是「玩法说明」按钮，两者叠在一起 ——
+ * 实测 1366×768：重刷本局 (581,13,625,69) 与 玩法说明 (1132,42,89,26) 重叠 44×26px。
+ *
+ * 处理：主题下把这条投票条**从页头挪到左下角空白区**（.brief__foot 从 x≈598 起，左侧一直空着），
+ * 变成一条紧凑窄条。只动位置/宽度，不动内容与交互。
+ */
+html[data-ui-theme="closure"] .brief-reroll {
+  position: absolute;
+  bottom: auto;
+  top: .18rem;
+  left: 38%;
+  right: 18%;
+  width: auto;
+  max-width: none;
+  padding: .1rem .14rem;
+  margin: 0;
+  gap: .08rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  border-left: 2px solid rgba(89, 243, 254, .65);
+  background: linear-gradient(90deg, rgba(8, 22, 30, .92), rgba(8, 22, 30, .6) 78%, rgba(8, 22, 30, 0));
+}
+html[data-ui-theme="closure"] .brief-reroll__text { min-width: 0; }
+html[data-ui-theme="closure"] .brief-reroll__text > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-ui-theme="closure"] .brief-reroll__text strong { color: var(--sp-ac-cyan, #59f3fe); }
+html[data-ui-theme="closure"] .brief-reroll__actions { justify-content: flex-end; flex-wrap: nowrap; }
+html[data-ui-theme="closure"] .brief-reroll .btn { flex: 0 0 auto; }
+
+/* 窄屏：页头放不下，挪到底部中间（页脚按钮之上），横向压缩 */
+@media (max-width: 1100px) {
+  html[data-ui-theme="closure"] .brief-reroll {
+    top: auto;
+    bottom: .34rem;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(30rem, 88vw);
+    max-width: 88vw;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── 盟约区的数字 / 名称：接上 AC 字体 ─────────────────────────────────────────────
+ * 主题的 ac-closure-bonds.css 只给**对局内**的盟约条（`.gm__bonds .bstrip--closure`）上了
+ * ArkWide（数字）/ ArkCN（名称），「确认本局信息」这一屏的盟约区（`.brief-bonds`）一条规则都不命中，
+ * 于是同一套皮肤里出现两种数字字体：对局内是 AC 数字，确认屏还是本仓的 Bender。
+ * 实测（1366×768，dev/game-mock-closure.html?phase=INFO_CHECK）：
+ *   `.brief-bond__ban.num` → font-family: Bender…, 9.96px
+ *   `.bond__name`          → Noto Sans SC, 15.64px
+ * 这里按 ac-closure-bonds.css 的对局内口径补齐（只换字体/字重/字色，不动尺寸与位置）。
+ */
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .num,
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .brief-bond__ban,
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond__count,
+html[data-ac-terminal-theme="ac_s_closur"] .brief .brief-banned__n,
+html[data-ac-terminal-theme="ac_s_closur"] .brief .brief-ready__txt .num,
+html[data-ac-terminal-theme="ac_s_closur"] .stephead__title .num {
+  font-family: 'ArkWide', var(--font-num, sans-serif);
+  font-weight: 400;
+  font-synthesis: none;
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -.03em;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .brief-bond__ban { text-shadow: 0 1px 3px #000; }
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond__count { color: #b9b9bc !important; text-shadow: 0 1px 3px #000 !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond.is-active .bond__count { color: #fff !important; }
+
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond__name {
+  font-family: 'ArkCN', sans-serif;
+  font-weight: 500;
+  font-synthesis: none;
+  color: #a5a5a7 !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond.is-active .bond__name,
+html[data-ac-terminal-theme="ac_s_closur"] .brief-bonds .bond.has-board .bond__name { color: #fff !important; }
+
+/* 数字的**强调色**：本仓用薄荷绿（--mint ≈ #23e8b1），AC 皮肤的主色是青蓝 #59f3fe。
+   「1/2」「已就绪 2/4」的前一个数都是强调数字，这里换成 AC 青蓝并加一点辉光；
+   分母（/4）与灰色计数保持本仓的中性色，不动。 */
+html[data-ac-terminal-theme="ac_s_closur"] .brief .stephead__title .num,
+html[data-ac-terminal-theme="ac_s_closur"] .brief .brief-ready__txt > b.num,
+html[data-ac-terminal-theme="ac_s_closur"] .draft .stephead__title .num,
+html[data-ac-terminal-theme="ac_s_closur"] .draft .brief-ready__txt > b.num {
+  color: var(--sp-ac-cyan, #59f3fe) !important;
+  text-shadow: 0 0 calc(var(--p, 1px) * 10) rgba(89, 243, 254, .55);
+}

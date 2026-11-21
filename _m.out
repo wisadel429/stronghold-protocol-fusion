@@ -1,0 +1,16 @@
+[content] vanilla 7852c0f01bcda4a8 (436 code files, 38 data files)
+[packs] lang en (English), lang ja (日本語), lang ko (한국어), lang zh-TW (繁體中文)
+[versions] enabled: act2autochess (第二期下半, default) · 暂未开放: act3autochess, act2autochess@V2_1, act1autochess, act1autochess@V1_1
+[http] limits: rooms 1000 (16/network), matches 8/network, sockets 2000 (64/network)
+[artlock] 已启用：前缀 /assets/char/, /assets/spine/, /assets/skins/, /assets/namecard/, /assets/ui/, /assets/skill/, /assets/enemy/, /assets/relics/, /assets/band/, /assets/bond/, /assets/item/, /assets/token/, /assets/annihilation-intro/, /ui-art/img/, /ui-art/fonts-ark/
+[admin] 管理后台: http://localhost:3010/admin
+
+  卫戍协议：盟约 · Stronghold Protocol: Alliance v0.3.3-Yuan
+  Local:   http://localhost:3010
+  LAN:     http://192.168.3.24:3010
+  LAN:     http://[240e:352:4f24:1101:5455:d578:c5c:2]:3010
+  Studio:  http://localhost:3010/studio/#key=kmZkCMAGjS_HA0Qxh6AK5Q  (插件工作台 · plugin studio — this machine and the LAN; the link carries its key)
+  Internet: cloudflared tunnel --url http://localhost:3010
+
+[admin] 删除账号 75520599 (AAA) #acc_73adabc4a6d34d06 · 社交清理 {"friends":0,"requests":1,"sent":0,"block":0}
+[admin] 删除账号 52122175 (BBB) #acc_b86bda0d85f94626 · 社交清理 {"friends":0,"requests":0,"sent":0,"block":0}

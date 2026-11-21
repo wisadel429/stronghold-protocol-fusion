@@ -1,0 +1,927 @@
+/* 卫戍协议：盟约 主界面 (js/ui/officialHub.js, 2026-10-27): the official event lobby laid out in the recording's pixels.
+   --p is one pixel of the 1280×720 recording; every box below is that recording's position, anchored to the edge it
+   sits on (top row: top; the rest: bottom; left / right / centre as in the recording). The pictures are the event's own
+   sprites (img/official/hub). --dusk (0 night … 1 dusk) is set on .lobby-hub by the 盟约 backdrop (ui/allianceScene.js):
+   the logo turns dark on the dusk like the official one. */
+.lobby-hub--official {
+  --p: min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 1280), calc((100vh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 720));
+  --oh-green: #3ddfa9; --oh-gold: #efd9a4; --dusk: 0;
+}
+@supports (height: 100dvh) {
+  .lobby-hub--official { --p: min(calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 1280), calc((100dvh - var(--fit-t, 0px) - var(--fit-b, 0px)) / 720)); }
+}
+.oh-layer { position: absolute; z-index: 1; inset: var(--fit-t, 0px) var(--fit-r, 0px) var(--fit-b, 0px) var(--fit-l, 0px); pointer-events: none;
+  font-family: var(--font-cjk); color: #fff; }
+.oh-layer > *, .oh-layer button { pointer-events: auto; }
+.oh-layer :is(.oh-info, .oh-medal, .oh-ach, .oh-ibtn, .oh-mission, .oh-mile, .oh-plate, .oh-invite, .oh-entry) { position: absolute; display: block; padding: 0; margin: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.oh-layer img, .oh-page img, .oh-veil img { position: absolute; display: block; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.oh-layer button:focus-visible, .oh-page button:focus-visible { outline: calc(var(--p) * 2) solid var(--oh-green); outline-offset: calc(var(--p) * 2); }
+.oh-layer :is(.oh-ibtn, .oh-mission, .oh-mile, .oh-plate, .oh-invite, .oh-entry):active > img:first-child { filter: brightness(1.18); }
+
+/* ---- top bar ---- */
+.oh-nav { position: absolute; left: calc(var(--p) * 17); top: calc(var(--p) * 13); width: calc(var(--p) * 356); height: calc(var(--p) * 50);
+  background: rgba(46, 46, 46, .94); box-shadow: 0 calc(var(--p) * 2) calc(var(--p) * 8) rgba(0, 0, 0, .35); z-index: 3; }
+.oh-nav--solo { width: calc(var(--p) * 146); }
+.oh-nav--solo .oh-nav__back { border-right: 0 !important; }
+.oh-nav button { position: absolute; top: 0; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.oh-nav__back { left: 0; width: calc(var(--p) * 146); border-right: calc(var(--p) * 2) solid #121212 !important; }
+.oh-nav__back svg { position: absolute; left: calc(var(--p) * 20); top: calc(var(--p) * 10); width: calc(var(--p) * 18); height: calc(var(--p) * 30);
+  fill: none; stroke: #f2f2f2; stroke-width: 2.6; }
+.oh-nav__home { left: calc(var(--p) * 148); width: calc(var(--p) * 208); overflow: hidden; }
+.oh-nav__net { position: absolute; left: calc(var(--p) * 42); top: 0; width: calc(var(--p) * 125); height: 100%; stroke: rgba(205, 205, 205, .55); stroke-width: .7; fill: rgba(225, 225, 225, .8); }
+.oh-nav__house { position: absolute; left: calc(var(--p) * 88); top: calc(var(--p) * 12); width: calc(var(--p) * 33); height: calc(var(--p) * 28); fill: #f4f4f4; }
+.oh-nav button:hover { background: rgba(255, 255, 255, .05); }
+.oh-layer .oh-info { left: calc(var(--p) * 391); top: calc(var(--p) * 13); width: calc(var(--p) * 50); height: calc(var(--p) * 50); overflow: hidden; background: rgba(46, 46, 46, .94); }
+.oh-info img { left: calc(var(--p) * -9); top: calc(var(--p) * -1); width: calc(var(--p) * 69); height: calc(var(--p) * 71); }
+.oh-layer .oh-medal { left: calc(var(--p) * 468); top: calc(var(--p) * 22); width: calc(var(--p) * 102); height: calc(var(--p) * 32);
+  border-radius: calc(var(--p) * 16); background: rgba(46, 46, 46, .88); box-shadow: inset 0 0 0 calc(var(--p) * 1) rgba(255, 255, 255, .1); }
+.oh-medal__icon { left: calc(var(--p) * 16); top: calc(var(--p) * -8); width: calc(var(--p) * 38); height: calc(var(--p) * 45); }
+.oh-medal:not(.is-full) .oh-medal__icon { left: calc(var(--p) * 4); top: calc(var(--p) * -20); width: calc(var(--p) * 62); height: calc(var(--p) * 66); }
+.oh-medal__tick { position: absolute; left: calc(var(--p) * 17); top: calc(var(--p) * 22); width: calc(var(--p) * 36); height: calc(var(--p) * 10);
+  background: var(--oh-green); clip-path: polygon(0 0, 100% 0, 100% 35%, 50% 100%, 0 35%); }
+.oh-medal__n { position: absolute; left: calc(var(--p) * 64); top: 0; line-height: calc(var(--p) * 32); font-size: calc(var(--p) * 17); color: #cfcfcf; }
+.oh-medal__n b { color: #eaa53c; font-weight: 400; }
+.oh-medal.is-full .oh-medal__n b { color: var(--oh-green); }
+.oh-time { position: absolute; right: calc(var(--p) * 35); top: calc(var(--p) * 31); height: calc(var(--p) * 30); display: flex; align-items: center; gap: calc(var(--p) * 12);
+  padding: 0 calc(var(--p) * 18) 0 calc(var(--p) * 16); border-radius: calc(var(--p) * 15); white-space: nowrap;
+  background: rgba(22, 22, 22, .6); box-shadow: 0 0 calc(var(--p) * 10) calc(var(--p) * 4) rgba(22, 22, 22, .45); font-size: calc(var(--p) * 16); }
+.oh-time__clock { width: calc(var(--p) * 18); height: calc(var(--p) * 18); margin-right: calc(var(--p) * -3); flex: none;
+  background: url("/ui-art/img/official/hub/time_bg.png") calc(var(--p) * -26) calc(var(--p) * -12) / calc(var(--p) * 114) calc(var(--p) * 42) no-repeat; }
+.oh-time__label { color: #b3b3b3; }
+.oh-time__at { color: #fff; font-family: var(--font-cjk); }
+.oh-time__left { color: #3ad19c; }
+
+/* the page's own tools (设置, 录像, 背景, 全屏, 音乐, 反馈, 公告, 好友, 账号…) at the top right (no clock: owner 2026-10-27) */
+.lobby-hub--official > .oh-topbar { position: absolute; z-index: 3; top: calc(var(--fit-t, 0px) + var(--p) * 13); right: calc(var(--fit-r, 0px) + var(--p) * 35);
+  left: auto; width: auto; height: auto; min-height: 0; padding: 0; margin: 0; background: none; border: 0; box-shadow: none;
+  display: flex; flex-direction: column; align-items: flex-end; gap: calc(var(--p) * 6);
+  /* never reaches the logo's frame (centre ± 90): what does not fit folds behind ⋯ (officialHub.js useToolsFold) */
+  max-width: calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 2 - var(--p) * 135); }
+.oh-topbar .topbar__left, .oh-topbar .topbar__right { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: calc(var(--p) * 5); margin: 0; }
+.oh-topbar .topbar__right { order: 0; } .oh-topbar .topbar__left { order: 1; }
+.oh-topbar .topbar__tools { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: calc(var(--p) * 5); }
+.sp-coarse .oh-topbar .topbar__tools { gap: max(calc(var(--p) * 5), calc(10px * var(--sp-ui, 1))); } /* touch: hit areas stay apart */
+.oh-topbar .oh-tools-toggle { display: none; }
+.oh-topbar--folded .oh-tools-toggle { display: inline-flex; }
+.sp-coarse .oh-topbar .oh-tools-toggle { min-width: max(calc(var(--p) * 30), 32px, calc(40px * var(--sp-ui, 1))); height: max(calc(var(--p) * 30), 32px, calc(40px * var(--sp-ui, 1))); }
+.oh-topbar--open .oh-tools-toggle { border-color: var(--oh-green); color: var(--oh-green); }
+.oh-topbar--folded .topbar__left { position: relative; }
+.oh-topbar--folded .topbar__tools { position: absolute; z-index: 5; top: calc(100% + var(--p) * 6); right: 0; width: max-content;
+  max-width: calc((100vw - var(--fit-l, 0px) - var(--fit-r, 0px)) / 2 - var(--p) * 60); padding: calc(var(--p) * 8);
+  background: rgba(22, 22, 22, .95); border: 1px solid rgba(255, 255, 255, .14); box-shadow: 0 calc(var(--p) * 6) calc(var(--p) * 18) rgba(0, 0, 0, .5);
+  visibility: hidden; opacity: 0; transform: translateY(calc(var(--p) * -4)); transition: opacity .14s, transform .14s, visibility 0s .14s; }
+.oh-topbar--open .topbar__tools { visibility: visible; opacity: 1; transform: none; transition: opacity .14s, transform .14s; }
+.oh-topbar .topbar__tools .btn:not(.btn--square) { height: calc(var(--p) * 30); min-height: 0; padding: 0 calc(var(--p) * 9); font-size: calc(var(--p) * 13);
+  background: rgba(46, 46, 46, .88); border: calc(var(--p) * 1) solid rgba(255, 255, 255, .12); border-radius: 0; color: #ddd; }
+.oh-topbar .btn--sm.btn--square { width: calc(var(--p) * 30); height: calc(var(--p) * 30); min-height: 0; padding: 0;
+  background: rgba(46, 46, 46, .88); border: calc(var(--p) * 1) solid rgba(255, 255, 255, .12); border-radius: 0; }
+.oh-topbar .btn__icon, .oh-topbar .btn svg { width: calc(var(--p) * 17); height: calc(var(--p) * 17); }
+.oh-topbar .lobby-connection { font-size: calc(var(--p) * 13); padding: 0 calc(var(--p) * 8); height: calc(var(--p) * 30); display: inline-flex; align-items: center; gap: calc(var(--p) * 4);
+  background: rgba(46, 46, 46, .88); color: #cfcfcf; border-radius: 0; border: 0; }
+.oh-topbar .hub-online { margin: 0; height: calc(var(--p) * 32); font-size: calc(var(--p) * 13); background: rgba(46, 46, 46, .88); border: 0;
+  /* 业主 2026-11-15：这一行以前会被右侧的账号卡压住（flex 收缩 + 文字溢出）。
+     现在整块不收缩、不换行，并把数字提亮，读起来更清楚。 */
+  flex: 0 0 auto; white-space: nowrap; position: relative; z-index: 1;
+  padding: 0 calc(var(--p) * 9); border-radius: calc(var(--p) * 6); display: inline-flex; align-items: center; gap: calc(var(--p) * 5); }
+.oh-topbar .hub-online .num { color: #6bf7cd; font-weight: 800; }
+.oh-topbar .hub-online > span:last-child { color: #c9d6d1; }
+/* 顶栏右侧的每一块都不许被压缩，避免互相盖住（放不下就整体换行） */
+.oh-topbar .topbar__right > * { flex: 0 0 auto; }
+.oh-topbar .hub-tile--friends { position: relative; height: calc(var(--p) * 32); min-height: 0; width: auto; padding: 0 calc(var(--p) * 10) 0 calc(var(--p) * 6); gap: calc(var(--p) * 5);
+  display: inline-flex; align-items: center; background: rgba(46, 46, 46, .88); border: 0; }
+.oh-topbar .hub-tile--friends .hub-tile__icon { width: calc(var(--p) * 22); height: calc(var(--p) * 22); }
+.oh-topbar .hub-tile--friends .hub-tile__en { display: none; }
+.oh-topbar .hub-tile--friends .hub-tile__label { font-size: calc(var(--p) * 14); }
+
+/* ---- centre logo ---- */
+.oh-logo { position: absolute; left: 50%; top: calc(var(--p) * 75); width: calc(var(--p) * 220); height: calc(var(--p) * 212); margin-left: calc(var(--p) * -110);
+  pointer-events: none !important; --ink: brightness(calc(1 - var(--dusk) * .92)); }
+/* img_frame: logo_frame_white nine-sliced (20) 180×138.6 at (0,50) of the title group; frame_mask (164×152, same centre) hides all but
+   its two 8 px ends, which leaves the brackets. Recording: white at ~.18 on the night, rgba(0,0,0,.6) (the layout's colour) on the dusk */
+.oh-logo__frame { position: absolute; left: calc(var(--p) * 20); top: calc(var(--p) * -.3); width: calc(var(--p) * 180); height: calc(var(--p) * 138.6);
+  border: calc(var(--p) * 20) solid transparent; border-image: url("/ui-art/img/official/hub/logo_frame_white.png") 20;
+  opacity: calc(.18 + var(--dusk) * .42); filter: brightness(calc(1 - var(--dusk)));
+  -webkit-mask: linear-gradient(90deg, #000 calc(var(--p) * 8), transparent 0 calc(100% - var(--p) * 8), #000 0);
+  mask: linear-gradient(90deg, #000 calc(var(--p) * 8), transparent 0 calc(100% - var(--p) * 8), #000 0); }
+.oh-logo__dots { left: calc(var(--p) * 36); top: calc(var(--p) * 5); width: calc(var(--p) * 149); height: calc(var(--p) * 131); filter: var(--ink); }
+.oh-logo__l1 { left: calc(var(--p) * 17); top: calc(var(--p) * 147); width: calc(var(--p) * 185); height: calc(var(--p) * 14); filter: var(--ink); }
+.oh-logo__l2 { left: calc(var(--p) * -15); top: calc(var(--p) * 166); width: calc(var(--p) * 245); height: calc(var(--p) * 22); filter: var(--ink); opacity: .9; }
+.oh-logo__en { position: absolute; left: calc(var(--p) * 56); top: calc(var(--p) * 187); width: calc(var(--p) * 106); height: calc(var(--p) * 22);
+  background: color-mix(in srgb, var(--oh-green), #141414 calc(var(--dusk) * 100%));
+  -webkit-mask: url("/ui-art/img/official/hub/title_season_name_en.png") 0 0 / 100% 100% no-repeat; mask: url("/ui-art/img/official/hub/title_season_name_en.png") 0 0 / 100% 100% no-repeat; }
+.oh-title { position: absolute; left: 50%; top: calc(var(--p) * 287); transform: translateX(-50%); margin: 0; white-space: nowrap; pointer-events: none !important;
+  font-size: calc(var(--p) * 24); font-weight: 900; letter-spacing: .02em; line-height: 1.2;
+  color: color-mix(in srgb, #fff, #141414 calc(var(--dusk) * 100%)); text-shadow: 0 0 calc(var(--p) * 6) rgba(0, 0, 0, calc(.6 - var(--dusk) * .6)); }
+.oh-title b { color: color-mix(in srgb, var(--oh-green), #141414 calc(var(--dusk) * 100%)); font-weight: 900; }
+.oh-title__colon { margin: 0 .05em; }
+
+/* ---- left column ---- */
+/* btn_achievement (320×160 at 17.6,76.6): its img_bg 337×186 sits centred (9.1,63.6); everything below is relative to that */
+.oh-layer .oh-ach { left: calc(var(--p) * 9.1); top: calc(var(--p) * 63.6); width: calc(var(--p) * 337); height: calc(var(--p) * 186); }
+.oh-ach__scene { left: 0; top: 0; width: calc(var(--p) * 337); height: calc(var(--p) * 186); }
+/* trophy (-106,6.5): medal_icon 60×60, the account's trophy-level piece (ui/trophies.js), and the count on img_trophy (nine-sliced 30/30) */
+.oh-ach__rank { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.oh-ach .oh-ach__medal { position: absolute; left: calc(var(--p) * 32.5); top: calc(var(--p) * 49.5); width: calc(var(--p) * 60); height: calc(var(--p) * 60); }
+.oh-ach__count { position: absolute; left: calc(var(--p) * 62.5); top: calc(var(--p) * 89.8); height: calc(var(--p) * 38); min-width: calc(var(--p) * 60); transform: translateX(-50%);
+  padding: 0 calc(var(--p) * 17) 0 calc(var(--p) * 33); border-image: url("/ui-art/img/official/hub/img_trophy.png") 0 30 fill / 0 calc(var(--p) * 30);
+  font-size: calc(var(--p) * 14); line-height: calc(var(--p) * 38); color: rgb(244, 244, 244); white-space: nowrap; }
+.oh-ach__count b { font-weight: 400; }
+/* text_bg (0,-56.5): btn_achievement_text_bg 221×63, its icon tinted rgba(223,194,129), the text rgba(255,219,139) */
+.oh-ach__label { position: absolute; left: calc(var(--p) * 58); top: calc(var(--p) * 118); width: calc(var(--p) * 221); height: calc(var(--p) * 63);
+  background: url("/ui-art/img/official/hub/btn_achievement_text_bg.png") 0 0 / 100% 100% no-repeat; }
+.oh-ach__icon { position: absolute; left: calc(var(--p) * 43); top: calc(var(--p) * 12.5); width: calc(var(--p) * 37); height: calc(var(--p) * 38); background: rgb(223, 194, 129);
+  -webkit-mask: url("/ui-art/img/official/hub/btn_achievement_desc.png") 0 0 / 100% 100% no-repeat; mask: url("/ui-art/img/official/hub/btn_achievement_desc.png") 0 0 / 100% 100% no-repeat; }
+.oh-ach__label span { position: absolute; left: calc(var(--p) * 90); top: 0; line-height: calc(var(--p) * 63); font-size: calc(var(--p) * 22.5); font-weight: 700; color: rgb(255, 219, 139); white-space: nowrap; }
+.oh-ach.is-guest .oh-ach__scene { filter: saturate(.4) brightness(.8); }
+
+.oh-ibtn { width: calc(var(--p) * 115); height: calc(var(--p) * 110); }
+.oh-layer .oh-ibtn--reward { left: calc(var(--p) * 41); bottom: calc(var(--p) * 242); }
+.oh-layer .oh-ibtn--daily { left: calc(var(--p) * 184); bottom: calc(var(--p) * 242); width: calc(var(--p) * 141); }
+.oh-ibtn img { left: 0; top: 0; width: 100%; height: calc(var(--p) * 82); }
+.oh-ibtn span { position: absolute; left: -50%; right: -50%; bottom: 0; text-align: center; font-size: calc(var(--p) * 17); font-weight: 700; white-space: nowrap;
+  text-shadow: 0 0 calc(var(--p) * 4) #000, 0 0 calc(var(--p) * 8) rgba(0, 0, 0, .8); }
+.oh-layer .oh-mission { left: calc(var(--p) * 43); bottom: calc(var(--p) * 152); width: calc(var(--p) * 279); height: calc(var(--p) * 68); }
+.oh-mission img { inset: 0; width: 100%; height: 100%; }
+.oh-mission span { position: absolute; right: calc(var(--p) * 15); top: 0; line-height: calc(var(--p) * 68); font-size: calc(var(--p) * 20); font-weight: 700; }
+.oh-dot { position: absolute; right: calc(var(--p) * -1); top: calc(var(--p) * -4); width: calc(var(--p) * 13); height: calc(var(--p) * 13); transform: rotate(45deg);
+  background: #f2552c; box-shadow: 0 0 0 calc(var(--p) * 3) rgba(242, 85, 44, .35), 0 0 calc(var(--p) * 8) rgba(242, 85, 44, .8); }
+.oh-layer .oh-mile { left: calc(var(--p) * 43); bottom: calc(var(--p) * 24); width: calc(var(--p) * 279); height: calc(var(--p) * 87); }
+.oh-mile__bg { inset: 0; width: 100%; height: 100%; }
+.oh-mile__coin { left: calc(var(--p) * -11); top: calc(var(--p) * -14); width: calc(var(--p) * 103); height: calc(var(--p) * 104); }
+.oh-mile__lvt { position: absolute; left: calc(var(--p) * 102); top: calc(var(--p) * 13); font-size: calc(var(--p) * 11); color: #a7a7a7; font-family: var(--font-num); }
+.oh-mile__lv { position: absolute; left: calc(var(--p) * 100); top: calc(var(--p) * 26); font-size: calc(var(--p) * 30); line-height: 1; color: var(--oh-green); font-weight: 400; }
+.oh-mile__name { position: absolute; right: calc(var(--p) * 14); top: calc(var(--p) * 29); font-size: calc(var(--p) * 21); font-weight: 700; line-height: 1.2; }
+.oh-mile__max { left: calc(var(--p) * 219); top: calc(var(--p) * 8); width: calc(var(--p) * 46); height: calc(var(--p) * 15); }
+.oh-mile__bar { position: absolute; left: calc(var(--p) * 100); top: calc(var(--p) * 65); width: calc(var(--p) * 164); height: calc(var(--p) * 9); border-radius: calc(var(--p) * 5); background: #0d0d0d; overflow: hidden; }
+.oh-mile__bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--oh-green); }
+
+/* ---- right column ---- */
+.oh-plate { width: calc(var(--p) * 252); height: calc(var(--p) * 75); color: #1c1c1c; }
+.oh-plate img { inset: 0; width: 100%; height: 100%; }
+.oh-layer .oh-plate--sweep { right: calc(var(--p) * 34); bottom: calc(var(--p) * 357); }
+.oh-layer .oh-plate--pool { right: calc(var(--p) * 32); bottom: calc(var(--p) * 278); width: calc(var(--p) * 254); height: calc(var(--p) * 74); }
+.oh-plate span { position: absolute; font-weight: 700; white-space: nowrap; color: #1c1c1c; }
+.oh-plate--sweep span { left: calc(var(--p) * 96); top: calc(var(--p) * 5); font-size: calc(var(--p) * 18); letter-spacing: .01em; }
+.oh-plate--pool span { left: calc(var(--p) * 113); top: calc(var(--p) * 15); font-size: calc(var(--p) * 20); }
+.oh-plate .lo-n { position: absolute; right: calc(var(--p) * 2); top: calc(var(--p) * -8); min-width: calc(var(--p) * 18); padding: 0 calc(var(--p) * 4); font-size: calc(var(--p) * 12); line-height: calc(var(--p) * 18);
+  border-radius: calc(var(--p) * 9); background: var(--oh-green); color: #062018; text-align: center; font-weight: 700; }
+.oh-layer .oh-invite { right: calc(var(--p) * 11); bottom: calc(var(--p) * 163); width: calc(var(--p) * 233); height: calc(var(--p) * 80); }
+.oh-invite img { inset: 0; width: 100%; height: 100%; }
+.oh-invite span { position: absolute; left: calc(var(--p) * 49); top: calc(var(--p) * 18); font-size: calc(var(--p) * 19); line-height: calc(var(--p) * 26); color: #ececec; }
+.oh-invite__n { position: absolute; left: calc(var(--p) * 136); top: calc(var(--p) * 20); min-width: calc(var(--p) * 22); height: calc(var(--p) * 22); padding: 0 calc(var(--p) * 5); border-radius: calc(var(--p) * 11);
+  background: #f07a26; color: #1b0c02; font-size: calc(var(--p) * 13); line-height: calc(var(--p) * 22); text-align: center; }
+
+/* the 危机合约 card (a core that plays contracts) and other extras: under the tools, above S.W.E.E.P. */
+/* 危机合约 (this site's own event card): bottom left, where the recording's 功勋兑换处 sits (left out here) */
+.oh-layer .oh-extra { position: absolute; left: calc(var(--p) * 41); bottom: calc(var(--p) * 26); display: flex; flex-direction: column; gap: calc(var(--p) * 8); }
+.oh-layer .oh-extra .cc-card { position: relative; width: calc(var(--p) * 281); }
+
+/* ---- entries ---- */
+.oh-entries { position: absolute; right: 0; bottom: 0; width: calc(var(--p) * 735); height: calc(var(--p) * 160); pointer-events: none !important; }
+.oh-group { position: absolute; bottom: calc(var(--p) * 8); height: calc(var(--p) * 140); pointer-events: none;
+  background: linear-gradient(180deg, rgba(36, 70, 60, .62), rgba(16, 30, 27, .72) 70%, rgba(10, 18, 16, .6));
+  box-shadow: inset 0 calc(var(--p) * 1.5) 0 rgba(120, 190, 165, .55), inset 0 0 0 calc(var(--p) * 1) rgba(110, 170, 150, .28); }
+.oh-group--solo { right: calc(var(--p) * 525); width: calc(var(--p) * 208); }
+.oh-group--multi { right: calc(var(--p) * 18); width: calc(var(--p) * 496); }
+.oh-group__head { position: absolute; left: 0; right: 0; top: calc(var(--p) * -19); margin: 0; display: flex; justify-content: center; align-items: center; gap: calc(var(--p) * 6);
+  font-size: calc(var(--p) * 17); font-weight: 500; color: #d2d8d5; text-shadow: 0 0 calc(var(--p) * 4) #000; }
+.oh-group__head img { position: static; height: calc(var(--p) * 17); width: auto; }
+.oh-group--multi .oh-group__head { left: calc(var(--p) * 150); right: auto; }
+.oh-entry { pointer-events: auto; }
+.oh-layer .oh-entry--solo { left: calc(var(--p) * 3); top: calc(var(--p) * 20); width: calc(var(--p) * 201); height: calc(var(--p) * 121); }
+.oh-layer .oh-entry--coop { left: calc(var(--p) * 2); top: calc(var(--p) * 18); width: calc(var(--p) * 233); height: calc(var(--p) * 122); }
+.oh-layer .oh-entry--search { left: calc(var(--p) * 228); top: calc(var(--p) * 20); width: calc(var(--p) * 267); height: calc(var(--p) * 120); }
+.oh-entry__art { inset: 0; width: 100%; height: 100%; }
+.oh-entry__label { position: absolute; top: calc(var(--p) * 60); font-size: calc(var(--p) * 30); font-weight: 900; letter-spacing: .02em; white-space: nowrap;
+  text-shadow: 0 calc(var(--p) * 1) 0 #000, 0 0 calc(var(--p) * 5) rgba(0, 0, 0, .9); }
+.oh-entry--solo .oh-entry__label { right: calc(var(--p) * 18); }
+.oh-entry--coop .oh-entry__label { right: calc(var(--p) * 26); }
+.oh-entry--search .oh-entry__label { right: calc(var(--p) * 24); color: #0c2a20; text-shadow: 0 0 calc(var(--p) * 3) rgba(160, 255, 220, .35); }
+.oh-entry__new { left: calc(var(--p) * 126); top: calc(var(--p) * -27); width: calc(var(--p) * 95); height: calc(var(--p) * 56); }
+.oh-entry__count { position: absolute; left: calc(var(--p) * 14); top: calc(var(--p) * 8); font-size: calc(var(--p) * 12); color: #b9f5e1; background: rgba(5, 20, 16, .7); padding: 0 calc(var(--p) * 6); }
+.oh-entry:hover .oh-entry__art { filter: brightness(1.12); }
+
+/* matchmaking in progress / maintenance: above the entries */
+.lobby-hub--official .oh-status { position: absolute; right: calc(var(--p) * 18); bottom: calc(var(--p) * 176); width: calc(var(--p) * 496); pointer-events: auto; }
+.lobby-hub--official .oh-status .matchmaking-hud { margin: 0; }
+
+/* ---- dialogs ---- */
+.oh-veil { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: blur(calc(var(--p) * 12)); backdrop-filter: blur(calc(var(--p) * 12));
+  font-family: var(--font-cjk); color: #fff; animation: oh-fade .18s ease-out; }
+@keyframes oh-fade { from { opacity: 0; } }
+.oh-daily__band { position: absolute; left: 0; right: 0; top: 26.4%; height: 47.2%; background: rgba(30, 30, 30, .93);
+ }
+/* the recording's band opens with a green glow along its top edge, fading down and toward the right */
+.oh-daily__band::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--p) * 46);
+  background: linear-gradient(180deg, rgba(40, 178, 134, .85), rgba(40, 178, 134, .28) 45%, rgba(40, 178, 134, 0));
+  -webkit-mask: linear-gradient(90deg, #000 75%, rgba(0, 0, 0, .35)); mask: linear-gradient(90deg, #000 75%, rgba(0, 0, 0, .35)); }
+.oh-daily__body { position: absolute; left: calc(50% - var(--p) * 322); top: 50%; transform: translateY(-50%); width: calc(var(--p) * 650); }
+.oh-daily h2 { position: relative; margin: 0 0 calc(var(--p) * 10); padding-left: calc(var(--p) * 46); font-size: calc(var(--p) * 25); font-weight: 900; line-height: calc(var(--p) * 36); }
+.oh-daily h2 img { left: calc(var(--p) * 10); top: calc(var(--p) * 1); width: calc(var(--p) * 29); height: calc(var(--p) * 35); }
+.oh-daily__bar { display: flex; align-items: center; gap: calc(var(--p) * 14); margin-left: calc(var(--p) * 12); font-size: calc(var(--p) * 22); color: #d0d0d0; }
+.oh-daily__bar > i { position: relative; width: calc(var(--p) * 187); height: calc(var(--p) * 11); border-radius: calc(var(--p) * 6); background: #0f0f0f; overflow: hidden; }
+.oh-daily__bar > i > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: var(--oh-green); }
+.oh-daily__bar b { color: var(--oh-green); font-weight: 400; }
+.oh-daily p { margin: calc(var(--p) * 38) 0 0; font-size: calc(var(--p) * 20); line-height: 1.45; color: #e8e8e8; }
+.oh-daily p b { color: var(--oh-green); font-weight: 400; }
+
+.oh-rules__box { position: absolute; left: 50%; top: 50%; width: calc(var(--p) * 1105); height: calc(var(--p) * 650); transform: translate(-50%, -50%); }
+.oh-rules__head { position: absolute; left: 0; top: 0; width: 100%; height: calc(var(--p) * 166); }
+.oh-rules__head > img { left: 0; top: 0; width: 100%; height: 100%; }
+.oh-rules__head p { position: absolute; left: calc(var(--p) * 170); top: calc(var(--p) * 64); margin: 0; font-size: calc(var(--p) * 21); white-space: nowrap; }
+.oh-rules__head p img { position: relative; display: inline-block; vertical-align: -.15em; width: calc(var(--p) * 21); height: calc(var(--p) * 24); margin-right: calc(var(--p) * 10); }
+.oh-rules__head p b { color: var(--oh-green); font-weight: 500; }
+.oh-close { position: absolute; right: calc(var(--p) * -36); top: calc(var(--p) * 22); width: calc(var(--p) * 36); height: calc(var(--p) * 36); border: 0; background: rgba(40, 40, 40, .9); color: #ddd; cursor: pointer;
+  display: grid; place-items: center; }
+.oh-close svg { width: calc(var(--p) * 20); height: calc(var(--p) * 20); }
+.oh-rules__table { position: absolute; left: calc(var(--p) * 45); top: calc(var(--p) * 155); width: calc(var(--p) * 1060); height: calc(var(--p) * 298); }
+.oh-rules__keys { position: absolute; left: 0; top: 0; width: calc(var(--p) * 110); height: 100%; display: grid; grid-template-rows: 1fr 1fr; z-index: 1; }
+.oh-rules__keys span { display: grid; place-items: center; font-size: calc(var(--p) * 19); font-weight: 700; }
+.oh-rules__keys span:first-child { background: #1f6b52; } .oh-rules__keys span:last-child { background: #1d1d1d; }
+.oh-rules__strip { position: absolute; left: calc(var(--p) * 110); top: 0; right: 0; height: 100%; display: flex; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #aaa #222;
+  background: linear-gradient(180deg, transparent 50%, rgba(10, 10, 10, .85) 50%),
+    repeating-linear-gradient(135deg, rgba(40, 120, 92, .55) 0 calc(var(--p) * 8), rgba(32, 104, 80, .55) calc(var(--p) * 8) calc(var(--p) * 16)); }
+.oh-rules__col { flex: none; width: calc(var(--p) * 192); display: grid; grid-template-rows: 1fr 1fr; position: relative; }
+.oh-rules__col::after { content: ''; position: absolute; right: 0; top: 18%; height: 14%; border-right: calc(var(--p) * 2) solid rgba(255, 255, 255, .25); box-shadow: 0 calc(var(--p) * 148) 0 rgba(255, 255, 255, .25); }
+.oh-rules__col b, .oh-rules__col span { display: flex; align-items: center; justify-content: center; gap: calc(var(--p) * 10); font-size: calc(var(--p) * 40); font-weight: 400; color: #f0f0f0; }
+.oh-rules__col span img { position: static; width: calc(var(--p) * 22); height: calc(var(--p) * 26); }
+.oh-layer .oh-rules__jump, .oh-rules__jump { position: absolute; right: calc(var(--p) * -60); top: calc(var(--p) * 35); width: calc(var(--p) * 75); height: calc(var(--p) * 75); border: 0; background: none; cursor: pointer; }
+.oh-rules__jump img { inset: 0; width: 100%; height: 100%; }
+.oh-rules__factors { position: absolute; left: calc(var(--p) * 45); top: calc(var(--p) * 473); width: calc(var(--p) * 1060); height: calc(var(--p) * 170); display: flex; gap: calc(var(--p) * 18); }
+.oh-rules__fac { position: relative; display: flex; background: #161616; }
+.oh-rules__fac--diff { flex: 1.5; } .oh-rules__fac--mode { flex: 1; }
+.oh-rules__fk { flex: none; width: calc(var(--p) * 112); display: grid; place-items: center; background: #262626; font-size: calc(var(--p) * 20); font-weight: 700; }
+.oh-rules__fv { flex: 1; display: grid; grid-template-rows: 1fr 1.05fr; border-left: calc(var(--p) * 2) solid #2c2c2c; }
+.oh-rules__fv small { display: flex; align-items: center; justify-content: center; gap: calc(var(--p) * 6); font-size: calc(var(--p) * 16); color: #ddd; background: #1f1f1f; }
+.oh-rules__fv small img { position: static; height: calc(var(--p) * 22); width: auto; }
+.oh-rules__fv.is-funny small { color: #f6a329; } .oh-rules__fv.is-normal small { color: #e85a1a; } .oh-rules__fv.is-hard small { color: #e73118; } .oh-rules__fv.is-abyss small { color: #ff2448; }
+.oh-rules__fv b { display: grid; place-items: center; font-size: calc(var(--p) * 36); font-weight: 500; background: #111; }
+
+/* pages (关键目标, 功勋兑换处): a screen of their own over the lobby */
+.oh-page { position: fixed; inset: 0; z-index: 60; overflow: hidden; background: #0b0b0b; font-family: var(--font-cjk); color: #fff; animation: oh-fade .2s ease-out;
+  --p: min(calc(100vw / 1280), calc(100vh / 720)); }
+@supports (height: 100dvh) { .oh-page { --p: min(calc(100vw / 1280), calc(100dvh / 720)); } }
+.oh-page button { cursor: pointer; font: inherit; }
+.oh-page .oh-nav { position: absolute; }
+.oh-page__head { position: absolute; left: calc(var(--p) * 430); top: calc(var(--p) * 18); height: calc(var(--p) * 54); display: flex; align-items: center; gap: calc(var(--p) * 14); }
+.oh-goals__tasks { display: flex; flex-direction: column; align-items: center; color: #cfcfcf; font-size: calc(var(--p) * 12); line-height: 1; }
+.oh-goals__tasks svg { width: calc(var(--p) * 28); height: calc(var(--p) * 30); fill: #d8d8d8; margin-bottom: calc(var(--p) * 3); }
+.oh-goals__tasks::after { content: ''; position: absolute; left: calc(var(--p) * 48); top: calc(var(--p) * 16); height: calc(var(--p) * 22); border-left: calc(var(--p) * 2) solid #777; }
+.oh-page__plate { position: relative; margin-left: calc(var(--p) * 10); width: calc(var(--p) * 218); height: calc(var(--p) * 53); }
+.oh-page__plate img { inset: 0; width: 100%; height: 100%; }
+.oh-page__plate b { position: absolute; right: calc(var(--p) * 14); top: 0; line-height: calc(var(--p) * 53); font-size: calc(var(--p) * 20); }
+.oh-goals { background: radial-gradient(70% 90% at 70% 50%, #2a2a2a, #0b0b0b 80%); }
+.oh-goals__map { left: calc(var(--p) * 14); top: calc(var(--p) * 92); width: calc(var(--p) * 395); height: calc(var(--p) * 604); }
+.oh-goals__list { position: absolute; left: calc(var(--p) * 418); right: calc(var(--p) * 22); top: calc(var(--p) * 100); bottom: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--p) * 30);
+  scrollbar-width: thin; scrollbar-color: #777 transparent; }
+.oh-goals__claim { position: relative; width: calc(var(--p) * 835); height: calc(var(--p) * 140); flex: none; }
+.oh-goals__claim > img { left: 0; top: 0; width: 100%; height: 100%; }
+.oh-goals__claim > span { position: absolute; left: calc(var(--p) * 158); top: calc(var(--p) * 56); font-size: calc(var(--p) * 18); color: #1c1c1c; font-weight: 500; }
+.oh-goals__claim > button { position: absolute; right: calc(var(--p) * 47); top: calc(var(--p) * 37); width: calc(var(--p) * 237); height: calc(var(--p) * 64); border: 0; background: none; color: #fff;
+  display: flex; align-items: center; justify-content: center; gap: calc(var(--p) * 18); font-size: calc(var(--p) * 21); padding-left: calc(var(--p) * 40); }
+.oh-goals__claim > button svg { position: absolute; left: calc(var(--p) * 20); top: calc(var(--p) * 18); width: calc(var(--p) * 28); height: calc(var(--p) * 28); fill: #222; background: #fff; border-radius: calc(var(--p) * 3); padding: calc(var(--p) * 3); }
+.oh-goals__claim > button:disabled { opacity: .45; cursor: default; }
+.oh-goals__claim.is-none > img { filter: grayscale(1) brightness(.7); }
+.oh-goals__claim.is-none > span { color: #ddd; }
+.oh-goal { position: relative; width: calc(var(--p) * 835); height: calc(var(--p) * 131); margin-top: calc(var(--p) * 2); }
+.oh-goal.is-ready { cursor: pointer; }
+.oh-goal__bg { left: calc(var(--p) * -6); top: calc(var(--p) * -6); width: calc(var(--p) * 846); height: calc(var(--p) * 167); }
+.oh-goal__text { position: absolute; left: calc(var(--p) * 34); top: calc(var(--p) * 30); width: calc(var(--p) * 360); height: calc(var(--p) * 64); margin: 0; display: flex; align-items: center;
+  font-size: calc(var(--p) * 18); line-height: 1.4; color: #eee; }
+.oh-goal.is-ready .oh-goal__text { color: #151515; font-weight: 500; }
+.oh-goal__proc { position: absolute; left: calc(var(--p) * 395); top: calc(var(--p) * 40); width: calc(var(--p) * 142); text-align: center; font-size: calc(var(--p) * 17); color: #eee; }
+.oh-goal.is-ready .oh-goal__proc { color: #1a1a1a; }
+.oh-goal__proc > i { display: block; position: relative; height: calc(var(--p) * 8); margin-top: calc(var(--p) * 8); border-radius: calc(var(--p) * 4); background: #3a3a3a; overflow: hidden; }
+.oh-goal__proc > i > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--oh-green); border-radius: inherit; }
+.oh-goal__reward { position: absolute; left: calc(var(--p) * 585); top: calc(var(--p) * 12); width: calc(var(--p) * 100); height: calc(var(--p) * 100); border-radius: 50%;
+  background: radial-gradient(circle, #2c2a20 58%, #d8b21c 60%, #7b6410 66%, transparent 68%); }
+.oh-goal__reward img { left: calc(var(--p) * 12); top: calc(var(--p) * 6); width: calc(var(--p) * 76); height: calc(var(--p) * 77); transform: rotate(-12deg); }
+.oh-goal__reward b { position: absolute; right: calc(var(--p) * 18); bottom: calc(var(--p) * 14); font-size: calc(var(--p) * 17); font-weight: 400; text-shadow: 0 0 calc(var(--p) * 3) #000; }
+.oh-goal__done { left: calc(var(--p) * -6); top: calc(var(--p) * -4); width: calc(var(--p) * 846); height: calc(var(--p) * 147); opacity: .92; }
+.oh-goal.is-claimed .oh-goal__text, .oh-goal.is-claimed .oh-goal__proc, .oh-goal.is-claimed .oh-goal__reward { opacity: .35; }
+
+.oh-mpage { background: #101010; }
+.oh-mpage__feature { position: absolute; inset: 0 0 calc(var(--p) * 330) 0; overflow: hidden; }
+.oh-mpage__skin { left: calc(var(--p) * -60); top: calc(var(--p) * -40); width: calc(var(--p) * 1026); height: calc(var(--p) * 668); opacity: .95; }
+.oh-mpage__feature::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 50%, rgba(16, 16, 16, .92) 68%, #101010 80%), linear-gradient(0deg, #101010, transparent 25%); }
+.oh-mpage__logo { left: calc(var(--p) * 48); top: calc(var(--p) * 92); width: calc(var(--p) * 252); height: calc(var(--p) * 154); z-index: 1; }
+.oh-mpage__who, .oh-mpage__skinname { position: absolute; z-index: 1; left: calc(var(--p) * 94); width: calc(var(--p) * 110); text-align: center; font-size: calc(var(--p) * 16); line-height: calc(var(--p) * 26); }
+.oh-mpage__who { top: calc(var(--p) * 243); background: rgba(30, 30, 30, .9); }
+.oh-mpage__skinname { top: calc(var(--p) * 272); width: calc(var(--p) * 130); background: #1f8d6b; }
+.oh-mpage__note { position: absolute; z-index: 1; left: calc(var(--p) * 60); top: calc(var(--p) * 306); font-size: calc(var(--p) * 15); color: #e8e8e8; text-shadow: 0 0 calc(var(--p) * 3) #000; }
+/* the sprite's card sits inside a shadow margin: sized so the card itself fills the recording's 147 × 150 box at 598, 140 */
+.oh-mpage__avatar { z-index: 1; left: calc(var(--p) * 562); top: calc(var(--p) * 127); width: calc(var(--p) * 219); height: calc(var(--p) * 198); }
+.oh-mpage__avkind { position: absolute; z-index: 1; left: calc(var(--p) * 735); top: calc(var(--p) * 266); width: calc(var(--p) * 104); text-align: center; font-size: calc(var(--p) * 15); line-height: calc(var(--p) * 26); background: rgba(34, 34, 34, .92); }
+.oh-mpage__avname { position: absolute; z-index: 1; left: calc(var(--p) * 672); top: calc(var(--p) * 296); padding: 0 calc(var(--p) * 10); font-size: calc(var(--p) * 15); line-height: calc(var(--p) * 24); background: #1f8d6b; }
+.oh-mpage__head { position: absolute; left: calc(var(--p) * 850); top: calc(var(--p) * 58); width: calc(var(--p) * 412); height: calc(var(--p) * 290); }
+.oh-mpage__head h2 { position: relative; margin: 0; height: calc(var(--p) * 90); font-size: calc(var(--p) * 30); font-weight: 900; line-height: calc(var(--p) * 80); padding-left: calc(var(--p) * 110); }
+.oh-mpage__head h2 img { left: calc(var(--p) * 20); top: calc(var(--p) * -50); width: calc(var(--p) * 395); height: calc(var(--p) * 160); opacity: .9; }
+.oh-mpage__head h2 span { position: relative; }
+.oh-mpage__coin { right: calc(var(--p) * -10); top: calc(var(--p) * -40); width: calc(var(--p) * 120); height: calc(var(--p) * 122); }
+.oh-mpage__lv { position: absolute; left: calc(var(--p) * 22); top: calc(var(--p) * 92); display: flex; align-items: baseline; gap: calc(var(--p) * 6); }
+.oh-mpage__lv small { font-size: calc(var(--p) * 30); color: #cfcfcf; font-family: var(--font-num); }
+.oh-mpage__lv b { font-size: calc(var(--p) * 66); font-weight: 400; line-height: 1; }
+.oh-mpage__lv img { position: relative; display: inline-block; margin-left: calc(var(--p) * 170); width: calc(var(--p) * 70); height: calc(var(--p) * 45); }
+.oh-mpage__lv span { margin-left: calc(var(--p) * 10); font-size: calc(var(--p) * 18); color: #bbb; }
+.oh-mpage__bar { position: absolute; left: calc(var(--p) * 22); top: calc(var(--p) * 157); width: calc(var(--p) * 388); height: calc(var(--p) * 14); border-radius: calc(var(--p) * 7); background: #2a2a2a; overflow: hidden; }
+.oh-mpage__bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--oh-green); border-radius: inherit; box-shadow: 0 0 calc(var(--p) * 10) rgba(61, 223, 169, .6); }
+.oh-mpage__sum { position: absolute; left: calc(var(--p) * 22); top: calc(var(--p) * 190); margin: 0; font-size: calc(var(--p) * 17); color: #ccc; }
+.oh-mpage__sum b { margin-left: calc(var(--p) * 8); color: var(--oh-green); font-weight: 400; font-size: calc(var(--p) * 22); }
+.oh-mpage__strip { position: absolute; left: 0; right: 0; bottom: calc(var(--p) * 22); height: calc(var(--p) * 300); display: flex; gap: calc(var(--p) * 14); padding: 0 calc(var(--p) * 18);
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #888 #222; }
+.oh-lvcard { position: relative; flex: none; width: calc(var(--p) * 236); height: calc(var(--p) * 294); }
+.oh-lvcard__bg { left: calc(var(--p) * -10); top: 0; width: calc(var(--p) * 255); height: calc(var(--p) * 303); } /* the sprite's card is 241 × 313 of 260 × 323 */
+.oh-lvcard__mask { inset: 0; width: 100%; height: 100%; opacity: .9; }
+.oh-lvcard__lv { position: absolute; right: calc(var(--p) * 16); top: calc(var(--p) * 4); display: flex; align-items: baseline; gap: calc(var(--p) * 4); }
+.oh-lvcard__lv small { font-size: calc(var(--p) * 38); color: rgba(255, 255, 255, .8); font-family: var(--font-num); }
+.oh-lvcard__lv b { font-size: calc(var(--p) * 112); font-weight: 400; line-height: 1; }
+.oh-lvcard.is-got .oh-lvcard__lv b { color: #46f0b8; }
+.oh-lvcard__cond { position: absolute; left: 0; right: 0; top: calc(var(--p) * 124); text-align: center; font-size: calc(var(--p) * 20); color: rgba(235, 255, 248, .78); }
+.oh-lvcard__need { position: absolute; left: 0; right: 0; top: calc(var(--p) * 156); text-align: center; font-size: calc(var(--p) * 15); color: rgba(235, 255, 248, .55); }
+.oh-lvcard__need::before { content: '卫戍认证 '; }
+.oh-lvcard.is-open { filter: saturate(.6); }
+.oh-lvcard.is-cur { outline: calc(var(--p) * 2) solid var(--oh-green); outline-offset: calc(var(--p) * -2); }
+
+/* 无限火力 (this site's own mode): a pill in the 模拟邀约 style, gold */
+.oh-layer .oh-fire { position: absolute; right: calc(var(--p) * 262); bottom: calc(var(--p) * 196); height: calc(var(--p) * 40); padding: 0 calc(var(--p) * 20) 0 calc(var(--p) * 22); border-radius: calc(var(--p) * 20);
+  display: inline-flex; align-items: center; gap: calc(var(--p) * 8); font-size: calc(var(--p) * 18); color: #f3e6c8; white-space: nowrap;
+  background: linear-gradient(90deg, rgba(60, 46, 20, .92), rgba(36, 30, 20, .92)); box-shadow: inset 0 0 0 calc(var(--p) * 1.5) rgba(240, 190, 90, .45); }
+.oh-fire b { font-weight: 700; font-size: calc(var(--p) * 13); color: #1b1404; background: #f0be5a; padding: 0 calc(var(--p) * 6); border-radius: calc(var(--p) * 3); }
+
+/* 大厅聊天 (chat-widget.js, appended to <body>) on the official lobby: folded under 成就统计, opening downwards over the
+   left column — the bottom left belongs to 功勋兑换处 */
+body:has(.lobby-hub--official) .community-chat {
+  --cp: min(calc(100vw / 1280), calc(100vh / 720));
+  left: calc(env(safe-area-inset-left, 0px) + var(--cp) * 17); top: calc(env(safe-area-inset-top, 0px) + var(--cp) * 254); bottom: auto;
+  display: flex; flex-direction: column-reverse; align-items: flex-start; }
+body:has(.lobby-hub--official) .community-chat .community-chat__toggle { min-height: 0; min-width: 0; height: calc(var(--cp) * 30); padding: 0 calc(var(--cp) * 12);
+  font-size: max(11px, calc(var(--cp) * 14)); border-radius: 0; background: rgba(46, 46, 46, .9); border: 1px solid rgba(255, 255, 255, .14); color: #e3e3e3; }
+body:has(.lobby-hub--official) .community-chat .community-chat__toggle[aria-expanded="true"] { border-color: var(--mint-400, #4ed8af); color: #bff3e2; }
+body:has(.lobby-hub--official) .community-chat .community-chat__panel { margin: 6px 0 0; height: min(calc(var(--cp) * 440), calc(100vh - var(--cp) * 300)); }
+/* the hub's own panels and pages cover the lobby chat too, like the recording's blur covers everything */
+body:has(.lobby-hub--official :is(.oh-veil, .oh-page)) .community-chat { visibility: hidden; }
+
+/* 选择模拟协议 (lobby.js ProtocolSelect) over the official lobby: the recording's sizes (5:00–5:20) in its pixels —
+   the difficulty cards 444 × 160 down the right (the chosen one 32 further left), 开始模拟 500 × 92 flush to the right
+   edge, the title at the top right, the lobby's ‹ / 首页 plate at the top left */
+.lobby-hub--official .proto-top { min-height: calc(var(--p) * 70); padding: calc(var(--p) * 24) calc(var(--p) * 55) 0 0; }
+.lobby-hub--official .proto-title { position: absolute; right: calc(var(--p) * 55); top: calc(var(--p) * 24); padding-top: 0; }
+.lobby-hub--official .proto-title h2 { font-size: calc(var(--p) * 25); font-weight: 700; letter-spacing: .04em; }
+.lobby-hub--official .proto-title__mode { font-size: calc(var(--p) * 13); }
+.lobby-hub--official .proto-body { grid-template-columns: minmax(0, 1fr) calc(var(--p) * 476); gap: 0; padding: 0 calc(var(--p) * 39) calc(var(--p) * 50) calc(var(--p) * 22); }
+.lobby-hub--official .proto-side { gap: calc(var(--p) * 8); }
+.lobby-hub--official .proto-list { gap: calc(var(--p) * 30); padding: calc(var(--p) * 8) 0 calc(var(--p) * 14) calc(var(--p) * 32); scrollbar-width: none; }
+.lobby-hub--official .proto-list::-webkit-scrollbar { display: none; }
+.lobby-hub--official .pcard { min-height: calc(var(--p) * 160); gap: calc(var(--p) * 3); padding: calc(var(--p) * 10) calc(var(--p) * 26) calc(var(--p) * 12);
+  border-radius: calc(var(--p) * 14); border-width: calc(var(--p) * 2); }
+.lobby-hub--official .pcard.is-on { transform: translateX(calc(var(--p) * -32)); }
+.lobby-hub--official .pcard__glyph { width: calc(var(--p) * 24); height: calc(var(--p) * 24); }
+.lobby-hub--official .pcard__name { font-size: calc(var(--p) * 26); }
+.lobby-hub--official .pcard__desc { font-size: calc(var(--p) * 16); padding-bottom: calc(var(--p) * 8); }
+.lobby-hub--official .pcard__effects { font-size: calc(var(--p) * 18); line-height: 1.33; padding-top: calc(var(--p) * 6); }
+.lobby-hub--official .pcard__meta { font-size: calc(var(--p) * 12); gap: calc(var(--p) * 2) calc(var(--p) * 10); }
+.lobby-hub--official .pcard.is-on > :not(.pcard__glow, .pcard__stamp) { padding-right: calc(var(--p) * 120); }
+.lobby-hub--official .pcard__stamp { right: calc(var(--p) * 22); width: calc(var(--p) * 120); height: calc(var(--p) * 100); }
+.lobby-hub--official .pcard__tick { width: calc(var(--p) * 44); height: calc(var(--p) * 44); border-radius: calc(var(--p) * 6); }
+.lobby-hub--official .pcard__ok { font-size: calc(var(--p) * 20); }
+.lobby-hub--official .proto-foot { gap: calc(var(--p) * 6); padding-left: calc(var(--p) * 15); margin-right: calc(var(--p) * -39); }
+.lobby-hub--official .proto-hint { font-size: calc(var(--p) * 13); }
+.lobby-hub--official .proto-opts { gap: calc(var(--p) * 10); }
+.lobby-hub--official .proto-start { height: calc(var(--p) * 92); gap: calc(var(--p) * 22); padding-left: calc(var(--p) * 22); border-width: calc(var(--p) * 3); border-right: 0; }
+.lobby-hub--official .proto-start__rook { font-size: calc(var(--p) * 34); }
+.lobby-hub--official .proto-start__rook .icon { width: calc(var(--p) * 32); height: calc(var(--p) * 32); }
+.lobby-hub--official .proto-start__mark small { font-size: calc(var(--p) * 8); }
+.lobby-hub--official .proto-start__label { font-size: calc(var(--p) * 32); letter-spacing: .06em; }
+.lobby-hub--official .proto-start__deco { width: 34%; }
+.lobby-hub--official .proto-brief { display: none; } /* not in the recording: the cards carry the same lines */
+
+/* 选择同盟方式 (lobby.js AllianceSelect), the recording 5:22–5:30: 创建同盟 497 × 227 at 718, 128; 加入同盟 497 × 267 at
+   718, 405 with 模拟邀约 (200 × 50) over its top right corner; 入门协议 189 × 65 at the bottom left; the title lower */
+.lobby-hub--official .ally .proto-title { top: calc(var(--p) * 62); }
+.lobby-hub--official .ally-body { grid-template-columns: minmax(0, 1fr) calc(var(--p) * 497); padding-right: calc(var(--p) * 65); }
+.lobby-hub--official .ally-side { justify-content: flex-start; gap: 0; padding: calc(var(--p) * 58) 0 0; overflow: visible; }
+.lobby-hub--official .ally-card { border-width: calc(var(--p) * 2); }
+.lobby-hub--official .ally-card--create { min-height: calc(var(--p) * 227); }
+.lobby-hub--official .ally-card--join { min-height: calc(var(--p) * 267); } /* grows with the recent keys row */
+.lobby-hub--official .ally-links { position: relative; z-index: 2; height: calc(var(--p) * 50); margin: calc(var(--p) * 25) calc(var(--p) * -12) calc(var(--p) * -25) 0; gap: calc(var(--p) * 10); }
+.lobby-hub--official .ally-pill { height: calc(var(--p) * 50); padding: 0 calc(var(--p) * 18) 0 calc(var(--p) * 28); gap: calc(var(--p) * 10); font-size: calc(var(--p) * 20); border-radius: calc(var(--p) * 25); }
+.lobby-hub--official .ally-pill .icon { width: calc(var(--p) * 20); height: calc(var(--p) * 20); }
+.lobby-hub--official .ally-pill__mark { width: calc(var(--p) * 26); height: calc(var(--p) * 26); }
+.lobby-hub--official .ally-card__bar { height: calc(var(--p) * 52); gap: calc(var(--p) * 14); padding: 0 calc(var(--p) * 22); font-size: calc(var(--p) * 26); }
+.lobby-hub--official .ally-card__bar small { font-size: calc(var(--p) * 13); }
+.lobby-hub--official .ally-card__icon { width: calc(var(--p) * 30); height: calc(var(--p) * 30); border-width: calc(var(--p) * 2); border-radius: calc(var(--p) * 5); }
+.lobby-hub--official .ally-card__bar--join:disabled { filter: saturate(.85) brightness(.8); }
+.lobby-hub--official .ally-key { height: calc(var(--p) * 46); margin: calc(var(--p) * 6) calc(var(--p) * 78) calc(var(--p) * 14) calc(var(--p) * 74); gap: calc(var(--p) * 10); }
+.lobby-hub--official .ally-key > .icon { width: calc(var(--p) * 22); height: calc(var(--p) * 22); }
+.lobby-hub--official .ally-key input { font-size: calc(var(--p) * 18); }
+.lobby-hub--official .ally-guide { left: calc(var(--p) * 26); bottom: 0; height: calc(var(--p) * 65); min-width: calc(var(--p) * 189); gap: calc(var(--p) * 10);
+  padding: 0 calc(var(--p) * 22) 0 calc(var(--p) * 16); font-size: calc(var(--p) * 20); }
+.lobby-hub--official .ally-guide__icon { width: calc(var(--p) * 58); height: calc(var(--p) * 48); }
+
+/* 同盟房间 (room.js), the recording 5:40: four seats 252 wide, 32 apart, from y 90 to 580 (10-seat / solo rooms keep theirs) */
+.rs { --p: min(calc((100vw - var(--sa-l, 0px) - var(--sa-r, 0px)) / 1280), calc((100vh - var(--sa-t, 0px) - var(--sa-b, 0px)) / 720)); }
+@supports (height: 100dvh) {
+  .rs { --p: min(calc((100vw - var(--sa-l, 0px) - var(--sa-r, 0px)) / 1280), calc((100dvh - var(--sa-t, 0px) - var(--sa-b, 0px)) / 720)); }
+}
+.rs:not(.rs--big, .rs--solo) .rs-seats { gap: calc(var(--p) * 32); padding-top: calc(var(--p) * 37); padding-bottom: calc(var(--p) * 50); }
+.rs:not(.rs--big, .rs--solo) .rseat { --w: min(calc(var(--p) * 252), calc((100vw - 1.6rem) / var(--n, 4) - .3rem)); }
+
+/* 搜寻中 (ui/matchFlow.js SearchPanel) in the room and over 选择模拟协议, the recording 6:00–6:20: the brand at y 136,
+   搜寻中 (42 px) at 200, the tags at 260, the scanner 420 wide at 300–440, the tip (19 px) at 500, 停止搜寻 218 × 57 in the
+   bottom right corner (bottom 655), the panel 500 wide against the right edge */
+:is(.rs, .lobby-hub--official) .mf-search { gap: 0; padding: calc(var(--p) * 120) calc(var(--p) * 20) 0; }
+.rs .rs-searchpanel.mf-search { width: calc(var(--p) * 500); padding-top: calc(var(--p) * 120); padding-bottom: 0; }
+.lobby-hub--official .proto-side--search .mf-search { position: relative; padding-top: calc(var(--p) * 54); margin-right: calc(var(--p) * -39); }
+:is(.rs, .lobby-hub--official) .mf-brand { font-size: calc(var(--p) * 22); }
+:is(.rs, .lobby-hub--official) .mf-search__title { margin: calc(var(--p) * 14) 0 0; font-size: calc(var(--p) * 42); }
+:is(.rs, .lobby-hub--official) .mf-search__tags { margin-top: calc(var(--p) * 8); gap: calc(var(--p) * 14); }
+:is(.rs, .lobby-hub--official) .mf-tag { padding: calc(var(--p) * 6) calc(var(--p) * 18); gap: calc(var(--p) * 6); font-size: calc(var(--p) * 18); }
+:is(.rs, .lobby-hub--official) .mf-tag .icon { width: calc(var(--p) * 20); height: calc(var(--p) * 20); }
+:is(.rs, .lobby-hub--official) .mf-search__scene { width: calc(var(--p) * 420); margin-top: calc(var(--p) * 2); padding: calc(var(--p) * 16) calc(var(--p) * 30); }
+:is(.rs, .lobby-hub--official) .mf-search__tip { min-height: 2.9em; margin-top: calc(var(--p) * 22); max-width: calc(var(--p) * 400); font-size: calc(var(--p) * 19); }
+:is(.rs, .lobby-hub--official) .mf-search__note { margin-top: calc(var(--p) * 6); font-size: calc(var(--p) * 13); }
+:is(.rs, .lobby-hub--official) .mf-stop { position: absolute; right: 0; bottom: calc(var(--p) * 65); width: calc(var(--p) * 218); height: calc(var(--p) * 57); margin: 0;
+  padding: 0 0 0 calc(var(--p) * 22); gap: calc(var(--p) * 14); font-size: calc(var(--p) * 24); }
+.lobby-hub--official .proto-side--search .mf-stop { bottom: calc(var(--p) * 15); }
+:is(.rs, .lobby-hub--official) .mf-stop__x { width: calc(var(--p) * 28); height: calc(var(--p) * 28); }
+
+/* 1/2 确认本局信息 (screens/briefing.js), the recording 6:30: the sections open at y 110, the enemy panel 255 tall, the
+   sections 20 apart */
+.brief { --p: min(calc((100vw - var(--sa-l, 0px) - var(--sa-r, 0px)) / 1280), calc((100vh - var(--sa-t, 0px) - var(--sa-b, 0px)) / 720)); }
+.brief .brief__main { padding-top: calc(var(--p) * 23); gap: calc(var(--p) * 20); }
+.brief .brief-enemy { min-height: calc(var(--p) * 255); }
+
+/* 对局内商店 (ui/shopBar.js), the recording 8:00: wider cards (155 there). As wide as the recording's while the bar
+   still ends right of the bottom-left tools (统计 / 设置 / 全屏 / 录制, ~345 px at 1280 × 720): three operators 150 with
+   the level card 110 and the funds 154; four operators 132; five (the most, data/config.json shopSlots) keep the old
+   sizes. Heights unchanged: the camera keeps the field above the bar's top (ui/fieldHost.js HUD_REM), not its width. */
+.gm__hud .shopbar .scard { width: 2.04rem; }
+.gm__hud .shopbar .lvcard { width: 1.5rem; }
+.gm__hud .shopbar .funds { width: 2.1rem; }
+.gm__hud .shopbar:has(.shopbar__cards > :nth-child(4)) .scard { width: 1.8rem; }
+.gm__hud .shopbar:has(.shopbar__cards > :nth-child(4)) .funds { width: 1.18rem; }
+.gm__hud .shopbar:has(.shopbar__cards > :nth-child(5)) .scard { width: 1.56rem; }
+.gm__hud .shopbar:has(.shopbar__cards > :nth-child(5)) .lvcard { width: 1.24rem; }
+
+/* ==========================================================================================
+   成就统计 (js/ui/achievements.js) to the recording 1:26–1:44 (2026-10-27): the panel keeps its layout from
+   css/screens/lobby.css; these are the recording's pixels (1280×720) in --p units and the event's sprites — the
+   header's dunes / hills, the dot triangle and ALLIANCE, the section bars (img/official/hub/ach_*).
+   ========================================================================================== */
+.ach { --p: min(calc((100vw - var(--sa-l, 0px) - var(--sa-r, 0px)) / 1280), calc((100vh - var(--sa-t, 0px) - var(--sa-b, 0px)) / 720)); }
+@supports (height: 100dvh) {
+  .ach { --p: min(calc((100vw - var(--sa-l, 0px) - var(--sa-r, 0px)) / 1280), calc((100dvh - var(--sa-t, 0px) - var(--sa-b, 0px)) / 720)); }
+}
+.ach .ach__box { width: calc(var(--p) * 1156); height: calc(var(--p) * 604); background: radial-gradient(60% 70% at 70% 60%, rgba(30, 70, 62, .22), transparent 70%), #0b0d0d; }
+.ach .ach__box::after { background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px calc(var(--p) * 3)); }
+/* header: grey hills behind the logo, the dunes band with the dot triangle in its brackets, ALLIANCE, 卫戍协议:盟约 */
+.ach .ach__head { height: calc(var(--p) * 85); background: #101212; border-bottom: 0; }
+.ach .ach__head::before { width: calc(var(--p) * 720); opacity: .85; background: url("/ui-art/img/official/hub/ach_head_hills.png") 0 62% / calc(var(--p) * 720) auto no-repeat;
+  -webkit-mask: linear-gradient(90deg, #000 62%, transparent); mask: linear-gradient(90deg, #000 62%, transparent); }
+.ach .ach__logo { gap: calc(var(--p) * 12); padding-left: calc(var(--p) * 33); color: #9ea5a3; }
+.ach .ach__logo svg { width: calc(var(--p) * 40); height: calc(var(--p) * 30); }
+.ach .ach__logo b { font-size: calc(var(--p) * 13); letter-spacing: .02em; }
+.ach .ach__band { width: calc(var(--p) * 640); gap: calc(var(--p) * 24); padding-left: calc(var(--p) * 222);
+  background: url("/ui-art/img/official/hub/ach_head_dunes.jpg") 50% 45% / cover no-repeat;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 calc(var(--p) * 180)); mask: linear-gradient(90deg, transparent, #000 calc(var(--p) * 180)); }
+.ach .ach__band::before { background: linear-gradient(90deg, rgba(30, 14, 0, .35), transparent 40%); }
+.ach .ach__dunes { display: none; }
+.ach .ach__emblem { display: flex; align-items: center; gap: calc(var(--p) * 6); height: 100%; }
+.ach .ach__emblem img { width: auto; height: calc(var(--p) * 72); filter: brightness(0); opacity: .86; }
+.ach .ach__brk { width: calc(var(--p) * 9); height: calc(var(--p) * 74); border: calc(var(--p) * 2) solid rgba(26, 16, 6, .8); }
+.ach .ach__brk:first-child { border-right: 0; }
+.ach .ach__brk:last-child { border-left: 0; }
+.ach .ach__titles { align-items: center; gap: calc(var(--p) * 2); }
+.ach .ach__titles .ach__en { width: calc(var(--p) * 120); height: calc(var(--p) * 25); font-size: 0; color: transparent; -webkit-text-stroke: 0; background: rgba(36, 22, 8, .62);
+  -webkit-mask: url("/ui-art/img/official/hub/title_season_name_en.png") 0 0 / 100% 100% no-repeat; mask: url("/ui-art/img/official/hub/title_season_name_en.png") 0 0 / 100% 100% no-repeat; }
+.ach .ach__titles b { font-size: calc(var(--p) * 27); font-weight: 900; color: #120d07; }
+.ach .ach__colon { margin: 0 .04em; }
+.ach .ach__close { right: calc(var(--p) * -22); top: calc(var(--p) * -18); width: calc(var(--p) * 40); height: calc(var(--p) * 40); }
+.ach .ach__close .icon { width: calc(var(--p) * 40); height: calc(var(--p) * 40); }
+.ach .ach__foot { right: 0; bottom: calc(var(--p) * -38); height: calc(var(--p) * 35); display: flex; align-items: center; padding: 0 calc(var(--p) * 10);
+  font-size: calc(var(--p) * 17); color: #f1f4f3; background: rgba(26, 30, 29, .96); box-shadow: inset 0 0 0 1px rgba(220, 230, 226, .12); }
+.ach .ach__body { margin-right: calc(var(--p) * 22); padding: 0 calc(var(--p) * 44) calc(var(--p) * 34) calc(var(--p) * 66); scrollbar-color: rgba(190, 197, 195, .6) transparent; }
+
+/* the top area: the namecard, 已获奖杯 / 已获赞, the per-mode table | the 评语 hexagon */
+.ach .ach-top-area { grid-template-columns: calc(var(--p) * 607) minmax(0, 1fr); gap: calc(var(--p) * 25); padding-top: calc(var(--p) * 29); }
+.ach .ach-plate { gap: calc(var(--p) * 22); }
+.ach .ach-card { width: calc(var(--p) * 410); height: calc(var(--p) * 128); gap: calc(var(--p) * 17); padding: calc(var(--p) * 13) calc(var(--p) * 8); border-radius: calc(var(--p) * 6); }
+.ach .ach-card__ava { width: calc(var(--p) * 103); height: calc(var(--p) * 103); border-width: calc(var(--p) * 2); align-self: flex-start; }
+.ach .ach-card__glyph { font-size: calc(var(--p) * 46); }
+.ach .ach-card__lv { left: calc(var(--p) * -9); top: calc(var(--p) * -12); width: calc(var(--p) * 44); height: calc(var(--p) * 44); border-width: calc(var(--p) * 3); }
+.ach .ach-card__lv b { font-size: calc(var(--p) * 18); }
+.ach .ach-card__lv small { font-size: calc(var(--p) * 11); }
+.ach .ach-card__who { gap: calc(var(--p) * 8); padding-top: calc(var(--p) * 16); }
+.ach .ach-card__name { font-size: calc(var(--p) * 20); font-weight: 500; }
+.ach .ach-card__tag { margin-left: 0; color: inherit; font-weight: inherit; }
+.ach .ach-card__id { padding: calc(var(--p) * 2) calc(var(--p) * 9); font-size: calc(var(--p) * 15); color: #f3c9ce; background: rgba(104, 0, 22, .6); border-radius: calc(var(--p) * 3); }
+.ach .ach-card__brand { right: calc(var(--p) * 16); bottom: calc(var(--p) * 12); font-size: calc(var(--p) * 12); }
+.ach .ach-counts { column-gap: calc(var(--p) * 16); row-gap: calc(var(--p) * 8); padding-top: calc(var(--p) * 6); }
+.ach .ach-counts__badge { width: calc(var(--p) * 58); height: calc(var(--p) * 56); }
+.ach .ach-counts__badge.is-like { width: calc(var(--p) * 58); height: calc(var(--p) * 36); }
+.ach .ach-counts__badge.is-like svg { width: calc(var(--p) * 34); height: calc(var(--p) * 34); }
+.ach .ach-counts__row small { gap: calc(var(--p) * 5); font-size: calc(var(--p) * 17); color: #c3cbc8; }
+.ach .ach-counts__row small .icon { width: calc(var(--p) * 17); height: calc(var(--p) * 17); }
+.ach .ach-counts__row b { font-size: calc(var(--p) * 24); color: #f4f7f6; }
+.ach .ach-counts__likes small .icon { fill: currentColor; }
+.ach .ach-counts__likes b { color: #f4f7f6; }
+.ach .ach-modes { margin-top: calc(var(--p) * 20); background: rgba(22, 32, 30, .62); }
+.ach .ach-modes__row { position: relative; grid-template-columns: calc(var(--p) * 118) repeat(3, minmax(0, 1fr)); height: calc(var(--p) * 120); }
+.ach .ach-modes__row + .ach-modes__row .ach-modes__cell { border-top: 0; }
+.ach .ach-modes__row + .ach-modes__row::before { content: ''; position: absolute; left: calc(var(--p) * 152); right: calc(var(--p) * 30); top: 0; height: 1px; background: rgba(220, 230, 226, .12); }
+.ach .ach-modes__mode { gap: calc(var(--p) * 10); background: rgba(30, 86, 74, .42); }
+.ach .ach-modes__mode .icon { width: calc(var(--p) * 20); height: calc(var(--p) * 20); }
+.ach .ach-modes__mode b { font-size: calc(var(--p) * 21); }
+.ach .ach-modes__cell { height: calc(var(--p) * 80); gap: calc(var(--p) * 2); padding-left: calc(var(--p) * 41); }
+.ach .ach-modes__cell b { font-size: calc(var(--p) * 28); }
+.ach .ach-modes__cell small { font-size: calc(var(--p) * 18); }
+.ach .ach-radar { position: relative; align-items: flex-start; justify-content: flex-start; }
+.ach .ach-radar > .st-titlehex { flex: none; width: calc(var(--p) * 420); max-width: none; margin: calc(var(--p) * 6) 0 0 calc(var(--p) * -26); }
+.ach .st-titlehex__label { width: auto; gap: calc(var(--p) * 3); white-space: nowrap; }
+.ach .st-titlehex__count { font-size: calc(var(--p) * 24); }
+.ach .st-titlehex__name { font-size: calc(var(--p) * 19); color: #c9d1ce; overflow-wrap: normal; }
+.ach .ach-hex__cap { left: calc(var(--p) * 25); top: calc(var(--p) * 12); column-gap: calc(var(--p) * 8); font-size: calc(var(--p) * 13); color: rgba(220, 230, 226, .28); }
+.ach .ach-hex__cap i { width: calc(var(--p) * 6); height: calc(var(--p) * 6); }
+.ach .ach-hex__cap small { width: calc(var(--p) * 36); height: calc(var(--p) * 7); margin-top: calc(var(--p) * 6); background: rgba(43, 185, 143, .8); }
+
+/* section bars: the event's grey strip (its RHODES ISLAND marks at the right end), the trophy in its brackets */
+.ach .ach-bar { height: calc(var(--p) * 40); margin: calc(var(--p) * 36) 0 calc(var(--p) * 30); padding: 0 0 0 calc(var(--p) * 118); gap: 0;
+  background: url("/ui-art/img/official/hub/ach_group_title.png") right center / auto 100% no-repeat, url("/ui-art/img/official/hub/ach_group_title.png") left center / 100% 100% no-repeat; }
+.ach .ach-bar::after, .ach .ach-bar__marks { display: none; }
+.ach .ach-bar__icon { left: calc(var(--p) * 28); top: calc(var(--p) * -13); width: calc(var(--p) * 64); height: calc(var(--p) * 67); padding-bottom: calc(var(--p) * 8); box-sizing: border-box;
+  --bk: rgba(196, 204, 201, .6); --bw: calc(var(--p) * 2); --bl: calc(var(--p) * 12);
+  background: linear-gradient(var(--bk), var(--bk)) 0 0 / var(--bw) 100% no-repeat, linear-gradient(var(--bk), var(--bk)) 100% 0 / var(--bw) 100% no-repeat,
+    linear-gradient(var(--bk), var(--bk)) 0 0 / var(--bl) var(--bw) no-repeat, linear-gradient(var(--bk), var(--bk)) 100% 0 / var(--bl) var(--bw) no-repeat,
+    linear-gradient(var(--bk), var(--bk)) 0 100% / var(--bl) var(--bw) no-repeat, linear-gradient(var(--bk), var(--bk)) 100% 100% / var(--bl) var(--bw) no-repeat, #1c1f1e;
+  box-shadow: none; }
+.ach .ach-bar__icon::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: calc(var(--p) * 8); height: calc(var(--p) * 3); background: rgba(196, 204, 201, .4); }
+.ach .ach-bar__icon svg { width: calc(var(--p) * 34); height: calc(var(--p) * 34); }
+.ach .ach-bar__title { font-size: calc(var(--p) * 23); font-weight: 700; letter-spacing: .02em; }
+
+/* 卫戍成就: 战果纪录 (the emblem wired to the lineup) and the three single-match bests */
+.ach .ach-best { grid-template-columns: calc(var(--p) * 275) minmax(0, 1fr); gap: 0; align-items: start; }
+.ach .ach-best__left { align-items: stretch; gap: calc(var(--p) * 16); padding-top: calc(var(--p) * 10); }
+.ach .ach-pill { margin-left: calc(var(--p) * 24); gap: calc(var(--p) * 6); padding: calc(var(--p) * 3) calc(var(--p) * 14); border-radius: calc(var(--p) * 16); font-size: calc(var(--p) * 17); background: rgba(160, 168, 166, .22); }
+.ach .ach-pill .icon { width: calc(var(--p) * 16); height: calc(var(--p) * 16); }
+.ach .ach-best__mount { align-self: center; width: calc(var(--p) * 200); gap: calc(var(--p) * 10); padding: 0 0 calc(var(--p) * 8); }
+.ach .ach-best__mount::before, .ach .ach-best__mount::after { top: calc(var(--p) * 22); bottom: 0; width: calc(var(--p) * 10); border-width: calc(var(--p) * 2); }
+.ach .ach-best__glyph { width: calc(var(--p) * 132); height: calc(var(--p) * 132); margin-top: 0;
+  box-shadow: 0 0 0 calc(var(--p) * 3) rgba(196, 204, 201, .4), 0 0 0 calc(var(--p) * 8) #0b0f0e, 0 0 0 calc(var(--p) * 8 + 1px) rgba(196, 204, 201, .14); }
+.ach .ach-best__glyph .bglyph { width: calc(var(--p) * 92); height: calc(var(--p) * 92); }
+.ach .ach-best__label { margin-top: calc(var(--p) * 14); font-size: calc(var(--p) * 18); }
+.ach .ach-best__num { font-size: calc(var(--p) * 50); }
+.ach .ach-best__wire { top: calc(var(--p) * 108); width: calc(var(--p) * 38); }
+.ach .ach-best__lineup { gap: calc(var(--p) * 30); padding: calc(var(--p) * 17) calc(var(--p) * 24) calc(var(--p) * 10) calc(var(--p) * 34); }
+.ach .ach-best__lineup::before, .ach .ach-best__lineup::after { width: calc(var(--p) * 10); border-width: calc(var(--p) * 2); }
+.ach .ach-best__rows { gap: calc(var(--p) * 15); }
+.ach .ach-best__row { gap: calc(var(--p) * 24); }
+.ach .ach-best .sop { width: calc(var(--p) * 78); height: calc(var(--p) * 150); }
+.ach .ach-best .sop__art { height: calc(var(--p) * 112); }
+.ach .ach-best .sop__slots { height: calc(var(--p) * 38); }
+.ach .ach-best__bonds { gap: calc(var(--p) * 12) calc(var(--p) * 32); padding-left: calc(var(--p) * 12); }
+.ach .ach-best__bonds .sbond__disc { width: calc(var(--p) * 62); height: calc(var(--p) * 62); }
+.ach .ach-best__bonds .sbond__disc .bglyph { width: calc(var(--p) * 36); height: calc(var(--p) * 36); }
+.ach .ach-best__bonds .sbond b { font-size: calc(var(--p) * 22); }
+.ach .ach-maxima { gap: calc(var(--p) * 19); margin: calc(var(--p) * 40) calc(var(--p) * 15) 0 calc(var(--p) * 17); }
+.ach .ach-max { height: calc(var(--p) * 100); gap: calc(var(--p) * 4); padding: calc(var(--p) * 10) calc(var(--p) * 22) 0; }
+.ach .ach-max::before, .ach .ach-max::after { width: calc(var(--p) * 10); border-width: calc(var(--p) * 2); }
+.ach .ach-max__label { font-size: calc(var(--p) * 17); color: #c6cecb; }
+.ach .ach-max__label::before { content: ''; position: absolute; left: 0; top: calc(var(--p) * -16); width: calc(var(--p) * 96); height: calc(var(--p) * 3); background: rgba(196, 204, 201, .16); }
+.ach .ach-max__num small { font-size: calc(var(--p) * 30); }
+.ach .ach-max__num .num { font-size: calc(var(--p) * 36); }
+.ach .ach-max__glyph { right: calc(var(--p) * 26); width: calc(var(--p) * 96); height: calc(var(--p) * 96); margin-top: calc(var(--p) * -48); opacity: .5; }
+
+/* 盟约纪录 / 策略纪录 */
+.ach .ach-sub { margin: calc(var(--p) * 26) 0 calc(var(--p) * 28) calc(var(--p) * 47); font-size: calc(var(--p) * 18); }
+.ach .ach-sub::before { margin-right: calc(var(--p) * 22); }
+.ach .ach-empty { margin: calc(var(--p) * 8) 0 calc(var(--p) * 8) calc(var(--p) * 72); font-size: calc(var(--p) * 16); }
+.ach .ach-tops { gap: calc(var(--p) * 98); padding-left: calc(var(--p) * 175); }
+.ach .ach-top { gap: calc(var(--p) * 18); }
+.ach .ach-top__frame { width: calc(var(--p) * 160); height: calc(var(--p) * 160); background: rgba(10, 14, 13, .55); box-shadow: inset 0 0 0 calc(var(--p) * 3) rgba(104, 112, 110, .9); }
+.ach .ach-top__frame .bglyph { width: calc(var(--p) * 100); height: calc(var(--p) * 100); }
+.ach .ach-top__rank { left: calc(var(--p) * 10); top: calc(var(--p) * 5); font-size: calc(var(--p) * 20); color: rgba(150, 158, 156, .8); }
+.ach .ach-top__name { font-size: calc(var(--p) * 21); }
+.ach .ach-ops { gap: calc(var(--p) * 40) calc(var(--p) * 43); padding-left: calc(var(--p) * 105); max-width: calc(var(--p) * 921); }
+.ach .ach-op { width: calc(var(--p) * 100); height: calc(var(--p) * 100); }
+.ach .ach-op .uthumb { --ut: calc(var(--p) * 96); box-shadow: 0 0 0 calc(var(--p) * 3) rgba(16, 20, 19, .95), 0 0 calc(var(--p) * 14) rgba(74, 242, 196, .2); }
+.ach .ach-op__tier { left: calc(var(--p) * -8); bottom: calc(var(--p) * -6); min-width: calc(var(--p) * 36); height: calc(var(--p) * 30); padding: 0 calc(var(--p) * 4); font-size: calc(var(--p) * 17); border-width: calc(var(--p) * 2); border-radius: calc(var(--p) * 5); }
+.ach .ach-tops--band { gap: 0; padding-left: calc(var(--p) * 102); }
+.ach .ach-top--band { width: calc(var(--p) * 297); gap: calc(var(--p) * 14); }
+.ach .ach-top--band .ach-top__frame { width: calc(var(--p) * 142); height: calc(var(--p) * 142); }
+.ach .ach-top--band .bandicon, .ach .ach-mark__frame .bandicon { width: calc(var(--p) * 112); height: calc(var(--p) * 112); }
+.ach .ach-top__side { gap: calc(var(--p) * 8); }
+.ach .ach-top__count small { font-size: calc(var(--p) * 19); }
+.ach .ach-top__count b { font-size: calc(var(--p) * 30); }
+.ach .ach-marks { gap: calc(var(--p) * 30); padding-left: calc(var(--p) * 113); }
+.ach .ach-mark { gap: calc(var(--p) * 16); }
+.ach .ach-mark b { font-size: calc(var(--p) * 21); }
+.ach .ach-mark__frame { width: calc(var(--p) * 136); height: calc(var(--p) * 136); box-shadow: none;
+  background: repeating-linear-gradient(135deg, rgba(64, 132, 114, .24) 0 calc(var(--p) * 4), transparent calc(var(--p) * 4) calc(var(--p) * 11)), rgba(14, 28, 26, .8); }
+.ach .ach-mark__badge { right: calc(var(--p) * 3); top: calc(var(--p) * 3); width: calc(var(--p) * 26); height: calc(var(--p) * 26); background: #f08a1c; border: 0; color: #3a1d04; }
+.ach .ach-mark__badge .icon { width: calc(var(--p) * 18); height: calc(var(--p) * 18); }
+
+/* ==== S.W.E.E.P.报告 (screens/sweep.js) on the event's handbook page (2026-10-27 round 3) ===============================
+   The activity bundle's act_auto_chess_handbook_state, 1 unit = 1 px at 1280×720, checked against the recording's 2:19 /
+   2:27 (where the two differ, the recording): its background, the top bar and tabs, the list titles and item tiles, the
+   left panel's plates — the pictures from scripts/build-handbook-art.py, nine-sliced ones as border-image. Replaces the
+   mist / bars / discs sweep.css draws; landscape only (portrait and very short screens keep sweep.css's own layout).
+   The list sits right (panel_list, 715 wide), the detail left (panel_detail, 565 wide), as the layout anchors them. */
+@media (min-aspect-ratio: 4/3) {
+  .sw { --p: min(calc(100vw / 1280), calc(100vh / 720)); }
+  .sw .sw__bg { background: #c3cdcc url("/ui-art/img/official/hub/handbook_bkg.jpg") 50% 50% / cover no-repeat; }
+  .sw .sw__mist, .sw .sw__lines { display: none; }
+  /* top: the back plate as in the hub (no 首页, as the owner has it there), ⓘ = panel_guidebook (sprite_guidebook_icon),
+     panel_top_bar 564×54 at 42 from the right, 22 down: three 188 tabs on img_top_bar_bkg (13/13), the chosen one on
+     img_tab_selected (106/100, 218×84, centred 11 lower), icons img_top_bar_icon_* tinted rgb(23,23,23) / white, text rgb(8,8,8) / white */
+  .sw .sw-top { position: absolute; left: 0; right: 0; top: 0; z-index: 2; height: 0; padding: 0; }
+  .sw .sw-back { position: absolute; left: calc(var(--p) * 17); top: calc(var(--p) * 13); width: calc(var(--p) * 146); height: calc(var(--p) * 50); padding: 0;
+    background: rgba(46, 46, 46, .94); border: 0; box-shadow: 0 calc(var(--p) * 2) calc(var(--p) * 8) rgba(0, 0, 0, .35); }
+  .sw .sw-back .icon { position: absolute; left: calc(var(--p) * 14); top: calc(var(--p) * 9); width: calc(var(--p) * 32); height: calc(var(--p) * 32); }
+  .sw .sw-back__mark { display: none; }
+  .sw .sw-info { position: absolute; left: calc(var(--p) * 391); top: calc(var(--p) * 13); width: calc(var(--p) * 50); height: calc(var(--p) * 50); border: 0;
+    background: rgba(46, 46, 46, .94) url("/ui-art/img/official/hub/btn_info.png") calc(var(--p) * -9) calc(var(--p) * -1) / calc(var(--p) * 69) calc(var(--p) * 71) no-repeat; }
+  .sw .sw-info .icon { display: none; }
+  .sw .sw-tabs { position: absolute; right: calc(var(--p) * 42); top: calc(var(--p) * 22); height: calc(var(--p) * 54); padding: 0; border: 0; border-radius: 0; background: none;
+    box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-image: url("/ui-art/img/official/hub/img_top_bar_bkg.png") 0 13 fill / 0 calc(var(--p) * 13); }
+  .sw .sw-tab { position: relative; isolation: isolate; width: calc(var(--p) * 188); min-width: 0; height: calc(var(--p) * 54); padding: 0; gap: calc(var(--p) * 8); border-radius: 0;
+    font-size: calc(var(--p) * 21); font-weight: 700; color: rgb(8, 8, 8); }
+  .sw .sw-tab:hover:not(.is-on) { background: rgba(255, 255, 255, .12); }
+  .sw .sw-tab.is-on { color: #fff; background: none; box-shadow: none; }
+  .sw .sw-tab.is-on::before { content: ''; position: absolute; z-index: -1; left: calc(var(--p) * -15.08); right: calc(var(--p) * -15.08); top: calc(var(--p) * -4); bottom: calc(var(--p) * -26);
+    border-image: url("/ui-art/img/official/hub/img_tab_selected.png") 0 100 0 106 fill / 0 calc(var(--p) * 100) 0 calc(var(--p) * 106); }
+  .sw .sw-tab__icon { width: var(--iw); height: var(--ih); background: rgb(23, 23, 23); -webkit-mask: var(--i) 0 0 / 100% 100% no-repeat; mask: var(--i) 0 0 / 100% 100% no-repeat; }
+  .sw .sw-tab.is-on .sw-tab__icon { background: #fff; }
+  .sw .sw-tab__icon > * { display: none; }
+  .sw .sw-tab:nth-child(1) .sw-tab__icon { --i: url("/ui-art/img/official/hub/img_top_bar_icon_bond.png"); --iw: calc(var(--p) * 37); --ih: calc(var(--p) * 31); }
+  .sw .sw-tab:nth-child(2) .sw-tab__icon { --i: url("/ui-art/img/official/hub/img_top_bar_icon_band.png"); --iw: calc(var(--p) * 25); --ih: calc(var(--p) * 34); }
+  .sw .sw-tab:nth-child(3) .sw-tab__icon { --i: url("/ui-art/img/official/hub/img_top_bar_icon_enemy.png"); --iw: calc(var(--p) * 32); --ih: calc(var(--p) * 39); }
+  /* the two columns, placed as the layout anchors them */
+  .sw .sw-body { position: relative; display: block; padding: 0; }
+  .sw .sw-left { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 565); }
+  .sw .sw-right { position: absolute; right: calc(var(--p) * 15); top: calc(var(--p) * 43); bottom: calc(var(--p) * 43); width: calc(var(--p) * 700); padding: calc(var(--p) * 54) 0 calc(var(--p) * 20);
+    scrollbar-width: thin; scrollbar-color: rgba(9, 24, 36, .7) rgba(0, 0, 0, .2); }
+  .sw .sw-right::-webkit-scrollbar { width: calc(var(--p) * 7); }
+  .sw .sw-right::-webkit-scrollbar-track { background: rgba(0, 0, 0, .2); border-radius: calc(var(--p) * 4); }
+  .sw .sw-right::-webkit-scrollbar-thumb { background: rgba(9, 24, 36, .7); border-radius: calc(var(--p) * 4); }
+  /* list titles (prefab_act_auto_chess_handbook_*_title, 674×84): img_list_title_bkg (16/16) 53 high at the bottom, the
+     [ name ] plate img_list_title_text_bkg (18/18) 38 high 2.5 below the bar's middle, the group icon over the bar's top edge */
+  .sw .sw-sec { width: calc(var(--p) * 674); margin: 0; padding: calc(var(--p) * 31) 0 0; background: none; box-shadow: none; }
+  .sw .sw-sec__head { height: calc(var(--p) * 53); border-image: url("/ui-art/img/official/hub/img_list_title_bkg.png") 0 16 fill / 0 calc(var(--p) * 16); }
+  .sw .sw-sec__name { height: calc(var(--p) * 38); margin-top: calc(var(--p) * 5); padding: 0 calc(var(--p) * 32); gap: 0; font-size: calc(var(--p) * 22); font-weight: 700; letter-spacing: .04em; color: #f1f4f3;
+    border-image: url("/ui-art/img/official/hub/img_list_title_text_bkg.png") 0 18 fill / 0 calc(var(--p) * 18); }
+  .sw .sw-sec__name i, .sw .sw-sec__name small { display: none; }
+  .sw .sw-sec__glyph { top: 0; width: var(--gw); height: var(--gh); margin-top: var(--gy); transform: translateX(-50%); background: var(--g) 0 0 / 100% 100% no-repeat; box-shadow: none; }
+  .sw .sw-sec__glyph > * { display: none; }
+  .sw .sw-sec--core .sw-sec__glyph { --g: url("/ui-art/img/official/hub/img_group_title_icon_temp_bond.png"); --gw: calc(var(--p) * 68); --gh: calc(var(--p) * 62); --gy: calc(var(--p) * -35); }
+  .sw .sw-sec--extra .sw-sec__glyph { --g: url("/ui-art/img/official/hub/img_group_title_icon_perm_bond.png"); --gw: calc(var(--p) * 48); --gh: calc(var(--p) * 41); --gy: calc(var(--p) * -20.5); }
+  .sw .sw-sec--boss .sw-sec__glyph { --g: url("/ui-art/img/official/hub/img_group_title_icon_boss.png"); --gw: calc(var(--p) * 65); --gh: calc(var(--p) * 62); --gy: calc(var(--p) * -31); }
+  .sw .sw-sec--type .sw-sec__glyph { --g: url("/ui-art/img/official/hub/img_group_title_icon_enemy.png"); --gw: calc(var(--p) * 66); --gh: calc(var(--p) * 62); --gy: calc(var(--p) * -31); }
+  /* the strategies have no title in the event (prefab_act_auto_chess_handbook_band_group only) */
+  .sw .sw-sec--band { padding-top: 0; }
+  .sw .sw-sec--band .sw-sec__head { display: none; }
+  /* item tiles: rows of 137, five to a row 130.9 apart, each img_list_item_bkg 148 (7 below the cell's middle); chosen:
+     img_item_bkg_selected 153, 9 up from it. 盟约: img_bond_item_bkg 117 with the icon (the layout's 72 box; the recording shows
+     the glyph 58 across, dark) 8 above the tile's middle — the recording's placement where it differs from the layout's 12 */
+  .sw .sw-sec__grid { grid-template-columns: repeat(5, calc(var(--p) * 130.9)); grid-auto-rows: calc(var(--p) * 137); gap: 0; padding: 0 0 0 calc(var(--p) * 7.55); }
+  .sw .sw-tile { aspect-ratio: auto; background: none; border: 0; border-radius: 0; box-shadow: none; outline: none; }
+  .sw .sw-tile::before, .sw .sw-tile.is-on::after { content: ''; position: absolute; left: 50%; top: 50%; pointer-events: none; }
+  .sw .sw-tile::before { width: calc(var(--p) * 148); height: calc(var(--p) * 148); margin: calc(var(--p) * -67) 0 0 calc(var(--p) * -74);
+    background: url("/ui-art/img/official/hub/img_list_item_bkg.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-tile.is-on { outline: none; box-shadow: none; }
+  .sw .sw-tile.is-on::after { width: calc(var(--p) * 153); height: calc(var(--p) * 153); margin: calc(var(--p) * -78.5) 0 0 calc(var(--p) * -76.5);
+    background: url("/ui-art/img/official/hub/img_item_bkg_selected.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-tile:hover { box-shadow: none; }
+  .sw .sw-tile__in { z-index: 1; overflow: visible; }
+  .sw .sw-tile__cap { display: none; }
+  .sw .sw-disc { width: calc(var(--p) * 117); height: calc(var(--p) * 117); margin: 0 0 calc(var(--p) * 24); border-radius: 0; box-shadow: none;
+    background: url("/ui-art/img/official/hub/img_bond_item_bkg.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-disc img { width: calc(var(--p) * 58); height: calc(var(--p) * 58); opacity: .9; }
+  .sw .sw-face { width: calc(var(--p) * 110); margin: 0 0 calc(var(--p) * 20); }
+  .sw .sw-art, .sw .sw-glyph { width: calc(var(--p) * 100); margin: 0 0 calc(var(--p) * 24); }
+  .sw .sw-tile__hp { right: calc(var(--p) * 14); top: calc(var(--p) * 12); font-size: calc(var(--p) * 13); }
+  /* the left: panel_icon 356×210 (img_left_bkg) 68 down, centred 30 right of the column's middle; img_left_bond_icon_bkg
+     200×184 behind the icon 150; the name at 278; 激活所需人数 on img_detail_info_bkg (38/38) 158×32 at 42.5,319 with the
+     count in rgb(36,255,195); the text from 362; 对应干员: img_bkg_enemy_detail_list (19/19) 498×37 at 33.5,467.5 */
+  .sw .sw-detail { position: absolute; inset: 0; display: block; }
+  .sw .sw-hero { position: static; }
+  .sw .sw-hero__box, .sw .sw-hero__box.is-art { position: absolute; left: calc(var(--p) * 134.5); top: calc(var(--p) * 68); width: calc(var(--p) * 356); height: calc(var(--p) * 210);
+    background: url("/ui-art/img/official/hub/img_left_bkg.png") 0 0 / 100% 100% no-repeat; box-shadow: none; }
+  .sw .sw-hero__c { display: none; }
+  .sw .sw-hero__img { position: absolute; left: calc(var(--p) * 51); top: calc(var(--p) * 9); width: calc(var(--p) * 200); height: calc(var(--p) * 184); border-radius: 0; box-shadow: none;
+    background: url("/ui-art/img/official/hub/img_left_bond_icon_bkg.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-hero__img img { width: calc(var(--p) * 150); height: calc(var(--p) * 150); margin: calc(var(--p) * 8) 0 0 calc(var(--p) * -6); filter: none; }
+  .sw .sw-hero__box.is-art .sw-hero__img { left: calc(var(--p) * 58); top: calc(var(--p) * 15); width: calc(var(--p) * 180); height: calc(var(--p) * 180); background: none; }
+  .sw .sw-hero__box.is-art .sw-hero__img img { width: 100%; height: 100%; margin: 0; }
+  .sw .sw-hero__name { position: absolute; left: calc(var(--p) * 75); top: calc(var(--p) * 278); width: calc(var(--p) * 415); height: calc(var(--p) * 30); margin: 0; text-align: center;
+    font-size: calc(var(--p) * 24); line-height: calc(var(--p) * 30); font-weight: 700; letter-spacing: .02em; }
+  .sw .sw-hero__sub { position: absolute; left: calc(var(--p) * 75); top: calc(var(--p) * 306); width: calc(var(--p) * 415); text-align: center; font-size: calc(var(--p) * 13); }
+  .sw .sw-facts { position: absolute; left: calc(var(--p) * 42.5); top: calc(var(--p) * 319); right: calc(var(--p) * 40); gap: calc(var(--p) * 10); }
+  .sw .sw-pill { height: calc(var(--p) * 32); padding: 0 calc(var(--p) * 22); gap: calc(var(--p) * 12); align-items: center; border-radius: 0; background: none; box-shadow: none;
+    font-size: calc(var(--p) * 17); line-height: calc(var(--p) * 32); color: #fff; border-image: url("/ui-art/img/official/hub/img_detail_info_bkg.png") 0 38 fill / 0 calc(var(--p) * 38); }
+  .sw .sw-pill b { font-size: calc(var(--p) * 22); color: rgb(36, 255, 195); }
+  .sw .sw-pill--ghost { opacity: .75; }
+  .sw .sw-pill--ghost b { font-size: calc(var(--p) * 17); color: #eef2f1; }
+  .sw .sw-kind { font-size: calc(var(--p) * 12); }
+  .sw .sw-text { position: absolute; left: calc(var(--p) * 42); top: calc(var(--p) * 360); width: calc(var(--p) * 485); height: calc(var(--p) * 100); min-height: 0; padding: 0;
+    font-size: calc(var(--p) * 17); line-height: calc(var(--p) * 22.5); }
+  .sw .sw-text__h { font-size: calc(var(--p) * 17); }
+  .sw .sw-box { position: absolute; left: calc(var(--p) * 33.5); top: calc(var(--p) * 467.5); width: calc(var(--p) * 498); bottom: calc(var(--p) * 12); padding: 0; gap: calc(var(--p) * 15);
+    background: none; border: 0; box-shadow: none; overflow-y: auto; scrollbar-width: none; }
+  .sw .sw-box__head { flex: none; height: calc(var(--p) * 37); min-height: 0; padding: 0 calc(var(--p) * 10) 0 calc(var(--p) * 18);
+    border-image: url("/ui-art/img/official/hub/img_bkg_enemy_detail_list.png") 0 19 fill / 0 calc(var(--p) * 19); }
+  .sw .sw-box__k { gap: calc(var(--p) * 12); font-size: calc(var(--p) * 18); font-weight: 700; }
+  .sw .sw-box__k .icon { width: calc(var(--p) * 9); height: calc(var(--p) * 23); color: transparent; background: url("/ui-art/img/official/hub/img_left_title_bond_char_list.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-box__k .icon > * { display: none; }
+  .sw .sw-box__k small { font-size: calc(var(--p) * 13); }
+  .sw .sw-box__note { display: inline-flex; align-items: center; gap: calc(var(--p) * 8); font-size: calc(var(--p) * 15); color: rgba(255, 255, 255, .6); }
+  .sw .sw-box__swap { flex: none; width: calc(var(--p) * 23); height: calc(var(--p) * 18); margin: 0; font-size: 0; background: url("/ui-art/img/official/hub/img_left_bond_title_switch_icon.png") 0 0 / 100% 100% no-repeat; }
+  .sw .sw-ops { grid-template-columns: repeat(5, calc(var(--p) * 80)); gap: calc(var(--p) * 15) calc(var(--p) * 17.5); padding-left: calc(var(--p) * 14.5); }
+  /* portraits as the recording: 80 across in a 2 px white rim, the tier chip (TierChip, the official img_chess_level_N) over the bottom-left corner */
+  .sw .sw-op { overflow: visible; border: calc(var(--p) * 2) solid #f2f4f3; }
+  .sw .sw-op .sw-op__tier { position: absolute; left: calc(var(--p) * -8); bottom: calc(var(--p) * -7); width: calc(var(--p) * 30); height: calc(var(--p) * 28); min-width: 0; padding: 0;
+    --tier-h: calc(var(--p) * 28); background: none; border: 0; }
+}
+
+@media (min-aspect-ratio: 4/3) {
+  /* per tab, the layout's own detail panels: 策略 (panel_band_detail) sits 110 lower; 领袖 (panel_boss_detail) on
+     img_left_boss_bkg 291×210 with the art 150, the text from 320 and 敌方领袖 at 552.5; 特训 (panel_enemy_detail) without
+     the round icon backing, the text from 320 and the enemy list at 416.5. No hit points on the strategy tiles (the recording has none) */
+  .sw[data-tab="bands"] .sw-hero__box { top: calc(var(--p) * 178); }
+  .sw[data-tab="bands"] .sw-hero__box.is-art .sw-hero__img { left: calc(var(--p) * 83); top: calc(var(--p) * 40); width: calc(var(--p) * 130); height: calc(var(--p) * 130); }
+  .sw[data-tab="bands"] .sw-hero__name { top: calc(var(--p) * 376); }
+  .sw[data-tab="bands"] .sw-hero__sub { top: calc(var(--p) * 404); }
+  .sw[data-tab="bands"] .sw-facts { top: calc(var(--p) * 431); }
+  .sw[data-tab="bands"] .sw-text { top: calc(var(--p) * 473); height: calc(var(--p) * 230); }
+  .sw[data-tab="bands"] .sw-sec--band { padding-top: calc(var(--p) * 10); }
+  .sw .sw-tile__hp { display: none; }
+  .sw[data-tab="enemies"] .sw-hero__box.is-art { left: calc(var(--p) * 171); width: calc(var(--p) * 291);
+    background-image: url("/ui-art/img/official/hub/img_left_boss_bkg.png"); }
+  .sw[data-tab="enemies"] .sw-hero__box.is-art .sw-hero__img { left: calc(var(--p) * 36.5); top: calc(var(--p) * 30); width: calc(var(--p) * 150); height: calc(var(--p) * 150); }
+  .sw[data-tab="enemies"] .sw-hero__box.is-glyph .sw-hero__img { background: none; }
+  .sw[data-tab="enemies"] .sw-text { top: calc(var(--p) * 320); height: calc(var(--p) * 92); }
+  .sw[data-tab="enemies"] .sw-box { top: calc(var(--p) * 416.5); }
+  .sw[data-tab="enemies"] .sw-detail:has(.sw-hero__box.is-art) .sw-text { height: calc(var(--p) * 222); }
+  .sw[data-tab="enemies"] .sw-detail:has(.sw-hero__box.is-art) .sw-box { top: calc(var(--p) * 552.5); }
+  .sw .sw-box__k :is(.icon, svg) { width: calc(var(--p) * 19); height: calc(var(--p) * 24); }
+  .sw[data-tab="enemies"] .sw-box__k :is(.icon, svg) { color: transparent; background: url("/ui-art/img/official/hub/img_left_title_enemy_list.png") 50% 50% / contain no-repeat; }
+  .sw[data-tab="enemies"] .sw-detail:has(.sw-hero__box.is-art) .sw-box__k :is(.icon, svg) { background-image: url("/ui-art/img/official/hub/img_left_title_boss_list.png"); }
+  .sw[data-tab="enemies"] .sw-box__k :is(.icon, svg) > * { display: none; }
+  /* 查看: btn_enemy_detail (64/36) 119×54, the magnifier is the picture's, the word centred 72 in */
+  .sw .sw-look { width: calc(var(--p) * 119); height: calc(var(--p) * 54); margin: calc(var(--p) * 8) calc(var(--p) * -10) calc(var(--p) * -8) 0; padding: 0 0 0 calc(var(--p) * 52);
+    font-size: calc(var(--p) * 17); color: #fff; background: none; border: 0; border-radius: 0;
+    border-image: url("/ui-art/img/official/hub/btn_enemy_detail.png") 0 36 0 64 fill / 0 calc(var(--p) * 36) 0 calc(var(--p) * 64); }
+  .sw .sw-look .icon { display: none; }
+}
+
+/* 选择模拟协议's event scene (js/ui/protocolScene.js EventScene, 2026-10-27 round 3): the recording's 1280×720 pixels are
+   the SVG's view box. The plates take the protocol's tint (lit .55, dim .2 with lighter tiles); the scene loops every 5.8 s
+   from the moment the protocol is picked: the ID card pops out at 0.8 s, the cable's light runs down at 0.45 s and 3.5 s. */
+.proto-stage .ps--event { overflow: visible; } /* the cable comes in from above the stage (in the room's backdrop it stays inside) */
+.ps--event .psm-plates { animation: psm-sweep 420ms cubic-bezier(.2, .7, .3, 1) backwards; }
+@keyframes psm-sweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.ps--event .psm-lit polygon { fill: var(--tint); fill-opacity: .55; }
+.ps--event .psm-mark { fill: none; stroke: var(--tint); stroke-opacity: .75; stroke-width: 1.6; }
+.ps--event .psm-dim > polygon:first-child { fill: var(--tint); fill-opacity: .2; stroke: var(--tint); stroke-opacity: .5; stroke-width: 1.2; }
+.ps--event .psm-dim__tile { fill: var(--tint); fill-opacity: .22; }
+.ps--event .psm-fig, .ps--event .psm-thorn, .ps--event .psm-crosses image { animation: psm-in 300ms ease-out backwards; animation-delay: calc(var(--i, 0) * 12ms + 120ms); }
+@keyframes psm-in { from { opacity: 0; } }
+.ps--event .psm-cable { mix-blend-mode: screen; }
+.ps--event .psm-cable__dim { fill: var(--cable); opacity: .12; }
+.ps--event .psm-cable__lit { fill: var(--cable); }
+.ps--event .psm-pulse { animation: psm-pulse 5.8s linear infinite; }
+@keyframes psm-pulse { 0%, 7.8% { transform: translateY(0); } 19.8%, 60.3% { transform: translateY(880px); }
+  60.31% { transform: translateY(0); } 72.4%, 100% { transform: translateY(880px); } }
+.ps--event .psm-card { transform-box: fill-box; transform-origin: 50% 80%; animation: psm-card 5.8s linear infinite; }
+@keyframes psm-card { 0%, 13.7% { opacity: 0; transform: scale(.9); } 16% { opacity: 1; transform: none; } 99.6% { opacity: 1; } 100% { opacity: 0; } }
+.ps--event .psm-ava image { animation: psm-ava .8s steps(1) infinite; }
+@keyframes psm-ava { 0% { transform: translate(0, 0); } 25% { transform: translate(-64px, 0); } 50% { transform: translate(0, -64px); } 75% { transform: translate(-64px, -64px); } }
+@media (prefers-reduced-motion: reduce) { .ps--event .psm-pulse, .ps--event .psm-ava image { animation: none; } .ps--event .psm-card { animation: none; } }
+
+/* 选择模拟协议's right column and ground as the event's sprites (modechoice/ + common/, 2026-10-27 round 3; the recording
+   5:00–5:18 at 1280×720): the scan-line ground tiled 1:1; the chosen card's glow (select_glow, 300 × 270, in the protocol's
+   colour) running out past the card to the screen's edge — so the list reaches that edge; the 已选定 stamp: select_round
+   160 × 123 standing 28 past the card's right edge, model_select_icon 47 × 47 on its glow in the protocol's colour (the tick is cut out of the box), the word under it; 开始模拟's
+   mark confirm_btn_icon_start 1:1 (802, 593 — re-measured 2026-10-27 against the new button ground). */
+/* Over it (the newer Arkdays pack, 2026-10-27; the recording 5:00 / 5:58): the page's panel sheet img_bkg_main — AB1 / AB2,
+   RHODES ISLAND, PERSONEL CHECKED, the ruler, the STIMULATING bands — stretched as the game draws it, 1020 × 668 to
+   1501.7 × 668 (x 1.472, y 1) from -114.2, 34.5; under it the rock img_bkg_dec_left_upper 1:1 at -62, -46. Both as shipped, over the scan lines (that tile is opaque). */
+.lobby-hub--official .proto__bg { background:
+  url("/ui-art/img/official/hub/mc/img_bkg_main.png") calc(var(--p) * -114.2) calc(var(--p) * 34.5) / calc(var(--p) * 1501.7) calc(var(--p) * 668) no-repeat,
+  url("/ui-art/img/official/hub/mc/img_bkg_dec_left_upper.png") calc(var(--p) * -62) calc(var(--p) * -46) / calc(var(--p) * 500) calc(var(--p) * 332) no-repeat,
+  url("/ui-art/img/official/hub/mc/img_screen_line_repeat.png") 0 0 / calc(var(--p) * 128) repeat; }
+.lobby-hub--official .proto-list { margin-right: calc(var(--p) * -39); padding-right: calc(var(--p) * 39); }
+.lobby-hub--official .pcard { overflow: visible; }
+.lobby-hub--official .pcard__glow { inset: auto; right: calc(var(--p) * -73); top: 50%; width: calc(var(--p) * 300); height: calc(var(--p) * 270); transform: translateY(-50%);
+  background: var(--d-color); -webkit-mask: url("/ui-art/img/official/hub/mc/select_glow.png") 0 0 / 100% 100% no-repeat;
+  mask: url("/ui-art/img/official/hub/mc/select_glow.png") 0 0 / 100% 100% no-repeat; }
+.lobby-hub--official .pcard__stamp { right: calc(var(--p) * -28); top: calc(50% - var(--p) * 10); width: calc(var(--p) * 160); height: calc(var(--p) * 123); transform: translateY(-50%);
+  display: none; background: url("/ui-art/img/official/hub/mc/select_round.png") center / 100% 100% no-repeat; }
+.lobby-hub--official .pcard.is-on .pcard__stamp { display: block; animation: psm-stamp 240ms var(--ease-out) backwards; }
+@keyframes psm-stamp { from { opacity: 0; transform: translateY(-50%) scale(1.2); } }
+.lobby-hub--official .pcard__ring { display: none; }
+.lobby-hub--official .pcard__tick { position: absolute; left: calc(var(--p) * 54); top: calc(var(--p) * 34); width: calc(var(--p) * 47); height: calc(var(--p) * 47);
+  background: url("/ui-art/img/official/hub/mc/model_select_icon.png") 0 0 / 100% 100% no-repeat; border-radius: 0; box-shadow: none; }
+.lobby-hub--official .pcard__tick::before { content: ''; position: absolute; inset: calc(var(--p) * -20); z-index: -1; background: var(--d-color);
+  -webkit-mask: url("/ui-art/img/official/hub/mc/model_select_icon_bg.png") center / 100% 100% no-repeat; mask: url("/ui-art/img/official/hub/mc/model_select_icon_bg.png") center / 100% 100% no-repeat; }
+.lobby-hub--official .pcard__tick .icon { display: none; }
+.lobby-hub--official .pcard__ok { position: absolute; left: 0; top: calc(var(--p) * 84); width: calc(var(--p) * 147); text-align: center; line-height: calc(var(--p) * 26); font-weight: 500; }
+.lobby-hub--official .proto-start__mark { width: calc(var(--p) * 76); height: calc(var(--p) * 64);
+  background: url("/ui-art/img/official/hub/mc/confirm_btn_icon_start.png") 0 0 / calc(var(--p) * 76) calc(var(--p) * 64) no-repeat; }
+.lobby-hub--official .proto-start__mark > * { display: none; }
+/* The button itself is the pack's confirm_btn_bg (500 × 94 at 780, 578: its grain and the machine at the right are in the
+   picture); searching (开始搜寻) swaps the mark for confirm_btn_icon_match at 94 % (806, 597); the word starts at 885. */
+.lobby-hub--official .proto-start { height: calc(var(--p) * 94); gap: calc(var(--p) * 7); border: 0; box-shadow: none;
+  background: url("/ui-art/img/official/hub/mc/confirm_btn_bg.png") 0 0 / 100% 100% no-repeat; }
+.lobby-hub--official .proto-start__deco { display: none; }
+.lobby-hub--official .proto-start--search .proto-start__mark {
+  background: url("/ui-art/img/official/hub/mc/confirm_btn_icon_match.png") calc(var(--p) * 4) calc(var(--p) * 4) / calc(var(--p) * 64) calc(var(--p) * 56.4) no-repeat; }
+@media (prefers-reduced-motion: reduce) { .lobby-hub--official .pcard.is-on .pcard__stamp { animation: none; } }
+
+/* 同盟房间's four seats as the Arkdays pack's room cards (img/official/hub/room/, scripts/build-room-art.py; 2026-10-27
+   round 4, the recording 5:55 at 1280×720): cards 236 wide every 284 from x 100, the top bar (bg_top_normal / bg_top_ready
+   236 × 36, its notch included) at y 87, the frame 3 px down to 581; a ready card's art fades into the protocol green under
+   img_char_card_bg_mask (as a mask), 已就绪's box player_card_ready 36 × 36 at 445; 创建者 on host_top_tag (9-sliced) at 132;
+   the plate 266 × 72 at 493 from 16 left of the card — mine inside card_deco_self 1:1 (the arrow at 63), the mark
+   icon_self_room 24 × 24; an empty seat: bg_plus 1:1 at 227, NOINFO 40 × 15, two strokes, card_empty 1:1 at 485 from 17
+   left; the kick button btn_kick 1:1 at 182, 80; a namecard plate shaded with card_matte. The 10-seat room keeps its own; the solo room (round 6) takes the same card. */
+.rs:not(.rs--big) .rs-seats { gap: calc(var(--p) * 48); padding-top: calc(var(--p) * 33.7); }
+.rs:not(.rs--big) .rseat { --w: min(calc(var(--p) * 236), calc((100vw - 1.6rem) / var(--n, 4) - .3rem)); left: calc(var(--p) * 4); }
+.rs:not(.rs--big) .rseat__clip { display: none; }
+.rs:not(.rs--big) .rseat__strip { flex: none; height: calc(var(--p) * 36); padding: 0;
+  background: url("/ui-art/img/official/hub/room/bg_top_normal.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat.is-ready .rseat__strip { background-image: url("/ui-art/img/official/hub/room/bg_top_ready.png"); }
+.rs:not(.rs--big) .rseat__strip > * { display: none; }
+.rs:not(.rs--big) .rseat__art { border: calc(var(--p) * 3) solid #2c2c2e; border-top: 0; background: #120f13; }
+.rs:not(.rs--big) .rseat.is-ready .rseat__art { border-color: #31cfaa; box-shadow: none; background: #16695a; }
+.rs:not(.rs--big) .rseat__art img { inset: 0 0 auto; height: calc(var(--p) * 380); }
+.rs:not(.rs--big) .rseat.is-ready .rseat__art::after { inset: calc(var(--p) * 190) 0 0;
+  background: linear-gradient(180deg, #22bf9e calc(var(--p) * 150), #1a8a72 calc(var(--p) * 230), #16695a calc(var(--p) * 270), #16695a calc(100% - var(--p) * 17), #31cfaa calc(100% - var(--p) * 17));
+  -webkit-mask: url("/ui-art/img/official/hub/room/img_char_card_bg_mask.png") 0 0 / 100% calc(var(--p) * 160) no-repeat, linear-gradient(#000, #000) 0 calc(var(--p) * 160) / 100% 100% no-repeat;
+  mask: url("/ui-art/img/official/hub/room/img_char_card_bg_mask.png") 0 0 / 100% calc(var(--p) * 160) no-repeat, linear-gradient(#000, #000) 0 calc(var(--p) * 160) / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat__host { top: calc(var(--p) * 9); padding: 0 calc(var(--p) * 6); font-size: calc(var(--p) * 18); font-weight: 500; line-height: calc(var(--p) * 12);
+  color: #0c2b25; background: none; border: calc(var(--p) * 8) solid transparent; border-radius: 0;
+  border-image: url("/ui-art/img/official/hub/room/host_top_tag.png") 8 fill / calc(var(--p) * 8) stretch; }
+.rs:not(.rs--big) .rseat__state { top: calc(var(--p) * 322); bottom: auto; height: calc(var(--p) * 36); gap: calc(var(--p) * 14); font-size: calc(var(--p) * 24); font-weight: 500;
+  color: #10302a; text-shadow: none; }
+.rs:not(.rs--big) .rseat:not(.is-ready) .rseat__state { color: #c9cecc; font-size: calc(var(--p) * 20); text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+.rs:not(.rs--big) .rseat__box { width: calc(var(--p) * 36); height: calc(var(--p) * 36); border-width: calc(var(--p) * 3); border-radius: calc(var(--p) * 6); }
+.rs:not(.rs--big) .rseat.is-ready .rseat__box { border: 0; border-radius: 0; background: url("/ui-art/img/official/hub/room/player_card_ready.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat.is-ready .rseat__box .icon { display: none; }
+.rs:not(.rs--big) .rseat__kick { left: calc(var(--p) * 182); right: auto; top: calc(var(--p) * -7); width: calc(var(--p) * 78); height: calc(var(--p) * 50); padding: 0;
+  background: url("/ui-art/img/official/hub/room/btn_kick.png") 0 0 / 100% 100% no-repeat; border: 0; border-radius: 0; }
+.rs:not(.rs--big) .rseat__kick { font-size: 0; color: transparent; } /* the bot one carries its words as text */
+.rs:not(.rs--big) .rseat__kick > * { display: none; }
+/* the plate */
+.rs:not(.rs--big) .rseat__plate { position: absolute; left: calc(var(--p) * -16); top: calc(var(--p) * 406); width: calc(var(--p) * 266); height: calc(var(--p) * 72); min-height: 0;
+  margin: 0; padding: calc(var(--p) * 6) calc(var(--p) * 8); column-gap: calc(var(--p) * 10); row-gap: calc(var(--p) * 4); align-content: center; z-index: 2;
+  background: #0c0c0e; border: 0; }
+.rs:not(.rs--big) .rseat.is-me .rseat__plate { background: linear-gradient(90deg, #1b1c1e, #3a3b3d 60%, #8e8f91); }
+.rs:not(.rs--big) .rseat.is-me .rseat__plate::after { content: ''; position: absolute; left: calc(var(--p) * -24); top: calc(var(--p) * -11); width: calc(var(--p) * 291); height: calc(var(--p) * 87);
+  background: url("/ui-art/img/official/hub/room/card_deco_self.png") 0 0 / 100% 100% no-repeat; pointer-events: none; }
+.rs:not(.rs--big) .rseat__plate .avatar { width: calc(var(--p) * 60); height: calc(var(--p) * 60); border-radius: 0; box-shadow: 0 0 0 1px rgba(255, 255, 255, .8); }
+.rs:not(.rs--big) .rseat__who { font-size: calc(var(--p) * 18); font-weight: 700; gap: calc(var(--p) * 6); }
+.rs:not(.rs--big) .rseat__doc { font-size: calc(var(--p) * 10); }
+.rs:not(.rs--big) .rseat__me { left: calc(var(--p) * 1); top: calc(var(--p) * -1); z-index: 1; width: calc(var(--p) * 24); height: calc(var(--p) * 24); border-radius: 0;
+  background: url("/ui-art/img/official/hub/room/icon_self_room.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat__me .icon { display: none; }
+/* an empty seat */
+.rs:not(.rs--big) .rseat--empty .rseat__art { background:
+  linear-gradient(to top right, transparent calc(50% - var(--p) * 1), #3a3a3c, transparent calc(50% + var(--p) * 1)) calc(var(--p) * 174) calc(var(--p) * 29) / calc(var(--p) * 32) calc(var(--p) * 55) no-repeat,
+  linear-gradient(to top right, transparent calc(50% - var(--p) * 1), #3a3a3c, transparent calc(50% + var(--p) * 1)) calc(var(--p) * 34) calc(var(--p) * 294) / calc(var(--p) * 18) calc(var(--p) * 30) no-repeat,
+  #120f13; }
+.rs:not(.rs--big) .rseat__invite, .rs:not(.rs--big) .rseat__wait { position: absolute; left: 0; right: 0; top: calc(var(--p) * 101); gap: 0; padding: 0; }
+.rs:not(.rs--big) .rseat__plus { width: calc(var(--p) * 106); height: calc(var(--p) * 107); transform: translateX(calc(var(--p) * 10));
+  background: url("/ui-art/img/official/hub/room/bg_plus.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat__plus::before, .rs:not(.rs--big) .rseat__plus::after { display: none; }
+.rs:not(.rs--big) .rseat__invite:hover .rseat__plus { filter: drop-shadow(0 0 calc(var(--p) * 6) #5df0c6); }
+.rs:not(.rs--big) .rseat__invite b { margin-top: calc(var(--p) * 6); font-size: calc(var(--p) * 22); font-weight: 500; }
+.rs:not(.rs--big) .rseat__invite small { margin-top: calc(var(--p) * 6); font-size: calc(var(--p) * 17); color: #6b6b6d; white-space: nowrap; }
+.rs:not(.rs--big) .rseat__noinfo { left: calc(var(--p) * 165); top: calc(var(--p) * 314); right: auto; bottom: auto; width: calc(var(--p) * 40); height: calc(var(--p) * 15);
+  font-size: 0; color: transparent; background: url("/ui-art/img/official/hub/room/noinfo.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat__plate--empty { left: calc(var(--p) * -17); top: calc(var(--p) * 398); width: calc(var(--p) * 275); height: calc(var(--p) * 104); display: flex;
+  align-items: center; justify-content: center; padding: 0; background: url("/ui-art/img/official/hub/room/card_empty.png") 0 0 / 100% 100% no-repeat; border: 0; }
+.rs:not(.rs--big) .rseat__plate.has-nc { --nc-shade: url("/ui-art/img/official/hub/room/card_matte.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rseat__invite small { font-size: calc(var(--p) * 15); }
+.rs:not(.rs--big) .rseat__addbot { flex: none; width: auto !important; height: calc(var(--p) * 30); padding: 0 calc(var(--p) * 14) !important; font-size: calc(var(--p) * 14); } /* its inline style is 100 % wide */
+/* the room's ground in the recording is 选择模拟协议's: the panel sheet and the top-left rock at the same places over the
+   scan lines (its bottom-right rock shows only a sliver there — not placed) */
+.rs:not(.rs--big) .rs__bg { background:
+  url("/ui-art/img/official/hub/mc/img_bkg_main.png") calc(var(--p) * -114.2) calc(var(--p) * 34.5) / calc(var(--p) * 1501.7) calc(var(--p) * 668) no-repeat,
+  url("/ui-art/img/official/hub/mc/img_bkg_dec_left_upper.png") calc(var(--p) * -62) calc(var(--p) * -46) / calc(var(--p) * 500) calc(var(--p) * 332) no-repeat,
+  url("/ui-art/img/official/hub/mc/img_screen_line_repeat.png") 0 0 / calc(var(--p) * 128) repeat; }
+/* a ready card's light (the recording 5:55): the glow standing on its bar (select_glow_up as a mask, 79 high) with the line
+   down to the notch; under the card's foot (round 5) the + bar select_deco_down1 1:1 at 13, 499.5 and the strands
+   select_deco_down2 at 110 % from the foot (581), on the card's middle — fitted on the recording 5:55 with the soft glow
+   filtered out (both ready cards: 1.1 and the foot) */
+.rs:not(.rs--big) .rs-seats { overflow: visible; }
+.rs:not(.rs--big) .rseat { isolation: isolate; }
+.rs:not(.rs--big) .rseat.is-ready::before { content: ''; position: absolute; left: 0; right: 0; top: calc(var(--p) * -87); height: calc(var(--p) * 100); z-index: -1; pointer-events: none;
+  background: linear-gradient(#31cfaa, #31cfaa) 50% 0 / calc(var(--p) * 3) calc(var(--p) * 90) no-repeat, linear-gradient(#31cfaa, #31cfaa) 0 calc(var(--p) * 21) / 100% calc(var(--p) * 79) no-repeat;
+  -webkit-mask: linear-gradient(#000, #000) 50% 0 / calc(var(--p) * 3) calc(var(--p) * 90) no-repeat, url("/ui-art/img/official/hub/room/select_glow_up.png") 0 calc(var(--p) * 21) / 100% calc(var(--p) * 79) no-repeat;
+  mask: linear-gradient(#000, #000) 50% 0 / calc(var(--p) * 3) calc(var(--p) * 90) no-repeat, url("/ui-art/img/official/hub/room/select_glow_up.png") 0 calc(var(--p) * 21) / 100% calc(var(--p) * 79) no-repeat; }
+.rs:not(.rs--big) .rseat.is-ready::after { content: ''; position: absolute; left: calc(var(--p) * -6.3); top: calc(var(--p) * 494); width: calc(var(--p) * 248.6);
+  height: calc(var(--p) * 148.5); z-index: -1; pointer-events: none;
+  background: url("/ui-art/img/official/hub/room/select_deco_down1.png") calc(var(--p) * 19.3) calc(var(--p) * 5.5) / calc(var(--p) * 208) calc(var(--p) * 28) no-repeat,
+    url("/ui-art/img/official/hub/room/select_deco_down2.png") 0 0 / 100% 100% no-repeat; }
+.rs:not(.rs--big) .rs-top { z-index: 3; } /* over the ready cards' glow */

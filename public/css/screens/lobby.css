@@ -1,0 +1,2199 @@
+/* ==========================================================================================
+   screens/lobby.css 鈥?the hub (official entry backdrop, the emblem in its radar and the title, 鎴愬氨缁熻 / 瀵嗛挜鍔犲叆 /
+   浣滄垬鎻愮ず at the left, the light S.W.E.E.P.鎶ュ憡 / 骞插憳璋冮厤 plates at the right, the 鐙珛妯℃嫙 / 鍚岀洘妯℃嫙 entries at the
+   bottom right), and the two full-screen dialogs (the project's Modal): 閫夋嫨妯℃嫙鍗忚 (official picture, difficulty cards
+   with the 宸查€夊畾 stamp, 寮€濮嬬嫭绔嬫ā鎷?鈥?or the room's 纭 / read-only view) and 閫夋嫨鍚岀洘鏂瑰紡 (radar, 鍒涘缓鍚岀洘 and 鍔犲叆鍚岀洘
+   cards). Text follows 鏂囧瓧澶у皬 (calc(k * var(--t))).
+   ========================================================================================== */
+
+/* ---- hub backdrop ------------------------------------------------------------------------------------- */
+/* the entries' width follows 鏂囧瓧澶у皬 (2.3rem at 灏? 搂35.18 review: at a fixed 2.3rem the names had to stop at 灏?s size) */
+.lobby-hub { --hub-entry-w: calc(2.3 * var(--t)); --hub-gap: .14rem; background: #050807; }
+/* Korean breaks between words, not between the syllables of one (搂35.18 review: 銆岆弲毽?鞁滊霠堨澊|靺樸€?at 灏?; a word too
+   long for its box still breaks rather than running out of it. The hub's own stage only: 閫夋嫨妯℃嫙鍗忚's button keeps its
+   two lines (銆岆弲毽?鞁滊霠堨澊靺?鞁滌瀾銆?took three at 鐗瑰ぇ in a 1024脳600 window by words) */
+.lobby-hub:lang(ko) .hub-stage { word-break: keep-all; overflow-wrap: break-word; }
+/* Japanese never starts a line with a small kana, 銉?or a closing mark (搂35.18 review: the tips' 銆屻偑銉氥儸|銉笺偪銉笺€?at 涓?/ 鐗瑰ぇ
+   in a 1024脳600 window; line-break: normal allows a break before them), as in the room */
+.lobby-hub:lang(ja) .hub-stage { line-break: strict; }
+/* a last line of one character: the hub's tips, the protocol dialog's paragraphs and its big button's label wrap `pretty`
+   (搂35.18 review of the text-fit fixes: 銆屾瘮杓冪殑鎵€瑕佹檪闁撱亴鐭亜銈枫儫銉ャ儸銉笺偡銉銉炽€?on a phone at 鐗瑰ぇ, 銆屽崢鐙紨绠椼倰闁媩濮嬨€?
+   Korean 銆岆弲毽?鞁滊霠堨澊靺?鞁渱鞛戙€?on desktops). Scoped as in the room (room.css): WebKit's `pretty` adds lines to short
+   labels, and the lobby's other dialogs were not measured with it. The dialog's button only (`.proto-foot`): the room's
+   big button shares the label's class and wraps plainly 鈥?in Safari `pretty` broke its Japanese 銆屻偡銉熴儱銉兗銈枫儳銉硘闁嬪銆?
+   inside the word, 銆屻偡銉熴儱銉兗|銈枫儳銉抽枊濮嬨€? at 灏?on the phones (review of 6f34f380), as `balance` had. `pretty`:
+   Chrome 117+, Safari 26+; Firefox wraps as before */
+.tips__text, .proto-brief p, .proto-hint, .proto-foot .proto-start__label { text-wrap: pretty; }
+/* 閫夋嫨鍚岀洘鏂瑰紡's note breaks Japanese between phrases in Chrome 119+ (BudouX; review of 6f34f380: 銆屸€︽暀銇堛仸銈傘倝銇唡銇嬨€佹嫑寰呫儶銉炽偗鈥︺€?
+   at 鐗瑰ぇ on the phones, now 銆屸€︽暀銇堛仸|銈傘倝銇嗐亱銆佹嫑寰呫儶銉炽偗銈抾鐩存帴闁嬨亜銇︺亸銇犮仌銇勩€?; Safari and Firefox ignore it and wrap as
+   before */
+.ally-recent:lang(ja) { word-break: auto-phrase; }
+/* the top bar's ping pill grows with its text at 澶?/ 鐗瑰ぇ, as in the room (搂35.18 review: its fixed .32rem cut it) */
+.lobby-hub > .topbar .ping { height: auto; min-height: .32rem; padding-top: 1px; padding-bottom: 1px; }
+.hub-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 60% at 50% 48%, rgba(96, 170, 186, .14), transparent 72%),
+    linear-gradient(180deg, #08100f, #040606 82%);
+}
+/* the official layers are drawn on black: `screen` keeps only their light. Their place, size and opacity below are
+   eyeballed from the event video [ASSUMED: no official layout data] */
+.hub-bg__glow, .hub-bg__ship { position: absolute; left: 50%; height: auto; transform: translate(-50%, -50%); mix-blend-mode: screen; }
+.hub-bg__glow { top: 46%; width: 9.6rem; opacity: .2; }
+.hub-bg__ship { top: 54%; width: 13.4rem; opacity: .4; animation: hub-ship 18s ease-in-out infinite alternate; }
+@keyframes hub-ship { to { transform: translate(-50%, calc(-50% - .1rem)); } }
+.hub-bg__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .028) 1px, transparent 1px);
+  background-size: .6rem .6rem;
+  -webkit-mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000 30%, transparent 85%);
+}
+.lobby-hub .topbar { background: linear-gradient(180deg, rgba(4, 8, 8, .85), transparent); border-bottom: 0; }
+
+/* ---- 澶у巺鑳屾櫙涓庨煶涔?(PR #643 split 8, ui/lobbyMedia.js): the player's own picture / video over the official layers,
+   darkened by its 鏆楀害 (--own-dim) so the title and the entries stay readable; the dialog reuses the settings rows ---- */
+.hub-bg__own { position: absolute; inset: 0; background: #050807; animation: hub-own-in 400ms ease-out backwards; }
+.hub-bg__own img, .hub-bg__own video, .hub-bg__own canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hub-bg__own::after { content: ''; position: absolute; inset: 0; background: rgba(5, 8, 7, var(--own-dim, .35)); }
+@keyframes hub-own-in { from { opacity: 0; } }
+.lmedia .modal__body { display: flex; flex-direction: column; gap: .16rem; }
+.lmedia__part { display: flex; flex-direction: column; gap: .1rem; padding: .14rem .16rem; border: 1px solid var(--line); background: rgba(0, 0, 0, .25); }
+.lmedia__head { display: flex; align-items: baseline; gap: .1rem; font-size: calc(.18 * var(--t)); color: var(--text-hi); }
+.lmedia__now { display: flex; align-items: center; gap: .08rem; min-width: 0; font-size: calc(.16 * var(--t)); color: var(--text-md); }
+.lmedia__now .icon { flex: none; width: .2rem; height: .2rem; color: var(--mint-500); }
+.lmedia__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lmedia__size { flex: none; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
+.lmedia__btns { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem; }
+.lmedia__btns .set-toggle { grid-column: auto; }
+.lmedia__dim { padding: 0 .16rem; }
+.lmedia__note { display: flex; gap: .06rem; margin: 0; font-size: calc(.15 * var(--t)); line-height: 1.6; color: var(--text-lo); }
+.lmedia__note .icon { flex: none; width: .18rem; height: .18rem; margin-top: .04rem; }
+
+/* 澶у巺鍦烘櫙 (ui/hubScene.js): four generated scenes over the official backdrop; colour tokens per scene ---------- */
+[data-hub-theme="night"] {
+  --sky-0: #03080a; --sky-1: #08141a; --sky-2: #12262a; --sky-3: #050909;
+  --haze: rgba(92, 168, 156, .17); --cloud: rgba(140, 196, 186, .055);
+  --ridge-far: #122022; --ridge-mid: #0b1516; --ridge-near: #060b0b;
+  --rim: rgba(110, 226, 196, .34); --fog: rgba(54, 104, 98, .3); --beam: rgba(150, 240, 215, .1);
+  --beacon: #59f4ca; --window: rgba(89, 244, 202, .7); --grid: rgba(89, 244, 202, .32);
+  --mote: rgba(170, 245, 225, .7);
+}
+/* the official backdrop's swatch: its dark field and glow */
+[data-hub-theme="official"] {
+  --sky-0: #08100f; --sky-1: #0c1a1b; --sky-2: #1b3134; --sky-3: #040606;
+  --ridge-far: transparent; --ridge-mid: transparent; --ridge-near: transparent; --beacon: rgba(150, 220, 230, .7);
+}
+[data-hub-theme="frost"] {
+  --sky-0: #070c12; --sky-1: #142029; --sky-2: #34444f; --sky-3: #090d11;
+  --haze: rgba(205, 226, 240, .2); --cloud: rgba(220, 236, 246, .08);
+  --ridge-far: #3a4852; --ridge-mid: #212c34; --ridge-near: #0f1418;
+  --rim: rgba(240, 248, 255, .62); --fog: rgba(180, 200, 214, .24); --beam: rgba(225, 240, 255, .12);
+  --beacon: #9fd8ff; --window: rgba(170, 220, 255, .7); --grid: rgba(170, 215, 240, .26);
+  --mote: rgba(240, 248, 255, .85);
+}
+[data-hub-theme="ember"] {
+  --sky-0: #080605; --sky-1: #120d0b; --sky-2: #251913; --sky-3: #070505;
+  --haze: rgba(196, 104, 52, .15); --cloud: rgba(130, 96, 76, .08);
+  --ridge-far: #211814; --ridge-mid: #150f0c; --ridge-near: #090606;
+  --rim: rgba(255, 150, 80, .28); --fog: rgba(84, 52, 38, .32); --beam: transparent;
+  --beacon: #ffae48; --window: rgba(255, 168, 80, .75); --grid: rgba(255, 170, 90, .22);
+  --mote: rgba(255, 150, 70, .85);
+}
+[data-hub-theme="calm"] {
+  --sky-0: #040606; --sky-1: #070b0b; --sky-2: #0c1211; --sky-3: #040505;
+  --haze: rgba(80, 120, 110, .07); --cloud: transparent;
+  --ridge-far: #0e1514; --ridge-mid: #090e0e; --ridge-near: #050808;
+  --rim: rgba(89, 244, 202, .14); --fog: rgba(30, 50, 46, .25); --beam: transparent;
+  --beacon: #4ed8af; --window: rgba(78, 216, 175, .45); --grid: rgba(89, 244, 202, .22);
+  --mote: transparent;
+}
+
+.hub-scene { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background: var(--sky-3); }
+.hub-bg__sky { position: absolute; inset: 0;
+  background: linear-gradient(180deg, var(--sky-0) 0%, var(--sky-1) 36%, var(--sky-2) 63%, var(--sky-3) 100%); }
+.hub-bg__stars { position: absolute; left: 0; top: 0; width: 1px; height: 1px; border-radius: 50%;
+  animation: hub-twinkle 7s ease-in-out infinite alternate; }
+.hub-bg__haze { position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 20% at 50% 64%, var(--haze), transparent 72%),
+    radial-gradient(ellipse 130% 36% at 50% 72%, var(--haze), transparent 70%); }
+.hub-bg__clouds { position: absolute; left: 0; top: 6%; width: 200%; height: 50%;
+  background:
+    radial-gradient(30% 10% at 15% 42%, var(--cloud), transparent 70%),
+    radial-gradient(22% 7% at 38% 20%, var(--cloud), transparent 70%),
+    radial-gradient(36% 11% at 66% 58%, var(--cloud), transparent 70%),
+    radial-gradient(20% 6% at 88% 28%, var(--cloud), transparent 70%);
+  background-size: 50% 100%; background-repeat: repeat-x; animation: hub-drift 180s linear infinite; }
+.hub-bg__land { position: absolute; left: 0; bottom: 0; width: 100%; height: 64%; overflow: visible; }
+.hub-bg__ridge--far { fill: var(--ridge-far); }
+.hub-bg__ridge--mid, .hub-bg__fort { fill: var(--ridge-mid); }
+.hub-bg__ridge--near { fill: var(--ridge-near); }
+.hub-bg__rim { fill: none; stroke: var(--rim); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.hub-fog-0 { stop-color: var(--fog); stop-opacity: 0; }
+.hub-fog-1 { stop-color: var(--fog); stop-opacity: 1; }
+.hub-beam-0 { stop-color: var(--beam); }
+.hub-beam-1 { stop-color: var(--beam); stop-opacity: 0; }
+.hub-bg__beam { transform-origin: 791px 300px; animation: hub-beam 16s ease-in-out infinite alternate; }
+.hub-bg__windows rect { fill: var(--window); animation: hub-window 9s steps(1) infinite; animation-delay: var(--dl); }
+.hub-bg__beacons g { fill: var(--beacon); animation: hub-beacon 2.8s ease-in-out infinite; animation-delay: var(--dl); }
+.hub-bg__beacon-glow { opacity: .22; }
+.hub-bg__motes { position: absolute; inset: 0; }
+.hub-bg__mote { position: absolute; border-radius: 50%; background: var(--mote); box-shadow: 0 0 6px var(--mote); opacity: 0;
+  animation: hub-mote var(--d) linear infinite; animation-delay: var(--dl); }
+[data-hub-theme="frost"] .hub-bg__mote { animation-name: hub-snow; }
+@keyframes hub-twinkle { from { opacity: .5; } to { opacity: 1; } }
+@keyframes hub-drift { to { transform: translateX(-50%); } }
+@keyframes hub-beam { from { transform: rotate(-18deg); } to { transform: rotate(24deg); } }
+@keyframes hub-window { 0%, 70% { opacity: .9; } 72%, 78% { opacity: .2; } 80%, 100% { opacity: .9; } }
+@keyframes hub-beacon { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes hub-mote { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 15% { opacity: .8; } 85% { opacity: .45; } 100% { transform: translate3d(2vw, -18vh, 0); opacity: 0; } }
+@keyframes hub-snow { 0% { transform: translate3d(0, -12vh, 0); opacity: 0; } 15% { opacity: .9; } 85% { opacity: .7; } 100% { transform: translate3d(-3vw, 14vh, 0); opacity: 0; } }
+.bgset__swatch { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-0), var(--sky-1) 40%, var(--sky-2) 66%, var(--sky-3)); }
+.bgset__swatch svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bgset__swatch .sw-far { fill: var(--ridge-far); }
+.bgset__swatch .sw-mid { fill: var(--ridge-mid); }
+.bgset__swatch .sw-near { fill: var(--ridge-near); }
+.bgset__swatch .sw-beacon { fill: var(--beacon); }
+@media (prefers-reduced-motion: reduce) {
+  .hub-scene * { animation: none; }
+  .hub-scene .hub-bg__mote { opacity: .3; }
+}
+/* the scene buttons of 澶у巺鑳屾櫙涓庨煶涔?*/
+.bgset__themes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .1rem; }
+.bgset__theme {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .05rem;
+  min-width: 0;
+  padding: .06rem;
+  font: inherit;
+  text-align: left;
+  color: var(--text-hi);
+  cursor: pointer;
+  background: rgba(223, 230, 226, .04);
+  border: 1px solid rgba(223, 230, 226, .14);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.bgset__theme:hover { border-color: var(--mint-a35); }
+.bgset__theme.is-selected { border-color: var(--mint-400); box-shadow: inset 0 0 0 1px var(--mint-400), 0 0 .14rem var(--mint-a20); }
+.bgset__name { font-size: calc(.15 * var(--t)); font-weight: 800; white-space: nowrap; }
+.bgset__en { font: 700 calc(.09 * var(--t)) / 1 ui-monospace, Consolas, monospace; letter-spacing: .14em; color: var(--text-dim); white-space: nowrap; }
+@media (max-width: 720px) { .bgset__themes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---- hub layout: the centre spans the first row; both columns lie above it -------------------------- */
+.hub-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 4rem) minmax(0, 1fr) minmax(0, calc(var(--hub-entry-w) * 3 + 2 * var(--hub-gap)));
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "side center right" "side entries entries";
+  gap: .2rem .4rem;
+  width: 100%;
+  padding: .1rem .36rem .36rem;
+}
+
+.hub-center {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+  min-width: 0;
+  text-align: center;
+  pointer-events: none;
+  animation: card-in var(--t-slow) var(--ease-out) backwards;
+}
+.hub-center__mark { position: relative; display: grid; place-items: center; min-height: 1.4rem; margin-bottom: .1rem; }
+.hub-center__logo { position: relative; width: 1.3rem; height: auto; filter: drop-shadow(0 0 .12rem rgba(210, 255, 240, .25)); }
+.hub-center__mark .emblem { position: relative; margin-bottom: 0; }
+.hub-center__en { position: relative; font-family: var(--font-display); font-size: calc(.17 * var(--t)); letter-spacing: .32em; color: rgba(223, 230, 226, .72); text-shadow: 0 1px .08rem rgba(0, 0, 0, .85); }
+.hub-center__en b { color: var(--mint-400); font-weight: 700; }
+.hub-center__title {
+  position: relative;
+  margin: 0;
+  /* follows 鏂囧瓧澶у皬 while it fits on one line beside the side columns (larger, it ran under the left column's tips 鈥?
+     搂35.18 review): the centre is the stage's width (100vw less its .72rem padding) and the title's box 8.8rem less (below);
+     7 CJK characters with their spacing are 7.4鈥?em, so it stops at that box / 8.2 (never below .56rem at 灏?; the latin
+     title below */
+  font-size: min(calc(.56 * var(--t)), calc((100vw - 9.52rem) / 8.2));
+  font-weight: 900;
+  letter-spacing: .14em;
+  line-height: 1.15;
+  color: var(--text-hi);
+  text-shadow: 0 .04rem .3rem rgba(0, 0, 0, .8);
+  overflow-wrap: anywhere;
+}
+.hub-center__title em { font-style: normal; color: var(--mint-400); }
+.hub-center__title--latin { font-family: var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+/* the title is centred over the whole stage: it keeps clear of the side columns (4rem and its gap each side), and the
+   latin one 鈥?銆孲TRONGHOLD PROTOCOL: ALLIANCE銆? 20em of the display font 鈥?is .46 脳 --t while it fits on one line
+   inside that, (100vw 鈭?9.52rem) / 20.2 (搂35.18 review: at .56rem it reached under the left column's tips in English, at
+   澶?/ 鐗瑰ぇ in 800鈥?280 px windows; pinned at .46rem it no longer followed 鏂囧瓧澶у皬). [ASSUMED] the .46 */
+.hub-center__title { max-width: calc(100% - 8.8rem); }
+.hub-center__title--latin { font-size: min(calc(.46 * var(--t)), calc((100vw - 9.52rem) / 20.2)); }
+/* the radar rings around the emblem (original drawing) */
+.hub-radar { position: absolute; left: 50%; top: 50%; width: 4.6rem; height: 4.6rem; transform: translate(-50%, -50%); }
+.hub-radar svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: rgba(89, 244, 202, .15); stroke-width: 1; }
+.hub-radar .hub-radar__ticks { stroke-width: 5; stroke-dasharray: 1.4 9.8; }
+.hub-radar__sweep {
+  position: absolute;
+  inset: 5.4%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 292deg, rgba(89, 244, 202, .15) 360deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 17%, #000 18%);
+  mask-image: radial-gradient(circle, transparent 0 17%, #000 18%);
+  animation: hub-sweep 9s linear infinite;
+}
+@keyframes hub-sweep { to { transform: rotate(1turn); } }
+
+/* ---- left column: 鎴愬氨缁熻, 瀵嗛挜鍔犲叆, 浣滄垬鎻愮ず ------------------------------------------------------------ */
+.hub-side { grid-area: side; position: relative; z-index: 1; display: flex; flex-direction: column; gap: .14rem; min-width: 0; padding-top: .3rem; }
+/* 鎴愬氨缁熻 (#643's top-left card, from the event video): a dusk scene with the emblem and the trophy medal, the label strip
+   with the LV under it */
+.hub-ach {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: #eef3f1;
+  cursor: pointer;
+  background: #0c1110;
+  border: 1px solid rgba(220, 230, 226, .16);
+  box-shadow: 0 .04rem .16rem rgba(0, 0, 0, .45);
+  transition: border-color var(--t-fast), filter var(--t-fast);
+}
+.hub-ach:hover, .hub-ach:focus-visible { border-color: rgba(78, 216, 175, .35); filter: brightness(1.08); outline: none; }
+.hub-ach:focus-visible { box-shadow: 0 0 0 2px var(--mint-400); }
+.hub-ach__scene { position: relative; height: 1rem; overflow: hidden; display: grid; place-items: center; }
+.hub-ach__land { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hub-ach__scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 3px), linear-gradient(90deg, rgba(8, 10, 10, .55), transparent 40%);
+}
+.hub-ach__mark { position: relative; z-index: 1; display: grid; place-items: center; }
+.hub-ach__mark .emblem { margin: 0; gap: .06rem; animation: none; }
+.hub-ach__mark .emblem__svg { width: .52rem; height: .56rem; filter: drop-shadow(0 0 .04rem rgba(0, 0, 0, .6)); }
+.hub-ach__mark .emblem__svg circle { fill: #15110c; animation: none; }
+.hub-ach__mark .emblem__svg circle.is-accent { fill: #2cf0b8; }
+.hub-ach__mark .emblem__bracket { width: .07rem; height: .66rem; border-width: 1px; border-color: rgba(20, 16, 10, .55); }
+.hub-ach__rank {
+  position: absolute;
+  left: .1rem;
+  top: .1rem;
+  z-index: 2;
+  width: .6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .01rem;
+  padding: .04rem 0 .03rem;
+  background: rgba(14, 18, 17, .55);
+  border: 1px solid rgba(240, 244, 243, .4);
+}
+.hub-ach__medal { width: .44rem; height: .44rem; object-fit: contain; }
+.hub-ach__rank > .icon { width: .3rem; height: .3rem; color: #eef3f1; }
+.hub-ach__rank small { display: inline-flex; align-items: center; gap: .02rem; font-size: min(calc(.13 * var(--t)), .15rem); color: #e6ebe9; }
+.hub-ach__rank small .icon { width: .12rem; height: .12rem; }
+.hub-ach__label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .08rem;
+  flex-wrap: wrap;
+  min-height: .46rem;
+  padding: .02rem .16rem;
+  font-size: calc(.21 * var(--t));
+  font-weight: 700;
+  background: linear-gradient(90deg, rgba(20, 26, 25, .96), rgba(14, 18, 17, .96));
+  border-top: 1px solid rgba(220, 230, 226, .14);
+}
+.hub-ach__label::before, .hub-ach__label::after { content: ''; position: absolute; top: .06rem; bottom: .06rem; width: .06rem; border: 1px solid rgba(220, 230, 226, .3); }
+.hub-ach__label::before { left: .04rem; border-right: 0; }
+.hub-ach__label::after { right: .04rem; border-left: 0; }
+.hub-ach__badge { flex: none; width: .24rem; height: .24rem; fill: #e8eeec; }
+.hub-ach__lv { margin-left: auto; font-size: calc(.15 * var(--t)); font-weight: 600; color: var(--mint-400); }
+.hub-tile {
+  display: flex;
+  align-items: center;
+  gap: .14rem;
+  width: 100%;
+  min-height: .74rem;
+  padding: .1rem .16rem;
+  text-align: left;
+  color: var(--text-hi);
+  background: rgba(8, 14, 13, .8);
+  border: 1px solid rgba(223, 230, 226, .2);
+  border-left: 3px solid var(--mint-500);
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.hub-tile:hover, .hub-tile:focus-visible { background: rgba(24, 40, 36, .9); border-color: var(--mint-a35); }
+.hub-tile__icon { flex: none; display: grid; place-items: center; width: .44rem; height: .44rem; border: 1px solid var(--mint-a35); color: var(--mint-400); }
+.hub-tile__icon .icon { width: .24rem; height: .24rem; }
+.hub-tile__text { display: flex; flex-direction: column; gap: .02rem; min-width: 0; }
+.hub-tile__label { font-size: calc(.2 * var(--t)); font-weight: 800; }
+.hub-tile__en { font-family: ui-monospace, Consolas, monospace; font-size: calc(.1 * var(--t)); font-weight: 600; letter-spacing: .18em; color: var(--text-dim); }
+.hub-side .tips { margin-top: .04rem; background: rgba(8, 14, 13, .72); }
+
+/* ---- right column: light plates with bracket marks (S.W.E.E.P.鎶ュ憡, 骞插憳璋冮厤 = loadout.js's LoadoutButton) --------- */
+.hub-right { grid-area: right; position: relative; z-index: 1; align-self: start; display: flex; flex-direction: column; gap: .12rem; min-width: 0; padding-top: .3rem; }
+.lobby-hub .hub-plate {
+  --pl-ink: #222b28;
+  --bk-c: var(--mint-400);
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .14rem;
+  width: 100%;
+  height: auto;
+  min-height: .7rem;
+  min-width: 0;
+  padding: .04rem .22rem .04rem .2rem;
+  font: inherit;
+  font-size: calc(.2 * var(--t));
+  letter-spacing: .04em;
+  color: #111816;
+  text-align: left;
+  cursor: pointer;
+  background:
+    linear-gradient(var(--pl-ink), var(--pl-ink)) left .07rem center / 2px 54% no-repeat,
+    linear-gradient(var(--pl-ink), var(--pl-ink)) left .07rem top 23% / .06rem 2px no-repeat,
+    linear-gradient(var(--pl-ink), var(--pl-ink)) left .07rem bottom 23% / .06rem 2px no-repeat,
+    linear-gradient(var(--pl-ink), var(--pl-ink)) right .07rem center / 2px 54% no-repeat,
+    linear-gradient(var(--pl-ink), var(--pl-ink)) right .07rem top 23% / .06rem 2px no-repeat,
+    linear-gradient(var(--pl-ink), var(--pl-ink)) right .07rem bottom 23% / .06rem 2px no-repeat,
+    linear-gradient(180deg, #e8edea, #c6cfcb);
+  border: 1px solid rgba(255, 255, 255, .5);
+  box-shadow: 0 .05rem .18rem rgba(0, 0, 0, .5), inset 0 -2px 0 rgba(0, 0, 0, .14);
+}
+.lobby-hub .hub-plate:not(:disabled):hover { border-color: #fff; box-shadow: 0 .05rem .22rem rgba(0, 0, 0, .55), 0 0 .16rem rgba(78, 216, 175, .3); filter: brightness(1.05); }
+.lobby-hub .hub-plate:focus-visible { outline: 2px solid var(--mint-400); outline-offset: 2px; }
+.hub-plate__glyph, .lobby-hub .hub-plate .lo-entry__icon, .lobby-hub .hub-plate > .btn__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: .46rem;
+  height: .46rem;
+  padding: .07rem;
+  box-sizing: border-box;
+  color: var(--mint-400);
+  background: #182120;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.hub-plate__glyph svg { width: 100%; height: 100%; }
+/* (a label too long for its plate wraps beside its glyph and the plate grows, rather than an ellipsis 鈥?搂35.18 review:
+   Japanese S.W.E.E.P.銉儩銉笺儓 beside its tag at 鐗瑰ぇ in 800鈥?280 px windows. It takes the row's free width, at least its
+   longest word, so only the tag drops under it when even that does not fit) */
+.hub-plate__label, .lobby-hub .hub-plate .btn__label { flex: 1 1 0; min-width: min-content; font-weight: 900; letter-spacing: .04em; line-height: 1.15; white-space: normal; color: #111816; }
+.hub-plate__tag { margin-left: auto; padding: .03rem .07rem; font-size: calc(.11 * var(--t)); font-weight: 700; letter-spacing: .12em; color: rgba(17, 24, 22, .6); border: 1px solid rgba(17, 24, 22, .28); white-space: nowrap; }
+.lobby-hub .hub-plate .lo-entry__n { margin-left: auto; }
+/* 鎴愬氨缁熻 as a plate: only on short screens, where the left column with its card gives way (see the media block) */
+.lobby-hub .hub-plate--ach { display: none; }
+.hub-plate--ach .hub-plate__glyph svg { fill: currentColor; }
+
+/* ---- entries (鐙珛妯℃嫙 / 鍚岀洘妯℃嫙), bottom right ----------------------------------------------------------- */
+/* (the card, the line above it, the tips' head and the 鎴愬氨缁熻 card's label grow or wrap rather than cut their text at
+   澶?/ 鐗瑰ぇ in a small window 鈥?搂35.18 review; the trophy count under the medal stops at .15rem, 澶?s size [ASSUMED]) */
+/* (the two cards share a height: the taller one's, their text at the bottom) */
+.hub-entries { grid-area: entries; position: relative; z-index: 1; display: flex; align-items: stretch; justify-content: flex-end; gap: var(--hub-gap); min-width: 0; }
+.hub-entry-wrap { display: flex; flex-direction: column; gap: .05rem; min-width: 0; animation: card-in var(--t-slow) var(--ease-out) backwards; }
+.hub-entry-wrap:nth-child(2) { animation-delay: 60ms; }
+.hub-entry__group { display: flex; align-items: center; gap: .06rem; min-height: .22rem; padding-left: .04rem; font-size: calc(.13 * var(--t)); color: rgba(223, 230, 226, .7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hub-entry__group .icon { flex: none; width: .16rem; height: .16rem; color: var(--mint-400); }
+.hub-entry__long { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hub-entry__short { display: none; }
+/* Narrow desktop windows keep the full descriptions (phones have their own short labels below).
+   [ASSUMED] A shared two-line minimum keeps both cards level when only one description wraps. */
+@media (max-width: 900px) and (min-height: 521px) {
+  .hub-entry__group { min-height: 3em; white-space: normal; overflow: visible; text-overflow: clip; }
+  .hub-entry__long { white-space: normal; overflow: visible; text-overflow: clip; }
+  /* 鎷撳睍妯″紡锛堥€夋嫨鎷撳睍鐜╂硶锛夌殑绐勫睆涓€妗ｏ細鍚屼竴濂椾袱鍒楅€昏緫锛屾暟鍊肩瓑姣旂缉灏?鈥斺€?琛?64px / gap 8px锛堝弬鑰冨疄鏈洪〉 800脳360 瀹炴祴锛?*/
+  .ext-body .ext-stage { gap: .12rem; padding: .15rem; border-radius: .15rem; }
+  .ext-body .ext-hero { gap: .14rem; }
+  .ext-body .ext-hero__art { width: .66rem; height: .66rem; border-radius: .14rem; }
+  .ext-body .ext-hero__art .icon { width: .33rem; height: .33rem; }
+  .ext-body .ext-hero__code { display: none; }
+  .ext-body .ext-hero__name { font-size: calc(.26 * var(--t)); }
+  .ext-body .ext-hero__en { font-size: calc(.12 * var(--t)); letter-spacing: .14em; }
+  .ext-body .ext-stat { padding: .08rem .11rem; }
+  .ext-body .ext-stat b { font-size: calc(.19 * var(--t)); }
+  .ext-body .ext-stat span { font-size: calc(.14 * var(--t)); }
+  .ext-body .ext-desc { font-size: calc(.17 * var(--t)); line-height: 1.5; }
+  .ext-body .ext-feats li { font-size: calc(.165 * var(--t)); line-height: 1.45; }
+  .ext-body .ext-note { padding: .11rem .12rem; font-size: calc(.16 * var(--t)); }
+  .ext-body .ext-pane__lead { font-size: calc(.17 * var(--t)); line-height: 1.45; }
+  .ext-body .ext-row { grid-template-columns: .33rem minmax(0, 1fr) auto; gap: .12rem; height: 64px; padding: 0 .14rem; }
+  /* 涓氫富 2026-10-29锛堢湡鏈猴級锛氭ā寮忛€夋嫨鍒楄〃琛岄棿璺濆啀鏉句竴鐐癸紝閬垮厤鎵嬫満绔浉閭昏璐寸潃锛堜笌浜岀骇椤典笂绉诲悓鐞嗭級銆?
+     閫夋嫨鍣ㄥ繀椤绘槸 li 鈥斺€?琛屾槸 `<li><button class="ext-row">`锛坰creens/extensionModes.js row()锛夛紝
+     `.ext-row + .ext-row` 姘歌繙鍛戒腑涓嶅埌锛岃繖鏉?2026-10-29 鍔犵殑闂磋窛涓€鐩存病鐢熸晥锛堜笟涓?2026-11-01 鍙堟姤浜嗕竴娆★級銆?*/
+  .ext-body .ext-list > li + li { margin-top: .06rem; }
+  .ext-body .ext-row__idx { font-size: calc(.165 * var(--t)); }
+  .ext-body .ext-row__name { font-size: calc(.21 * var(--t)); }
+  .ext-body .ext-row__desc { font-size: calc(.16 * var(--t)); }
+  .ext-body .ext-row__code { display: none; }
+  .ext-body .ext-list { gap: 8px; }
+  .ext-body .ext-foot { padding-top: .09rem; }
+  .ext-body .ext-foot__start { min-width: 1.56rem; min-height: 44px; font-size: calc(.2 * var(--t)); }
+  .ext-body .ext-foot__pack { font-size: calc(.15 * var(--t)); }
+  .ext-body .ext-party { gap: .04rem; }
+  .ext-body .ext-party__chip { min-width: max(.26rem, 24px); min-height: max(.26rem, 24px); padding: 0 .07rem; font-size: calc(.145 * var(--t)); }
+  .ext-body .ext-note-line { font-size: calc(.16 * var(--t)); }
+}
+.hub-entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex: 1 0 auto;
+  width: var(--hub-entry-w);
+  max-width: 100%;
+  min-height: calc(1.34 * var(--t));
+  padding: .14rem .16rem;
+  /* the icon's height kept above the text (below) */
+  padding-top: calc(.12rem + .42 * var(--t) + .04rem);
+  overflow: hidden;
+  text-align: left;
+  color: var(--text-hi);
+  background: linear-gradient(160deg, rgba(30, 46, 42, .94), rgba(9, 15, 14, .96));
+  border: 1px solid rgba(223, 230, 226, .26);
+  box-shadow: 0 .06rem .24rem rgba(0, 0, 0, .5);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.hub-entry:hover, .hub-entry:focus-visible { transform: translateY(-.04rem); border-color: var(--mint-400); box-shadow: 0 .08rem .3rem rgba(0, 0, 0, .55), 0 0 .2rem var(--mint-a20); }
+.hub-entry:active { transform: translateY(1px); }
+.hub-entry__icon { position: absolute; right: .14rem; top: .12rem; color: var(--mint-a35); }
+.hub-entry__icon .icon { width: calc(.42 * var(--t)); height: calc(.42 * var(--t)); }
+/* the card, its icon and its text follow 鏂囧瓧澶у皬 together (2.3 脳 1.34 --t, the icon .42 --t), as at 灏? the text stays
+   below the icon 鈥?the card's top padding is the icon's .12rem offset, its height and a gap 鈥?so a long name or the
+   decorative line grows the card rather than running under it (搂35.18 review: 銆孉LLIANCE SIMULATION銆?ran under the
+   people icon in English, Korean names under it at 澶?/ 鐗瑰ぇ; a padding beside it instead wrapped the line in every
+   language, Chinese 銆孉LLIANCE / SIMULATION銆?at 灏? which never reached the icon). A short card keeps its min-height */
+.hub-entry__en { font-family: ui-monospace, Consolas, monospace; font-size: calc(.11 * var(--t)); font-weight: 700; letter-spacing: .22em; color: var(--mint-400); }
+/* the name wraps between words (搂35.18 review: on one line English 銆孲olo Simulation銆?/ 銆孴eam Simulation銆?ran 25鈥?0 px
+   past the 2.3rem card at 灏?in every window and 84鈥?00 px at 鐗瑰ぇ, the card cutting it); 銆孲imulation銆?alone is ~6.2em,
+   and the card (2.3 脳 --t) keeps ~1.98 脳 --t inside for the .3 脳 --t name */
+.hub-entry__name { margin-top: .04rem; font-size: calc(.3 * var(--t)); font-weight: 900; letter-spacing: .06em; line-height: 1.1; }
+.hub-entry__corner { position: absolute; right: 0; bottom: 0; width: .3rem; height: .3rem; background: linear-gradient(135deg, transparent 50%, var(--mint-500) 50%); opacity: .8; }
+/* 鍚岀洘妯℃嫙, the main way to play: bright */
+.hub-entry--coop { background: linear-gradient(160deg, var(--mint-500), #1f8f72); color: #04140f; border-color: var(--mint-400); }
+.hub-entry--coop .hub-entry__en { color: rgba(4, 20, 15, .75); }
+.hub-entry--coop .hub-entry__icon { color: rgba(4, 20, 15, .25); }
+.hub-entry--coop .hub-entry__corner { background: linear-gradient(135deg, transparent 50%, #e8fff7 50%); }
+/* 鎷撳睍妯″紡锛堜笟涓?2026-10-26锛夛細澶у巺鐨勭涓夊紶鍗★紝闇滆摑 鈥斺€?瀹冩墦寮€鐨勬槸銆岄€夋嫨鎷撳睍鐜╂硶銆嶇殑鐩綍锛屼笉鏄悓鐩燂紝涔熶笉鏄毦搴︼紱
+   棰滆壊鍙栬嚜鍙傝€冨疄鏈洪〉 public/dev/extension-hall-preview.html 鐨?.hub-entry--ext锛宲x 鎸?1 : 1.5 鎶樺埌 1920 璁捐绋?*/
+.hub-entry--ext { background: linear-gradient(160deg, #12222e, #07121b); border-color: var(--ext-a35); }
+.hub-entry--ext .hub-entry__en { color: var(--ext-400); }
+.hub-entry--ext .hub-entry__icon { color: rgba(169, 220, 248, .85); }
+.hub-entry--ext .hub-entry__corner { background: linear-gradient(135deg, transparent 50%, var(--ext-400) 50%); }
+.hub-entry--ext:hover { border-color: var(--ext-400); box-shadow: 0 .08rem .3rem rgba(0, 0, 0, .55), 0 0 .2rem var(--ext-glow); }
+.hub-entry--ext:focus-visible { border-color: var(--ext-400); box-shadow: 0 .08rem .3rem rgba(0, 0, 0, .55), 0 0 .2rem var(--ext-glow); outline: 2px solid var(--ext-300); outline-offset: 2px; }
+@keyframes card-in { from { opacity: 0; transform: translateY(.14rem); } }
+
+/* ---- tips -------------------------------------------------------------------------------------------- */
+.tips {
+  --bk-c: var(--line-3);
+  margin-top: .3rem;
+  padding: .16rem .22rem .2rem;
+  background: rgba(8, 10, 9, .55);
+  border: 1px solid var(--line);
+}
+.tips__head { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem; font-size: calc(.16 * var(--t)); font-weight: 700; color: var(--text-md); }
+.tips__head > .icon { width: .2rem; height: .2rem; color: var(--mint-500); }
+/* the count and its arrows move to a line of their own, together, when the head is too narrow for them (搂35.18 review) */
+.tips__pager { display: inline-flex; align-items: center; gap: .1rem; margin-left: auto; }
+.tips__idx { font-size: calc(.16 * var(--t)); color: var(--text-md); }
+.tips__nav {
+  display: grid;
+  place-items: center;
+  width: .3rem;
+  height: .3rem;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--text-lo);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.tips__nav:hover { color: var(--mint-400); border-color: var(--mint-700); }
+.tips__nav .icon { width: .18rem; height: .18rem; }
+.tips__text { margin-top: .1rem; font-size: calc(.17 * var(--t)); color: var(--text-lo); line-height: 1.6; animation: tip-in var(--t-slow) var(--ease-out); }
+@keyframes tip-in { from { opacity: 0; transform: translateX(.1rem); } }
+
+/* ---- the two full-screen dialogs (Modal .proto / .ally) --------------------------------------------- */
+.modal.proto-veil { padding: 0; background: #0b0c0c; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.modal__box.proto, .modal__box.ally, .modal__box.ext {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  max-height: none;
+  padding: var(--sa-t, 0px) var(--sa-r, 0px) var(--sa-b, 0px) var(--sa-l, 0px);
+  color: #eef0ef;
+  background: #0b0c0c;
+  border: 0;
+  box-shadow: none;
+  overscroll-behavior: contain;
+  animation: proto-in 200ms var(--ease-out) backwards;
+}
+.modal__box.proto::after, .modal__box.proto > .modal__stripe, .modal__box.ally::after, .modal__box.ally > .modal__stripe, .modal__box.ext::after, .modal__box.ext > .modal__stripe { display: none; }
+.modal__box.proto > .modal__body, .modal__box.ally > .modal__body, .modal__box.ext > .modal__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0; overflow: hidden; color: inherit; }
+.proto__body, .ally__body, .ext__body { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+@keyframes proto-in { from { opacity: 0; } }
+.proto__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: background 400ms;
+  background:
+    radial-gradient(46% 60% at 30% 52%, rgba(255, 255, 255, .05), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 4px),
+    linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    radial-gradient(120% 90% at 50% 40%, #151616, #070808);
+  background:
+    radial-gradient(46% 60% at 30% 52%, color-mix(in srgb, var(--d-color, #4ed8af) 16%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 100% 50%, color-mix(in srgb, var(--d-color, #4ed8af) 10%, transparent), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 4px),
+    linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    radial-gradient(120% 90% at 50% 40%, #151616, #070808);
+}
+.proto-top, .proto-body { position: relative; }
+.proto-top { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: .2rem; padding: .18rem .34rem 0 .22rem; z-index: 2; }
+.proto-back {
+  display: inline-flex;
+  align-items: center;
+  height: max(.62rem, 32px, calc(36px * var(--sp-ui, 1)));
+  padding: 0;
+  font: inherit;
+  color: #f2f4f3;
+  background: linear-gradient(180deg, #2b2c2d, #1b1c1d);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 .04rem .14rem rgba(0, 0, 0, .5);
+}
+.proto-back > .icon { width: max(.4rem, 22px); height: max(.4rem, 22px); margin: 0 .3rem 0 .14rem; }
+.proto-back__home {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: max(2rem, 32px, calc(96px * var(--sp-ui, 1)));
+  border-left: 2px solid #0d0e0e;
+  background: radial-gradient(circle, rgba(255, 255, 255, .22) 1px, transparent 1.6px) 0 0 / .14rem .14rem, linear-gradient(90deg, #2f3132, #3d3f40 50%, #2f3132);
+}
+.proto-back__home .icon { width: max(.32rem, 18px); height: max(.32rem, 18px); }
+.proto-back:hover, .proto-back:focus-visible { border-color: rgba(255, 255, 255, .35); }
+.proto-title { display: flex; flex-direction: column; align-items: flex-end; gap: .02rem; min-width: 0; padding-top: .06rem; text-align: right; }
+.proto-title .modal__title { margin: 0; font-size: calc(.36 * var(--t)); font-weight: 900; letter-spacing: .06em; color: #eef0ef; }
+.proto-title__mode { display: inline-flex; align-items: center; gap: .08rem; font-size: calc(.16 * var(--t)); font-weight: 700; color: var(--d-color, var(--mint-400)); }
+.proto-title__mode .icon { width: 1.1em; height: 1.1em; }
+.proto-title__mode i { font-style: normal; font-family: var(--font-display); font-size: calc(.13 * var(--t)); letter-spacing: .16em; color: #8b8f8e; }
+
+/* the cards' column 5.6rem, at least 300 px (搂35.18 review: in a window whose 1rem is under 54 px 鈥?960脳540, 1100脳530,
+   800脳600 鈥?the px floors of the glyph and the 鏂囧瓧澶у皬 made 5.6rem too narrow for English 銆孲tandard Simulation銆?/
+   銆孶ltimate Simulation銆?on one line, and the unselected cards' names ended in an ellipsis), never past 46vw. [ASSUMED] the
+   floor */
+.proto-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) min(max(5.6rem, 32px, calc(300px * var(--sp-ui, 1))), 46vw); gap: .3rem; padding: 0 .34rem .26rem .22rem; }
+.proto-stage { position: relative; min-width: 0; min-height: 0; display: grid; place-items: center; }
+
+/* the official picture of the selected difficulty, with its brief at the bottom left */
+/* the picture fills the column (as #643's drawn scene did: from a little above the cards down to the brief) */
+.proto__pic { position: absolute; inset: -.5rem -1.8rem .9rem -.3rem; display: grid; place-items: center; min-height: 0; animation: proto-pic var(--t-slow) var(--ease-out); }
+.proto__art {
+  width: 100%;
+  height: 100%;
+  max-width: 9.4rem; /* the art is 427 脳 332: up to about 2.2脳 before it turns soft */
+  max-height: 7.3rem;
+  object-fit: contain;
+  filter: drop-shadow(0 0 .2rem var(--d-color));
+  filter: drop-shadow(0 0 .2rem color-mix(in srgb, var(--d-color) 45%, transparent));
+}
+.proto__glyph { width: 2.2rem; height: 2.2rem; color: var(--d-color); opacity: .8; filter: drop-shadow(0 0 .2rem var(--d-color)); }
+@keyframes proto-pic { from { opacity: 0; transform: translateX(-.14rem); } }
+
+/* the scene (ui/protocolScene.js, PR #643 + video 5:00鈥?:16): the official ship on a survey grid between two squares of
+   defenders, the cable with a light running down it; it reaches under the cards like the event's. A new difficulty
+   remounts it: dark first, then up in the new colour. */
+.proto-side { position: relative; z-index: 1; }
+
+.ps { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; color: var(--d-color); animation: ps-in 640ms ease-out backwards; }
+@keyframes ps-in { 0% { opacity: 0; filter: brightness(.15); } 35% { opacity: .35; filter: brightness(.3); } 100% { opacity: 1; filter: none; } }
+.ps-grid line { stroke: currentColor; stroke-opacity: .12; stroke-width: 1; }
+.ps-pad polygon { fill: currentColor; fill-opacity: .1; stroke: currentColor; stroke-opacity: .55; stroke-width: 1.2; }
+.ps-pad__edge { fill: none; stroke: currentColor; stroke-opacity: .7; stroke-width: 2; stroke-dasharray: 26 8; }
+.ps-hull { filter: drop-shadow(0 0 6px var(--d-color)); }
+.ps-ship image { filter: drop-shadow(0 0 10px var(--d-color)); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--d-color) 55%, transparent)); }
+/* 瓒呴檺 draws 缁堟瀬's official picture (it runs that mode) and its own emphasis is violet, so the picture is rotated into
+   that violet instead of sitting red inside an otherwise violet scene (.is-tinted, from ProtocolScene's `tint`). */
+.ps.is-tinted .ps-ship image { filter: drop-shadow(0 0 10px var(--d-color)) hue-rotate(258deg) saturate(0.6); }
+.ps-face { stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; fill: currentColor; }
+.ps-face--top { fill-opacity: .42; }
+.ps-face--front { fill-opacity: .26; }
+.ps-face--side { fill-opacity: .16; }
+.ps-seam { stroke: #fff; stroke-opacity: .35; stroke-width: 1; }
+.ps-beacon { fill: #fff; animation: ps-blink 1.6s steps(2) infinite; }
+@keyframes ps-blink { 50% { opacity: .2; } }
+.ps-cable { fill: none; stroke: currentColor; stroke-width: 5; stroke-opacity: .7; stroke-linecap: round; }
+.ps-cable__pulse { fill: none; stroke: #fff6d8; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 90 1200; stroke-dashoffset: 90;
+  filter: drop-shadow(0 0 6px var(--d-color)); animation: ps-pulse 2.6s cubic-bezier(.5, 0, .7, 1) 400ms infinite; }
+@keyframes ps-pulse { from { stroke-dashoffset: 90; opacity: 1; } 85% { opacity: 1; } to { stroke-dashoffset: -1000; opacity: 0; } }
+.ps-fig { animation: ps-fig 360ms var(--ease-out) backwards; animation-delay: calc(240ms + var(--i) * 18ms); }
+@keyframes ps-fig { from { opacity: 0; transform: translateY(-6px); } }
+.ps-fig__body, .ps-fig__head { fill: currentColor; fill-opacity: .88; stroke: rgba(0, 0, 0, .45); stroke-width: .8; }
+.ps-fig__head { fill-opacity: 1; }
+.ps-fig__shadow { fill: #000; opacity: .35; }
+.ps-spike polygon { fill: currentColor; fill-opacity: .75; }
+.ps-spike__x { stroke: currentColor; stroke-width: 2; stroke-opacity: .8; }
+.ps-spike { animation: ps-fig 420ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 60ms + 120ms); }
+.ps-call rect { fill: rgba(0, 0, 0, .55); stroke: currentColor; stroke-width: 1.5; }
+.ps-call line { stroke: currentColor; stroke-width: 1.5; stroke-opacity: .8; }
+.ps-call rect.ps-call__icon { fill: currentColor; fill-opacity: .25; }
+.ps-call__man { fill: currentColor; }
+.ps-call { animation: ps-fig 420ms var(--ease-out) 420ms backwards; }
+.ps-scan { stroke: currentColor; stroke-opacity: .2; stroke-width: 2; animation: ps-scan 7s linear infinite; }
+@keyframes ps-scan { from { transform: translateY(40px); } to { transform: translateY(620px); } }
+.proto-brief {
+  position: absolute;
+  left: .1rem;
+  bottom: .1rem;
+  max-width: min(6rem, 92%);
+  padding: .12rem .2rem .14rem;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .7), rgba(0, 0, 0, .2));
+  border-left: 3px solid var(--d-color);
+}
+.proto-brief__code { margin-right: .1rem; padding: 0 .08rem; font-size: calc(.14 * var(--t)); color: #111; background: var(--d-color); }
+.proto-brief__name { font-size: calc(.26 * var(--t)); color: var(--d-color); }
+.proto-brief p { margin: .04rem 0 0; font-size: calc(.16 * var(--t)); line-height: 1.5; color: #b7bcba; }
+
+/* the difficulty cards: the chosen one slides out with a glow and the 宸查€夊畾 stamp; centred while they fit (auto margins, so
+   a list taller than the column still scrolls from its top). The gaps and pads a little tighter than #643's (.14rem, .1rem
+   and .1 / .11rem) so the full cards fit at 灏?in a 16:9 window (they were 2鈥?6 px too tall at 1280x720 鈥?1920x1080:
+   搂35.18's leftover). [ASSUMED] the spacing */
+.proto-side { min-height: 0; display: flex; flex-direction: column; gap: .14rem; }
+.proto-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  padding: .07rem .06rem .07rem .5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .25) transparent;
+}
+.proto-list > :first-child { margin-top: auto; }
+.proto-list > :last-child { margin-bottom: auto; }
+.pcard {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: .04rem;
+  padding: .08rem .26rem .09rem;
+  overflow: hidden;
+  font: inherit;
+  text-align: left;
+  color: #e9eceb;
+  background: linear-gradient(180deg, #252627, #1a1b1c);
+  border: 2px solid #55585a;
+  border-radius: .2rem;
+  box-shadow: 0 .05rem .16rem rgba(0, 0, 0, .5);
+  transition: transform 220ms var(--ease-out), border-color 220ms;
+}
+.pcard:hover:not(.is-on), .pcard:focus-visible:not(.is-on) { border-color: #7b7f81; }
+/* the room's read-only view (another doctor's: the host chooses): shown, not chosen */
+.pcard:disabled { cursor: default; }
+.pcard:disabled:hover:not(.is-on) { border-color: #55585a; }
+.pcard.is-on { transform: translateX(-.44rem); border-color: #8f9496; }
+.pcard__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 260ms;
+  background: radial-gradient(70% 140% at 100% 50%, rgba(255, 255, 255, .12), transparent 72%);
+  background: radial-gradient(70% 140% at 100% 50%, color-mix(in srgb, var(--d-color) 70%, transparent), transparent 72%);
+}
+.pcard.is-on .pcard__glow { opacity: 1; }
+.pcard__head, .pcard__desc, .pcard__effects, .pcard__meta { position: relative; }
+.pcard.is-on .pcard__head, .pcard.is-on .pcard__desc, .pcard.is-on .pcard__effects, .pcard.is-on .pcard__meta { padding-right: max(1.3rem, 32px, calc(70px * var(--sp-ui, 1))); }
+.pcard__head { display: flex; align-items: center; gap: .08rem; }
+.pcard__glyph { width: max(.3rem, 18px); height: max(.3rem, 18px); color: var(--d-color); }
+.pcard__name { font-size: min(calc(.28 * var(--t)), .36rem); font-weight: 900; letter-spacing: .04em; color: var(--d-color); text-shadow: 0 0 .1rem rgba(0, 0, 0, .6); white-space: nowrap; }
+.pcard__desc { padding-bottom: .05rem; font-size: calc(.16 * var(--t)); color: #9a9f9d; border-bottom: 1px solid rgba(255, 255, 255, .18); }
+.pcard__effects { display: flex; flex-direction: column; padding-top: .04rem; font-size: calc(.17 * var(--t)); line-height: 1.4; }
+.pcard__effects span::before { content: '·'; margin-right: .06rem; }
+.pcard__meta { display: flex; flex-wrap: wrap; align-items: center; gap: .04rem .14rem; margin-top: .04rem; font-size: calc(.13 * var(--t)); color: #7f8583; }
+.pcard__meta b { color: #cfd3d1; }
+.pcard__stage { display: inline-flex; align-items: center; gap: .04rem; }
+.pcard__stage .icon { width: 1.1em; height: 1.1em; }
+.pcard__stamp {
+  position: absolute;
+  right: .2rem;
+  top: 50%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .04rem;
+  width: max(1.3rem, 32px, calc(70px * var(--sp-ui, 1)));
+  height: max(1.1rem, 32px, calc(60px * var(--sp-ui, 1)));
+  transform: translateY(-50%) rotate(-6deg);
+}
+.pcard.is-on .pcard__stamp { display: flex; animation: proto-stamp 260ms var(--ease-out) backwards; }
+@keyframes proto-stamp { from { opacity: 0; transform: translateY(-50%) rotate(-6deg) scale(1.4); } }
+.pcard__ring { position: absolute; inset: -.1rem -.14rem; width: calc(100% + .28rem); height: calc(100% + .2rem); }
+.pcard__ring path { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; opacity: .9; }
+.pcard__tick { display: grid; place-items: center; width: max(.46rem, 26px); height: max(.46rem, 26px); color: #2a1712; background: #f5f5f5; border-radius: .06rem; box-shadow: 0 .02rem .08rem rgba(0, 0, 0, .5); }
+.pcard__tick .icon { width: 78%; height: 78%; color: var(--d-color); filter: brightness(.7); }
+.pcard__ok { font-size: calc(.18 * var(--t)); font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); white-space: nowrap; }
+
+/* the foot: the test-room box, the hint, 寮€濮嬬嫭绔嬫ā鎷?/ 鍒涘缓鍚岀洘 */
+.proto-foot { flex: none; display: flex; flex-direction: column; gap: .08rem; padding-left: .5rem; }
+.create-box__test {
+  display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: .04rem .1rem;
+  color: #e8b84a; font-size: calc(.16 * var(--t));
+}
+.create-box__test input { width: .2rem; height: .2rem; margin: 0; flex: none; accent-color: #e8b84a; }
+.create-box__test em { flex-basis: 100%; font-style: normal; }
+@media (max-width: 720px) {
+  .create-box__test { font-size: 16px; }
+  .create-box__test input { width: 32px; height: 32px; }
+  .create-box__test em { font-size: 14px; }
+}
+.proto-hint { display: flex; align-items: center; gap: .08rem; min-height: .24rem; margin: 0; font-size: calc(.14 * var(--t)); color: #858b89; }
+.proto-hint .icon { flex: none; width: 1.1em; height: 1.1em; }
+.proto-hint--ro { min-height: max(.64rem, 32px, calc(38px * var(--sp-ui, 1))); font-size: calc(.18 * var(--t)); color: #b9bfbd; }
+.proto-start {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .26rem;
+  width: 100%;
+  min-height: max(1.04rem, 32px, calc(54px * var(--sp-ui, 1)));
+  padding: .03rem 0 .03rem .26rem;
+  overflow: hidden;
+  font: inherit;
+  color: #0d2a23;
+  text-align: left;
+  background: linear-gradient(180deg, #4fe0bf, #34c8a6);
+  border: 3px solid #121313;
+  box-shadow: 0 0 0 1px rgba(79, 224, 191, .5), 0 .06rem .2rem rgba(0, 0, 0, .55);
+  transition: filter var(--t-fast);
+}
+.proto-start:hover:not(:disabled), .proto-start:focus-visible { filter: brightness(1.07); }
+.proto-start:focus-visible { outline: 2px solid #eef0ef; outline-offset: 2px; }
+.proto-start:disabled { filter: grayscale(.8) brightness(.6); cursor: default; }
+.proto-start__mark { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.proto-start__rook { display: inline-flex; align-items: center; gap: 2px; font-size: calc(.36 * var(--t)); font-weight: 300; line-height: 1; }
+.proto-start__rook i { font-style: normal; }
+.proto-start__rook .icon { width: max(.34rem, 19px); height: max(.34rem, 19px); }
+.proto-start__mark small { font-family: var(--font-display); font-size: calc(.08 * var(--t)); font-weight: 800; letter-spacing: .06em; line-height: 1.1; text-align: center; }
+.proto-start__label { position: relative; display: inline-flex; align-items: center; gap: .1rem; min-width: 0; font-size: calc(.4 * var(--t)); font-weight: 900; letter-spacing: .08em; white-space: nowrap; }
+/* 閫夋嫨妯℃嫙鍗忚's own button (.proto-foot; the room's GoButton shares the rules above and makes its own choice in
+   css/screens/room.css 鈥?搂35.18 review: these rules once reached it too): the label wraps onto a second line (the button
+   grows: min-height above) rather than being cut, and stops at .46rem 鈥?澶?s size 鈥?on a screen taller than 520 px, the
+   mark's rook at .4rem (搂35.18's leftover: English 寮€濮嬬嫭绔嬫ā鎷?was cut at every desktop size, even at 灏?at 1440x900;
+   the short-screen block has its own caps). [ASSUMED] the label's caps */
+.proto-foot .proto-start__label { flex: 1 1 auto; padding-right: 8%; font-size: min(calc(.4 * var(--t)), .46rem); white-space: normal; line-height: 1.1; }
+.proto-foot .proto-start__rook { font-size: min(calc(.36 * var(--t)), .4rem); }
+.proto-start__deco {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 26%;
+  clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, .28) 0 5px, transparent 5px 11px), linear-gradient(90deg, rgba(13, 42, 35, .2), rgba(13, 42, 35, .6));
+}
+
+/* ---- 閫夋嫨鍚岀洘鏂瑰紡: the radar, the 鍒涘缓鍚岀洘 / 鍔犲叆鍚岀洘 cards -------------------------------------------------- */
+.ally__bg {
+  background:
+    radial-gradient(40% 55% at 30% 52%, rgba(46, 210, 160, .12), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 4px),
+    linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    radial-gradient(120% 90% at 50% 40%, #141616, #070808);
+}
+.ally__mode { color: var(--mint-400); }
+.ally-body { grid-template-columns: minmax(0, 1fr) min(7.4rem, 46vw); }
+.ally-stage { position: relative; min-width: 0; min-height: 0; }
+.mf-radar { position: absolute; inset: 0 0 .8rem; width: 100%; height: calc(100% - .8rem); }
+.mf-radar__grid line { stroke: rgba(78, 216, 175, .08); stroke-width: 1; }
+.mf-radar__land path { fill: rgba(150, 170, 165, .1); stroke: rgba(150, 170, 165, .2); stroke-width: 1; }
+.mf-radar__ring { fill: none; stroke: rgba(78, 216, 175, .25); stroke-width: 1.5; }
+.mf-radar__ring--far { fill: rgba(30, 140, 110, .1); }
+.mf-radar__ring--core { stroke: rgba(78, 216, 175, .75); stroke-width: 3; filter: drop-shadow(0 0 6px rgba(78, 216, 175, .6)); }
+.mf-radar__sweep { transform-origin: 270px 250px; animation: mf-sweep 4.5s linear infinite; }
+.mf-radar__sweep path { fill: rgba(60, 230, 180, .22); }
+.mf-radar__sweep line { stroke: #5df0c6; stroke-width: 3; filter: drop-shadow(0 0 6px #5df0c6); }
+@keyframes mf-sweep { to { transform: rotate(360deg); } }
+.mf-radar__blip { fill: #ffc53d; filter: drop-shadow(0 0 8px #ffc53d); animation: mf-blip 2.2s ease-in-out infinite; }
+.mf-radar__blip--b { fill: #5df0c6; filter: drop-shadow(0 0 6px #5df0c6); animation-delay: 1.1s; }
+@keyframes mf-blip { 50% { opacity: .2; } }
+.mf-radar__cross { stroke: #5df0c6; stroke-width: 3; }
+.mf-radar__read rect { fill: rgba(0, 0, 0, .5); stroke: rgba(78, 216, 175, .45); }
+.mf-radar__read text { fill: #9fe9d3; font: 700 14px var(--font-num, monospace); }
+.mf-radar__frame { fill: none; stroke: rgba(78, 216, 175, .35); stroke-width: 2; }
+.ally-guide {
+  position: absolute;
+  left: .1rem;
+  bottom: .1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .14rem;
+  height: max(.64rem, 32px, calc(38px * var(--sp-ui, 1)));
+  padding: 0 .3rem 0 .1rem;
+  font: inherit;
+  font-size: calc(.22 * var(--t));
+  font-weight: 800;
+  color: #1a1d1c;
+  background: linear-gradient(180deg, #e9edeb, #c3cac7);
+  border: 1px solid rgba(255, 255, 255, .6);
+  box-shadow: 0 .04rem .14rem rgba(0, 0, 0, .5);
+}
+.ally-guide:hover, .ally-guide:focus-visible { filter: brightness(1.06); }
+.ally-guide__icon { display: grid; place-items: center; width: max(.46rem, 28px); height: max(.4rem, 24px); color: #e9edeb; background: #2a2f2d; }
+.ally-guide__icon .icon { width: 64%; height: 64%; }
+/* centred safely: the auto margins give way when the column is taller than its space (justify-content: center would
+   push it past both ends), so a short screen's scroll (below) starts at 鍒涘缓鍚岀洘 */
+.ally-side { min-height: 0; display: flex; flex-direction: column; gap: .2rem; padding: .1rem 0 .1rem .3rem; }
+.ally-side > :first-child { margin-top: auto; }
+.ally-side > :last-child { margin-bottom: auto; }
+.ally-card {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  font: inherit;
+  color: #eef0ef;
+  text-align: left;
+  background: radial-gradient(70% 90% at 50% 40%, #161a19, #090a0a);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: .08rem;
+  box-shadow: 0 .06rem .2rem rgba(0, 0, 0, .5);
+}
+button.ally-card:hover, button.ally-card:focus-visible { border-color: rgba(93, 240, 198, .6); }
+.ally-card__art { display: block; padding: .1rem .2rem 0; }
+.mf-art { display: block; width: 100%; height: auto; max-height: 1.3rem; }
+.mf-art text { font: 700 8px var(--font-display, monospace); letter-spacing: 2px; fill: currentColor; opacity: .7; }
+.mf-art--create { color: #5df0c6; }
+.mf-art--create .mf-art__wire { fill: none; stroke: rgba(93, 240, 198, .45); stroke-width: 2; }
+.mf-art--create .mf-art__oct { fill: #2fd6a6; filter: drop-shadow(0 0 10px rgba(93, 240, 198, .6)); }
+.mf-art--create .mf-art__plus { stroke: #08221b; stroke-width: 7; stroke-linecap: square; }
+.mf-art--create .mf-art__brk { fill: none; stroke: #5df0c6; stroke-width: 4; }
+.mf-art--create .mf-art__dot { fill: #5df0c6; }
+.mf-art--join { color: #ff9a3c; }
+.mf-art--join .mf-art__wire { fill: none; stroke: rgba(255, 154, 60, .6); stroke-width: 2; }
+.mf-art--join .mf-art__tri { fill: #ff9a3c; }
+.mf-art--join .mf-art__target { fill: rgba(255, 154, 60, .15); stroke: #ff9a3c; stroke-width: 2; }
+.mf-art--join .mf-art__x { stroke: #ff9a3c; stroke-width: 3; }
+.mf-blk path { stroke: rgba(0, 0, 0, .5); stroke-width: 1; }
+.mf-blk__top { fill: #3a3d3d; } .mf-blk__l { fill: #2a2c2c; } .mf-blk__r { fill: #1f2121; }
+.mf-blk.is-lit .mf-blk__top { fill: #f0a35a; } .mf-blk.is-lit .mf-blk__l { fill: #c96b23; } .mf-blk.is-lit .mf-blk__r { fill: #a5541a; }
+.mf-blk.is-lit { animation: mf-blk 2.4s ease-in-out infinite; animation-delay: calc(var(--k) * 120ms); }
+@keyframes mf-blk { 50% { transform: translateY(-3px); } }
+.ally-card__bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .14rem;
+  height: max(.74rem, 32px, calc(42px * var(--sp-ui, 1)));
+  padding: 0 .2rem;
+  font-family: inherit;
+  font-size: calc(.3 * var(--t));
+  font-weight: 900;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  text-align: left;
+  color: #08221b;
+  background: linear-gradient(180deg, #4fe8c0, #2fcf9f);
+  border: 0;
+}
+/* the difficulty line wraps at the bar's right rather than ending in an ellipsis (搂35.51: English 銆孌ifficulty: Standard
+   Simulat鈥︺€?at 1280鈥?440 px, Japanese at 1024脳600 鐗瑰ぇ). It keeps a column of at least 10em beside the name, else it
+   takes a row of its own under the name and the bar grows (搂35.51 review: squeezed into the 96 px the name left in
+   English at 鐗瑰ぇ on 1024脳600, six lines ran out of the 42 px bar); Korean breaks between words only (the review:
+   銆岇嫓氘爤鞚磡靺樸€?once balanced), Japanese by its line-breaking rules */
+.ally-card--create .ally-card__bar { flex-wrap: wrap; align-content: center; row-gap: 1px; height: auto; min-height: max(.74rem, 32px, calc(42px * var(--sp-ui, 1)));
+  padding-top: 4px; padding-bottom: 4px; }
+.ally-card__bar small { flex: 0 1 auto; margin-left: auto; min-width: min(100%, 10em); white-space: normal; text-align: right; text-wrap: balance;
+  line-height: 1.2; font-size: calc(.14 * var(--t)); font-weight: 700; letter-spacing: 0; color: rgba(8, 34, 27, .75); }
+.ally-card__bar small:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
+.ally-card__bar small:lang(ja) { line-break: strict; }
+button.ally-card:disabled { cursor: default; }
+button.ally-card:disabled .ally-card__bar { filter: grayscale(.5) brightness(.8); }
+/* the test-room box under 鍒涘缓鍚岀洘 (test mode only) */
+.ally-test { padding: 0 .2rem; }
+.ally-card__bar--join { width: 100%; color: #2a1404; background: linear-gradient(180deg, #ffb24f, #f08a26); }
+.ally-card__bar--join:disabled { filter: grayscale(.6) brightness(.75); cursor: default; }
+.ally-card__bar--join:hover:not(:disabled), .ally-card__bar--join:focus-visible { filter: brightness(1.06); }
+.ally-card__icon { flex: none; display: grid; place-items: center; width: max(.36rem, 22px); height: max(.36rem, 22px); color: currentColor; background: rgba(0, 0, 0, .14); border: 2px solid currentColor; border-radius: 4px; }
+.ally-card__icon .icon { width: 74%; height: 74%; }
+/* the key field: the project's TextField (.field / .field__box / .field__input) restyled as the event's grey bar, with
+   瑙傛垬 beside it inside the same bar */
+.ally-key {
+  display: flex;
+  align-items: center;
+  gap: .1rem;
+  height: max(.56rem, 32px, calc(34px * var(--sp-ui, 1)));
+  margin: .06rem .2rem .08rem;
+  padding: 0 .06rem 0 .12rem;
+  background: #262929;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: .06rem;
+}
+.ally-key:focus-within { border-color: #ff9a3c; }
+.ally-key .field { flex: 1 1 auto; height: 100%; gap: 0; }
+.ally-key .field__box { height: 100%; padding: 0; gap: .1rem; background: none; border: 0; box-shadow: none; }
+.ally-key .field__box::after { display: none; }
+.ally-key .field__icon { flex: none; width: max(.24rem, 15px); height: max(.24rem, 15px); color: #c9cecc; }
+.ally-key .field__box:focus-within .field__icon { color: #ff9a3c; }
+.ally-key input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  font: inherit;
+  font-size: calc(.22 * var(--t));
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  color: #f2f4f3;
+  background: none;
+  border: 0;
+  outline: none;
+}
+.ally-key input::placeholder { color: #8d9391; font-family: inherit; font-size: calc(.22 * var(--t)); font-weight: 500; letter-spacing: .04em; text-transform: none; }
+.ally-key__spec {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .04rem;
+  height: 80%;
+  padding: 0 .12rem;
+  font: inherit;
+  font-size: calc(.15 * var(--t));
+  color: #eef0ef;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 4px;
+}
+.ally-key__spec:hover:not(:disabled), .ally-key__spec:focus-visible { border-color: rgba(255, 255, 255, .5); }
+.ally-key__spec:disabled { opacity: .45; cursor: default; }
+.ally-key__spec .icon { width: 1.1em; height: 1.1em; }
+.ally-recent { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .06rem .1rem; min-height: .3rem; margin: 0 .2rem .1rem; font-size: calc(.14 * var(--t)); text-align: center; }
+.code-chip {
+  padding: .03rem .12rem .03rem .16rem;
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, .3);
+  color: var(--amber);
+  font-size: calc(.17 * var(--t));
+  font-weight: 700;
+  letter-spacing: .2em;
+  transition: border-color var(--t-fast), background-color var(--t-fast);
+}
+.code-chip:hover { border-color: var(--amber); background: rgba(246, 163, 41, .08); }
+
+/* ---- 鎷撳睍妯″紡锛堜笟涓?2026-10-26锛夛細閫夋嫨鎷撳睍鐜╂硶 鈥斺€?宸︽。妗堣垶鍙?+ 鍙崇瓑璺濋€夐」鍒?---------------------------------
+   鐗堝紡鍙栬嚜鍙傝€冨疄鏈洪〉 public/dev/extension-hall-preview.html锛?280脳720 / 800脳360 / 667脳375 涓夋。瀹炴祴锛夛細宸﹁竟鏄墍閫?
+   鐜╂硶鐨勬。妗堬紙缂栧彿銆佸悕绉般€佸畠鑷繁鐨勬暟鍊笺€佺畝浠嬨€佽鐐癸紝浠ュ強銆岃兘涓嶈兘寮€灞€銆嶇殑璇存槑锛夛紝鍙宠竟鏄帺娉曞寘鍒楄〃鍜屽簳鏍忥紙鍖呭悕 / 寮€濮嬶級銆?
+   鍙傝€冮〉鐨?px 鎸?1 : 1.5 鎶樺埌鏈粨鐨?1920 璁捐绋匡紙14px 鈫?.21rem锛夛紝瀛楀彿鎶樻垚 --t 鐨勫€嶆暟锛?px 鈮?.015 脳 --t锛夎窡鐫€
+   銆屾枃瀛楀ぇ灏忋€嶈蛋锛涜楂樹笌鍒楄〃 gap 鐢ㄥ弬鑰冮〉瀹炴祴鐨?88 / 10px锛堚墹900px 瀹?64 / 8锛屸墹520px 楂?56 / 6锛夆€斺€?鍚嶅瓧鍜岀畝浠嬮兘
+   nowrap + 鐪佺暐鍙凤紝鏂囨鍐嶉暱涔熶笉浼氭妸涓嬩竴琛屾帹涓嬪幓銆傝垶鍙扮敤鐜╂硶鍖呰嚜宸辩殑棰滆壊锛?ext-stage 涓婄殑 --x-color锛屽ぇ鍘呬紶锛夛紝鍒楄〃
+   淇濇寔鐩綍鐨勮丹鑹层€傚獟浣撴煡璇㈤噷鐨勮鐩栦竴寰嬪啓鎴?.ext-body 鈥︼細涓嶄笌鍩虹瑙勫垯閲嶅悕锛屼篃澶╃劧鍘嬭繃鍚屽悕鐨?.proto-body銆?*/
+.ext__bg {
+  background:
+    radial-gradient(60% 40% at 18% 0%, rgba(194, 49, 61, .14), transparent 60%),
+    radial-gradient(70% 50% at 100% 0%, rgba(124, 198, 242, .1), transparent 62%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 4px),
+    linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px) 0 0 / 1.1rem 1.1rem,
+    radial-gradient(120% 90% at 50% 40%, #151616, #070808);
+}
+/* 鏍囬鍙充晶鐨勬ā寮忚鏄湝钃濓紝涓嶆槸闅惧害鑹?*/
+.ext__mode { color: var(--ext-400); }
+/* 40 / 60 涓ゅ垪 + 搴曢儴璇存槑琛岋紱涓や釜绫诲悕锛氬獟浣撴煡璇㈤噷鐨?.proto-body 涓嶆彁鍗囦紭鍏堢骇锛岃繖閲屽湪浠讳綍绐楀彛閮戒繚鎸佷袱鍒?*/
+.proto-body.ext-body {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: .2rem .24rem;
+}
+.ext-note-line {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: .12rem;
+  margin: 0;
+  font-size: calc(.17 * var(--t));
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.ext-note-line .icon { flex: none; width: 1.1em; height: 1.1em; margin-top: .02rem; color: var(--ext-400); }
+
+/* 宸︼細妗ｆ鑸炲彴锛堢帺娉曞寘鑷繁鐨勯鑹诧級 */
+/* 鑸炲彴鐨勫簳鑹蹭笌鎻忚竟閮芥潵鑷帺娉曞寘鑷繁鐨勯鑹层€俢olor-mix() 鏄?Chrome 111+锛岃€屾湰浠?Android 鐨勫簳绾挎槸 WebView 87
+   锛坉ocs/ANDROID.md锛夛細姣忓 color-mix 鍓嶉潰鍏堢粰涓€鏉＄函鑹?/ 绾笎鍙樼殑鍚岀被澹版槑 鈥斺€?鏃у唴鏍告嬁鍒板疄蹇冪殑鐜╂硶鍖呴鑹茬粏绾夸笌
+   闇滆摑鍏夋檿锛堝拰鍙傝€冮〉鍚屼竴灞傜骇鐨勮鎰燂級锛屾柊鍐呮牳鎵嶆崲鎴愭寜姣斾緥娣峰嚭鏉ョ殑閭ｅ眰锛堝啓娉曞悓涓嬮潰 .ps-ship 鐨?filter 瀵癸級 */
+.ext-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .18rem;
+  min-height: 0;
+  overflow: hidden;
+  padding: .27rem;
+  border: 1px solid var(--x-color, var(--ext-400));
+  border: 1px solid color-mix(in srgb, var(--x-color, var(--ext-400)) 34%, transparent);
+  border-radius: .21rem;
+  background:
+    radial-gradient(90% 70% at 50% 0%, var(--ext-a35), transparent 62%),
+    linear-gradient(180deg, rgba(20, 14, 16, .94), rgba(8, 10, 11, .98));
+  background:
+    radial-gradient(90% 70% at 50% 0%, color-mix(in srgb, var(--x-color, var(--ext-400)) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, rgba(20, 14, 16, .94), rgba(8, 10, 11, .98));
+  animation: tr-right 400ms var(--tr-ease) 180ms backwards;
+}
+/* 鑸炲彴鐨勬壂鎻忕嚎 + 鍥涜妗嗭紝璐寸潃瀹樻柟娲诲姩椤电殑璇█ */
+.ext-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .5;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 4px);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 78%);
+  mask-image: linear-gradient(180deg, #000, transparent 78%);
+}
+.ext-stage__frame { position: absolute; inset: .12rem; pointer-events: none; border: 1px solid var(--x-color, var(--ext-400)); border: 1px solid color-mix(in srgb, var(--x-color, var(--ext-400)) 28%, transparent); border-radius: .15rem; }
+.ext-stage__frame::before, .ext-stage__frame::after { content: ''; position: absolute; width: .21rem; height: .21rem; border: 2px solid var(--x-color, var(--ext-400)); }
+.ext-stage__frame::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+.ext-stage__frame::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+/* 妗ｆ鐨勪富瑙嗚锛堢帺娉曞寘鑷繁鐨勭編鏈紝theme.art锛夛細閾烘弧宸︽爮銆佹矇鍦ㄦ枃瀛椾笅闈€傚帇鏆楀埌鍙墿杞粨 鈥斺€?涓婇潰鐨勬爣棰樸€佹暟鍊间笌
+   瑕佺偣閮借璇诲緱娓咃紝鎵€浠ュ畠鍙洖绛斻€岃繖涓€椤靛睘浜庡摢涓帺娉曞寘銆嶏紝涓嶆壙杞戒俊鎭€傚簳鍥剧己澶辨椂 <img> 鑷繁闅愯棌锛坥nError锛夛紝
+   涓嬮潰閭ｅ眰娓愬彉鐓ф棫锛岀増闈笉濉屻€?*/
+.ext-stage__art { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.ext-stage__art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 62% 20%; opacity: .46; }
+.ext-stage__art::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 10, 11, .46) 0%, rgba(8, 10, 11, .24) 32%, rgba(8, 10, 11, .84) 72%, rgba(8, 10, 11, .97) 100%),
+    linear-gradient(90deg, rgba(8, 10, 11, .9) 0%, rgba(8, 10, 11, .32) 48%, transparent 80%);
+}
+
+.ext-hero { position: relative; display: flex; align-items: center; gap: .21rem; }
+.ext-hero__art {
+  display: grid;
+  place-items: center;
+  width: .96rem;
+  height: .96rem;
+  flex: none;
+  border-radius: .18rem;
+  color: #ffe9ec;
+  background: radial-gradient(60% 60% at 50% 38%, var(--x-color, var(--ext-400)), var(--ext-900));
+  background: radial-gradient(60% 60% at 50% 38%, color-mix(in srgb, var(--x-color, var(--ext-400)) 72%, transparent), color-mix(in srgb, var(--x-color, var(--ext-400)) 50%, transparent));
+  border: 1px solid var(--x-color, var(--ext-400));
+  border: 1px solid color-mix(in srgb, var(--x-color, var(--ext-400)) 60%, transparent);
+  box-shadow: 0 0 .33rem var(--ext-glow), inset 0 0 .27rem rgba(0, 0, 0, .45);
+  box-shadow: 0 0 .33rem color-mix(in srgb, var(--x-color, var(--ext-400)) 35%, transparent), inset 0 0 .27rem rgba(0, 0, 0, .45);
+}
+.ext-hero__art .icon { width: .48rem; height: .48rem; }
+.ext-hero__meta { display: flex; flex-direction: column; gap: .05rem; min-width: 0; }
+.ext-hero__code { font-family: var(--font-num); font-size: calc(.165 * var(--t)); font-weight: 700; letter-spacing: .18em; color: var(--ext-300); }
+.ext-hero__name { margin: 0; font-size: min(calc(.39 * var(--t)), .39rem); font-weight: 900; letter-spacing: .04em; color: #fff; text-shadow: 0 0 .27rem var(--ext-glow); text-shadow: 0 0 .27rem color-mix(in srgb, var(--x-color, var(--ext-400)) 50%, transparent); }
+.ext-hero__en { font-family: var(--font-mono); font-size: calc(.14 * var(--t)); font-weight: 600; letter-spacing: .2em; color: rgba(255, 255, 255, .45); }
+
+.ext-stats { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .12rem; }
+.ext-stat { display: flex; flex-direction: column; gap: .03rem; padding: .12rem .15rem; border-radius: .12rem; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .1); }
+.ext-stat b { font-family: var(--font-num); font-size: calc(.23 * var(--t)); font-weight: 800; line-height: 1.2; color: #fff; }
+.ext-stat span { font-size: calc(.16 * var(--t)); letter-spacing: .04em; color: var(--text-dim); }
+
+.ext-desc { position: relative; margin: 0; font-size: calc(.2 * var(--t)); line-height: 1.6; color: var(--text-lo); }
+.ext-feats { position: relative; display: flex; flex-direction: column; gap: .08rem; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: auto; }
+.ext-feats li { position: relative; display: -webkit-box; padding-left: .18rem; font-size: calc(.19 * var(--t)); line-height: 1.5; color: var(--text-md); -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.ext-feats li::before { content: ''; position: absolute; left: 0; top: .62em; width: .06rem; height: .06rem; border-radius: 1px; background: var(--x-color, var(--ext-400)); transform: rotate(45deg); }
+
+/* 鑳戒笉鑳藉紑灞€鐨勮鏄庤锛氱惀鐝€ = 杩樺樊涓€姝ワ紝钖勮嵎 = 宸插氨浣?*/
+.ext-note { position: relative; display: flex; align-items: flex-start; gap: .11rem; margin-top: auto; padding: .14rem .15rem; border-radius: .12rem; font-size: calc(.17 * var(--t)); line-height: 1.5; color: #f0d9a8; background: rgba(251, 191, 36, .08); border: 1px solid rgba(251, 191, 36, .26); }
+.ext-note .icon { flex: none; width: 1.1em; height: 1.1em; margin-top: 1px; color: var(--amber); }
+.ext-note.is-ready { color: #c9ffe9; background: var(--mint-a10); border-color: var(--mint-a35); }
+.ext-note.is-ready .icon { color: var(--mint-400); }
+
+/* 鍙筹細绛夎窛閫夐」鍒?*/
+.ext-pane { display: flex; flex-direction: column; gap: .15rem; min-height: 0; }
+.ext-pane__lead { margin: 0; font-size: calc(.19 * var(--t)); line-height: 1.6; color: var(--text-dim); }
+/* 鍐呰竟璺濈暀缁欑劍鐐圭殑澶栧湀锛坥utline-offset: 2px锛夛細鍒楄〃鑷繁浼氭粴鍔紝涓嶇暀杩欑偣绌猴紝绗竴琛岀殑鐒︾偣妗嗕細琚鎺夈€?
+   鍒楄〃鍙湁 1鈥? 鏉℃椂锛屽彸鏍忎笅鍗婂師鏈槸涓€澶х墖绌虹櫧锛堜笟涓?2026-10-28 瑕佹眰浼樺寲杩欎竴椤碉級锛氳蹇呴』淇濇寔绛夎窛锛埪?.2 鐨勫浐瀹?
+   琛岄珮閾佸緥锛屽垪琛ㄨ鍍忎竴鏋舵瀛愶級锛屾墍浠ヤ笉鎶婅鎷夐珮锛岃€屾槸璁╁垪琛ㄥ湪杩欏潡绌洪棿閲屽眳涓?鈥斺€?绌虹櫧骞冲潎鍒嗗埌涓婁笅锛屾瀛愪粛鐒跺畬鏁达紝
+   瑙嗙嚎钀藉湪涓棿鑰屼笉鏄创椤躲€傜煯灞忥紙鈮?20 px锛夌┖闂存湰鏉ュ氨涓嶅锛屼粛浠庨《閮ㄨ嚜鐒舵帓鍒椼€佸彲婊氬姩銆?*/
+.ext-list { list-style: none; margin: 0; padding: .04rem; display: flex; flex-direction: column; gap: 10px; flex: 1 1 auto; min-height: 0; overflow: auto; justify-content: center; }
+.ext-list > li { flex: none; }
+.ext-body .ext-list { justify-content: flex-start; }
+/* 鍥哄畾琛岄珮 + 鍥哄畾 gap锛氭枃妗堥暱鐭笉浼氬啀鏀瑰彉閫夐」闂磋窛锛堝弬鑰冮〉 v2 鐨勭浜屾淇増锛?*/
+.ext-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: .51rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .18rem;
+  flex: none;
+  width: 100%;
+  height: 88px;
+  padding: 0 .21rem;
+  text-align: left;
+  font: inherit;
+  color: var(--text-hi);
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02));
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: .15rem;
+  transition: border-color var(--t-med), background var(--t-med), transform var(--t-med) var(--tr-ease);
+  animation: tr-right 400ms var(--tr-ease) backwards;
+  /* 閫愯杩涘満锛氬欢杩熸寜琛屽彿绠椼€備互鍓嶅彧纭啓浜嗗墠涓夋潯锛坣th-child 1..3锛夛紝鑰?backwards 璁╄繖涓夋潯鍦?240鈥?60ms 涔嬮棿鏄€忔槑鐨勶紝
+     绗?4 鏉¤捣娌℃湁寤惰繜灏卞厛鍑虹幇 鈥斺€?鏉＄洰瓒呰繃 3 鏉℃椂椤哄簭鏁翠釜鍙嶈繃鏉ャ€?-n 鐢?extensionModes.js 鐨?row() 鍐欏湪琛屼笂锛? 璧凤級锛?
+     杩欐牱 1 鈫?N 閮戒笉浼氭紓銆傦紙蹇呴』鍐欏湪 animation 涔嬪悗锛氱畝鍐欎細鎶?animation-delay 閲嶇疆鍥?0銆傦級 */
+  animation-delay: calc(240ms + var(--n, 0) * 60ms);
+}
+.ext-row:hover:not(.is-placeholder):not(:disabled) { border-color: rgba(194, 49, 61, .6); background: linear-gradient(90deg, rgba(194, 49, 61, .14), rgba(255, 255, 255, .03)); }
+.ext-row:focus-visible { outline: 2px solid var(--ext-300); outline-offset: 2px; }
+.ext-row.is-selected { border-color: rgba(194, 49, 61, .85); background: linear-gradient(90deg, rgba(194, 49, 61, .2), rgba(255, 255, 255, .03)); }
+.ext-row.is-selected::before { content: ''; position: absolute; left: 0; top: .21rem; bottom: .21rem; width: .05rem; border-radius: .05rem; background: linear-gradient(180deg, #c2313d, #8d1622); }
+.ext-row.is-placeholder { cursor: default; opacity: .62; background: none; border-style: dashed; }
+.ext-row.is-placeholder .ext-row__name { color: var(--text-lo); }
+.ext-row__idx { font-family: var(--font-num); font-size: calc(.2 * var(--t)); font-weight: 800; letter-spacing: .08em; color: rgba(255, 255, 255, .35); }
+.ext-row.is-selected .ext-row__idx { color: #c2313d; }
+.ext-row__main { display: flex; flex-direction: column; gap: .06rem; min-width: 0; }
+.ext-row__head { display: flex; align-items: center; gap: .12rem; min-width: 0; }
+/* 鍚嶅瓧涓庣畝浠嬮兘寮哄埗涓€琛岋細鍚嶅瓧鏄?.ext-row__head 閲岀殑 flex 椤癸紝涓嶇粰 min-width: 0 瀹冪殑鑷姩鏈€灏忓昂瀵稿氨鏄暣鍙ュ搴︼紝
+   鐪佺暐鍙锋案杩滀笉浼氬嚭鐜帮紙鍙傝€冮〉鍙啓浜?nowrap + ellipsis锛?*/
+.ext-row__name { min-width: 0; font-size: calc(.25 * var(--t)); font-weight: 900; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ext-row__code { flex: none; padding: 1px .08rem; border-radius: .06rem; font-family: var(--font-num); font-size: calc(.16 * var(--t)); font-weight: 700; color: var(--ext-300); background: rgba(124, 198, 242, .12); }
+/* 绠€浠嬪己鍒朵竴琛?鈥斺€?杩欐槸銆屾枃鏈埆鍐嶆拺寮€閫夐」銆嶇殑鍏抽敭 */
+.ext-row__desc { margin: 0; font-size: calc(.18 * var(--t)); line-height: 1.4; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ext-row__tail { display: flex; align-items: center; gap: .12rem; flex: none; }
+
+/* 鐘舵€佽兌鍥婏細鍙紑灞€ / 寰呮帴鍏?/ 绛瑰涓?*/
+.chip { padding: 2px .12rem; border-radius: 99px; font-size: calc(.165 * var(--t)); font-weight: 700; white-space: nowrap; }
+.chip--pending { color: #ffd9a8; background: rgba(251, 191, 36, .14); border: 1px solid rgba(251, 191, 36, .35); }
+.chip--ready { color: #c9ffe9; background: rgba(93, 240, 198, .14); border: 1px solid rgba(93, 240, 198, .4); }
+.chip--missing { color: var(--text-lo); background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+
+/* 鍒楄〃涓嬮潰鐨勪笁涓鏁帮紙鐜╂硶鍖?/ 鍙紑灞€ / 闅惧害鍚勮嚜鐙珛锛夛細鎶婂畠浠斁鍦ㄨ繖閲岋紝鏄洜涓哄垪琛ㄥ彧鏈変袱涓夋潯鏃跺彸鏍忎笅鍗婃槸绌虹櫧鐨?
+   鈥斺€?涓€鎺掔瓑璺濈殑灏忔牸鏃㈠崰浣忛偅鐗囩┖鐧斤紝鍙堝洖绛斻€岃繖涓洰褰曢噷鍒板簳鏈夊嚑涓€佸嚑涓兘鐜┿€嶃€傛暟瀛楁槸 modes 閲屾暟鍑烘潵鐨勶紝涓嶆槸鍐欐鐨勩€?*/
+.ext-facts { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .1rem; }
+.ext-fact { display: flex; flex-direction: column; gap: .02rem; padding: .1rem .12rem; border-radius: .1rem; background: rgba(255, 255, 255, .03); border: 1px solid rgba(255, 255, 255, .08); }
+.ext-fact b { font-family: var(--font-num); font-size: calc(.2 * var(--t)); font-weight: 800; line-height: 1.2; color: #eaf4f1; }
+.ext-fact small { font-size: calc(.14 * var(--t)); letter-spacing: .04em; color: var(--text-dim); }
+
+.ext-foot { display: flex; align-items: center; justify-content: space-between; gap: .18rem; flex: none; padding-top: .15rem; border-top: 1px solid rgba(255, 255, 255, .1); }
+.ext-foot__pack { min-width: 0; overflow: hidden; font-family: var(--font-num); font-size: calc(.165 * var(--t)); font-weight: 600; color: var(--text-dim); white-space: nowrap; text-overflow: ellipsis; }
+.ext-foot__start {
+  min-width: 1.98rem;
+  min-height: 44px;
+  padding: 0 .27rem;
+  font-size: calc(.23 * var(--t));
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .06em;
+  color: #04210f;
+  cursor: pointer;
+  border: 0;
+  border-radius: .14rem;
+  background: linear-gradient(180deg, #4fe8c0, #2fcf9f);
+  transition: filter var(--t-fast), transform var(--t-fast);
+}
+.ext-foot__start:hover:not(:disabled) { filter: brightness(1.06); }
+.ext-foot__start:active:not(:disabled) { transform: translateY(1px); }
+.ext-foot__start:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ext-foot__start:disabled { cursor: not-allowed; color: var(--text-lo); background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .1); }
+/* 铓€娴?1..6锛堢帺娉曞寘鑷繁鐨勬。浣嶏級锛氳剼娉ㄩ噷鐨勯€夋嫨鍣紝鍙湪鏉＄洰澹版槑 erosionTiers 鏃跺嚭鐜帮紱6 = 鏃犲敖婀伃锛坱itle 璇存槑锛?*/
+.ext-tiers { display: flex; align-items: center; gap: .05rem; margin-left: auto; margin-right: .12rem; min-width: 0; }
+.ext-tiers__label { margin-right: .03rem; font-size: calc(.16 * var(--t)); color: var(--text-dim); white-space: nowrap; }
+.ext-tier {
+  min-width: max(.3rem, 24px);
+  min-height: max(.3rem, 24px);
+  padding: 0 .06rem;
+  font-size: max(11px, calc(.17 * var(--t)));   /* 鍍忕礌鍦版澘锛?-t 鍦ㄧ煯灞忓彧鏈?40px锛岀函姣斾緥浼氭帀鍒?6.8px */
+  font-weight: 800;
+  color: var(--text-lo);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: .07rem;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.ext-tier:hover { color: var(--ext-200); border-color: var(--ext-a35); }
+.ext-tier.is-on { color: #06202e; background: var(--ext-400); border-color: var(--ext-300); }
+.ext-tier:focus-visible { outline: 2px solid var(--ext-300); outline-offset: 2px; }
+/* 鍗曚汉 / 鍚岀洘锛堢帺娉曞寘鍚屼竴闅惧害鐨勪袱绉嶅舰鎬侊級锛氬拰铓€娴佷竴鏍峰彧鍦ㄥ０鏄庝簡鐜╂硶鐨勬潯鐩笂鍑虹幇銆備袱鏋?chip 涓€缁勶紝閫変腑鐨勯偅鏋氳蛋鍜岃殌娴?
+   鍚屼竴濂楅湝钃?鈥斺€?鍙樼殑鏄埧鍨嬶紙solo / coop锛夛紝闅惧害涓庤殌娴佹。浣嶉兘涓嶅彉銆傝剼娉ㄩ噷鐨勫寘鍚嶅厛鐢?min-width: 0 璁╀綅锛岃繖缁勪笉璁?*/
+.ext-party { display: flex; align-items: center; gap: .05rem; flex: none; }
+.ext-party__chip {
+  min-width: max(.3rem, 24px);
+  min-height: max(.3rem, 24px);
+  padding: 0 .09rem;
+  font-size: max(11px, calc(.16 * var(--t)));   /* 鍍忕礌鍦版澘锛?-t 鍦ㄧ煯灞忓彧鏈?40px锛岀函姣斾緥浼氭帀鍒?6.4px */
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  color: var(--text-lo);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: .07rem;
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.ext-party__chip:hover { color: var(--ext-200); border-color: var(--ext-a35); }
+.ext-party__chip.is-on { color: #06202e; background: var(--ext-400); border-color: var(--ext-300); }
+.ext-party__chip:focus-visible { outline: 2px solid var(--ext-300); outline-offset: 2px; }
+
+/* 绌虹姸鎬侊細鏁村紶琛ㄩ兘鏄澶囦腑 */
+.ext-empty { display: grid; place-items: center; gap: .12rem; min-height: 88px; padding: 0 .24rem; text-align: center; border: 1px dashed rgba(255, 255, 255, .18); border-radius: .15rem; color: var(--text-dim); }
+.ext-empty .icon { width: .36rem; height: .36rem; opacity: .5; }
+.ext-empty p { margin: 0; font-size: calc(.19 * var(--t)); color: var(--text-lo); }
+.ext-empty span { font-size: calc(.17 * var(--t)); }
+
+/* 绐勫睆锛堚墹900px 瀹斤級鐨勪竴妗ｅ湪鏂囦欢涓婂崐閮ㄥ垎澶у巺璇存槑鐨勯偅涓獟浣撳潡閲岋細琛?64px / gap 8px锛涚煭灞忎竴妗ｏ紙琛?56px / gap 6px锛?
+   鍦ㄤ笅闈㈢殑鐭睆鍧楅噷锛屼袱鑰呬笉浼氬悓鏃跺懡涓紙涓€涓槸 min-height 521px锛屼竴涓槸 max-height 520px锛?*/
+
+/* ---- 涓婚澶у巺锛堜笟涓?2026-10-28锛夛細閫変腑鐜╂硶鍖呬箣鍚庣殑涓嬩竴绾?------------------------------------------------
+   娴佺▼锛氬ぇ鍘?鈫?鎷撳睍妯″紡锛堥€夋嫨鎷撳睍鐜╂硶锛夆啋 閫変腑銆屾巩鐏ā鎷熴€嶈繘鍏?鈫?鏈睆 鈫?鍗曚汉/鍚岀洘 + 铓€娴?鈫?寮€濮?鈫?鎴裤€?
+   缇庢湳鍙栬嚜鍘熺帺娉曞寘锛氫富瑙嗚 crimson-knight.webp锛堜笉鎭伓鐏級閾烘弧鏁村睆锛屽帇鏆楀悗鍙暀鍙充晶璧よ壊杞粨锛涙帓鐗堣姹囩収瀹冪殑灏侀潰
+   slide-01 鈥斺€?宸︿笂鐪夐銆佸乏渚ц丹绾㈢珫绾裤€佸ぇ鏍囬銆佸彸渚у厜鐜紝搴曟爮涓€鎺掗€夋嫨銆傚簳鍥剧己澶辨椂鍙墿娓愬彉涓庢帓鐗堬紝涓嶄細鐮寸増銆?
+   搴曟爮鐨?鍗曚汉/鍚岀洘 涓?铓€娴?娌跨敤澶у巺閭ｅ .ext-party / .ext-tier 缁撴瀯锛堟祴璇曢挬瀛愪笉鍙橈級锛屽彧鎹㈤厤鑹叉垚鏈寘鐨勮丹绾?浣欑儸姗欍€?*/
+.ext-theme {
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: .16rem;
+  padding: .3rem .42rem .26rem; overflow: hidden; isolation: isolate;
+}
+.ext-theme__art { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.ext-theme__art-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 32%; opacity: .92; }
+.ext-theme__veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(58% 52% at 16% 8%, rgba(91, 10, 20, .5), transparent 62%),
+    linear-gradient(100deg, rgba(6, 5, 7, .94) 0%, rgba(6, 5, 7, .62) 44%, rgba(6, 5, 7, .22) 100%),
+    linear-gradient(0deg, rgba(6, 5, 7, .97) 0%, rgba(6, 5, 7, .25) 42%, rgba(6, 5, 7, .05) 100%);
+}
+/* 灏侀潰涓婇偅鍙彂鍏夌殑鐜細绾?CSS锛岀獎灞忎笌鐭睆鐩存帴钘忔帀 */
+.ext-theme__ring {
+  position: absolute; right: 9%; top: 16%; width: 2.2rem; height: 2.2rem; border-radius: 50%;
+  border: 2px solid rgba(232, 92, 58, .5);
+  box-shadow: 0 0 1.1rem rgba(232, 92, 58, .32), inset 0 0 .9rem rgba(232, 92, 58, .26);
+  opacity: .75;
+}
+.ext-theme__top { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: .2rem; flex: none; }
+.ext-theme__back { flex: none; }
+.ext-theme__title { display: flex; flex-direction: column; gap: .04rem; min-width: 0; padding-left: .16rem; border-left: 3px solid var(--x-color, #5b0a14); }
+.ext-theme__kicker { font-family: var(--font-mono); font-size: calc(.12 * var(--t)); font-weight: 600; letter-spacing: .22em; color: rgba(255, 255, 255, .5); white-space: nowrap; }
+.ext-theme__name { margin: 0; font-size: min(calc(.62 * var(--t)), .62rem); font-weight: 900; letter-spacing: .05em; color: #fff; text-shadow: 0 0 .4rem rgba(232, 92, 58, .45), 0 0 .9rem rgba(91, 10, 20, .8); }
+.ext-theme__meta { display: flex; align-items: baseline; gap: .12rem; font-family: var(--font-mono); font-size: calc(.13 * var(--t)); letter-spacing: .18em; color: rgba(255, 255, 255, .45); }
+.ext-theme__meta b { font-family: var(--font-num); font-weight: 800; color: #ff8a6a; }
+.ext-theme__meta i { font-style: normal; }
+.ext-theme__body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: .1rem; max-width: 62%; min-height: 0; }
+.ext-theme__desc { margin: 0; font-size: calc(.19 * var(--t)); line-height: 1.65; color: rgba(255, 255, 255, .8); }
+.ext-theme__feats { display: flex; flex-direction: column; gap: .05rem; margin: 0; padding: 0; list-style: none; }
+.ext-theme__feats li { position: relative; padding-left: .16rem; font-size: calc(.17 * var(--t)); line-height: 1.55; color: rgba(255, 255, 255, .62); }
+.ext-theme__feats li::before { content: ''; position: absolute; left: 0; top: .1rem; width: .06rem; height: .06rem; background: #e85c3a; transform: rotate(45deg); }
+/* 鏀荤暐璇存槑锛氱炕寮€鐜╂硶鍖呰嚜宸辩殑鎴樺満鎵嬪唽锛堝師鍖?slide-01鈥?8锛夈€俼uiet 鐨勬弿杈规寜閽?鈥斺€?瀹冩槸杩欎竴灞忕殑闃呰鍏ュ彛锛屼笉鑳藉拰鍙充笅
+   閭ｉ銆屽紑濮嬨€嶆姠娉ㄦ剰鍔涳紱椤垫暟鍐欏湪鍙宠竟锛屽憡璇夌帺瀹跺悗闈㈡湁鍑犻〉銆?*/
+.ext-theme__guide {
+  position: relative; z-index: 1; display: inline-flex; align-items: center; gap: .1rem; align-self: flex-start;
+  margin-top: .06rem; padding: .1rem .16rem; min-height: max(.52rem, 32px, calc(36px * var(--sp-ui, 1)));
+  font: inherit; font-size: calc(.17 * var(--t)); font-weight: 700; letter-spacing: .04em; color: #ffd9cc;
+  background: rgba(232, 92, 58, .1); border: 1px solid rgba(232, 92, 58, .42); border-radius: .1rem; cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.ext-theme__guide .icon { flex: none; width: 1.05em; height: 1.05em; }
+.ext-theme__guide i { font-style: normal; padding: 0 .05rem; color: rgba(255, 217, 204, .62); }
+.ext-theme__guide:hover { background: rgba(232, 92, 58, .2); border-color: #ff8a6a; color: #fff; }
+.ext-theme__guide:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ext-theme__foot {
+  position: relative; z-index: 1; display: flex; align-items: center; justify-content: flex-end; gap: .18rem;
+  flex: none; margin-top: auto; padding-top: .14rem; border-top: 1px solid rgba(232, 92, 58, .28);
+}
+.ext-theme__pack { margin-right: auto; font-family: var(--font-num); font-size: calc(.165 * var(--t)); color: rgba(255, 255, 255, .45); }
+.ext-theme .ext-tiers__label { color: rgba(255, 255, 255, .55); }
+.ext-theme .ext-tier { color: rgba(255, 255, 255, .72); background: rgba(255, 255, 255, .05); border-color: rgba(255, 255, 255, .16); }
+.ext-theme .ext-tier:hover { color: #fff; border-color: #ff8a6a; }
+.ext-theme .ext-tier.is-on { color: #1a0708; background: linear-gradient(180deg, #ff8a6a, #e85c3a); border-color: #ffb59f; }
+.ext-theme .ext-party__chip { color: rgba(255, 255, 255, .72); border-color: rgba(255, 255, 255, .16); }
+.ext-theme .ext-party__chip.is-on { color: #1a0708; background: linear-gradient(180deg, #ff8a6a, #e85c3a); border-color: #ffb59f; }
+.ext-theme__start {
+  flex: none; min-width: 1.6rem; min-height: 44px; padding: 0 .3rem;
+  font-size: calc(.2 * var(--t)); font-weight: 900; letter-spacing: .06em; color: #1a0708;
+  background: linear-gradient(180deg, #ff8a6a, #e85c3a); border: 1px solid #ffb59f; border-radius: .1rem;
+  cursor: pointer; transition: filter var(--t-fast), transform var(--t-fast);
+}
+.ext-theme__start:hover:not(:disabled) { filter: brightness(1.08); }
+.ext-theme__start:active:not(:disabled) { transform: translateY(1px); }
+.ext-theme__start:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ext-theme__start:disabled { cursor: not-allowed; color: var(--text-lo); background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .12); }
+/* 涓婚澶у巺鐨勪袱妗ｅ皬灞忚鐩栧啓鍦ㄦ枃浠舵湯灏撅紙瑙併€屼富棰樺ぇ鍘?路 灏忓睆銆嶏級锛氬ぇ鍘呬笌鍗忚椤电殑娴嬭瘯鎸夈€岀涓€鏉?max-width/height 濯掍綋鍧椼€?
+   鍙栫敤锛屾妸鏂扮殑鍚屾煡璇㈠潡鎻掑湪瀹冧滑鍓嶉潰浼氳閭ｄ簺鏂█璇诲埌閿欒鐨勫潡銆?*/
+
+/* ---- 閫夋嫨妯℃嫙鍗忚's cards when they do not fit their column (screens/lobby.js pickCardFit: data-fit), above 520 px tall --
+   (搂35.18's leftover there: at 澶?/ 鐗瑰ぇ, in a small window or a long language the list ran under 寮€濮嬬嫭绔嬫ā鎷?with 缁堟瀬妯℃嫙
+   out of view.) 'brief': the description only in the brief at the left, where the chosen difficulty's already is;
+   'names': a line each, and the brief adds the chosen difficulty's effects and rounds. At both, the chosen card's name
+   ends in an ellipsis beside the stamp should a long language need it (the brief names it in full); the names stop at
+   .36rem (base rule: at 鐗瑰ぇ in a 1024 px window English ran past the cards). The short-screen block below has its own
+   one-line cards. [ASSUMED] the levels and the sizes */
+.proto-brief__more { display: none; }
+@media (min-height: 521px) {
+  .proto__body[data-fit="brief"] .pcard__desc,
+  .proto__body[data-fit="names"] .pcard__desc, .proto__body[data-fit="names"] .pcard__effects, .proto__body[data-fit="names"] .pcard__meta { display: none; }
+  .proto__body[data-fit="names"] .pcard { padding-top: .08rem; padding-bottom: .08rem; }
+  .proto__body[data-fit="brief"] .pcard__head, .proto__body[data-fit="names"] .pcard__head { min-width: 0; }
+  .proto__body[data-fit="brief"] .pcard__glyph, .proto__body[data-fit="names"] .pcard__glyph { flex: none; }
+  .proto__body[data-fit="brief"] .pcard__name, .proto__body[data-fit="names"] .pcard__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .proto__body[data-fit="names"] .pcard.is-on .pcard__head { padding-right: max(.9rem, calc(46px * var(--sp-ui, 1))); }
+  .proto__body[data-fit="names"] .pcard.is-on .pcard__stamp { right: .1rem; width: max(.8rem, 32px, calc(40px * var(--sp-ui, 1))); height: max(.64rem, 32px, calc(34px * var(--sp-ui, 1))); }
+  .proto__body[data-fit="names"] .pcard.is-on .pcard__tick { width: max(.4rem, 22px); height: max(.4rem, 22px); }
+  .proto__body[data-fit="names"] .pcard__ok { display: none; }
+  .proto__body[data-fit="names"] .proto-brief__more { display: flex; flex-direction: column; gap: .04rem; margin-top: .06rem; padding-top: .06rem; border-top: 1px solid rgba(255, 255, 255, .18); }
+  .proto-brief__effects { display: flex; flex-direction: column; font-size: calc(.16 * var(--t)); line-height: 1.4; color: #e9eceb; }
+  .proto-brief__effects span::before { content: '路'; margin-right: .06rem; }
+  .proto-brief__meta { display: flex; flex-wrap: wrap; align-items: center; gap: .04rem .14rem; font-size: calc(.13 * var(--t)); color: #7f8583; }
+  .proto-brief__meta b { color: #cfd3d1; }
+}
+
+/* ---- narrow windows: the dialogs stack their halves ------------------------------------------------- */
+@media (max-aspect-ratio: 1/1) {
+  .proto-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, .7fr) minmax(0, 1.3fr); }
+  .ally-body { grid-template-rows: minmax(0, .5fr) minmax(0, 1.5fr); }
+  .proto__pic { inset: 0 0 .9rem; }
+  /* the list keeps the .5rem the chosen card slides into (搂35.51: at .1rem its -.44rem ran past the screen's left edge) */
+  .proto-foot { padding-left: .1rem; }
+  .ally-side { padding-left: 0; }
+  /* the cards and the button span the width here: the caps for the landscape column (a 5.6rem column) give way */
+  .pcard__name { font-size: calc(.28 * var(--t)); }
+  .proto-foot .proto-start__label { font-size: calc(.4 * var(--t)); }
+  .proto-foot .proto-start__rook { font-size: calc(.36 * var(--t)); }
+}
+
+/* ---- short landscape phones (鈮?520 CSS px tall) ---------------------------------------------------------- */
+/* The hub keeps its left column 鈥?鎴愬氨缁熻 stays there, as on a desktop (the owner, 2026-10-28: 銆屽畬鍏ㄥ拰鐢佃剳绔竴鑷寸殑浣跨敤鍜屾樉绀洪€昏緫銆? 鈥?
+   and drops only the 瀵嗛挜鍔犲叆 tile and the tips, which the 浣滄垬鎻愮ず column cannot fit; the dialogs keep the four cards and the
+   button in view without scrolling
+   at every 鏂囧瓧澶у皬 (the cards keep only their names, the selected difficulty's description moves to the brief). */
+@media (max-height: 520px) {
+  /* the entries span the screen's width here: at least 128 px each, so a wrapped English name has a line of its own
+     (at 2.1rem, 84 px, 銆孲imulation銆?was 95 px at 灏?. [ASSUMED] the width */
+  .lobby-hub { --hub-entry-w: max(2.1rem, 32px, calc(128px * var(--sp-ui, 1))); --hub-ach-w: max(1.5rem, 32px, calc(112px * var(--sp-ui, 1))); }
+  .hub-center { grid-column: 2; }
+  .hub-radar { display: none; }
+  .hub-center__mark { min-height: 0; margin-bottom: 0; }
+  .hub-center__logo { width: .9rem; }
+  .hub-center__mark .emblem__svg { width: .9rem; height: 1rem; }
+  .hub-center__title { max-width: none; font-size: calc(.46 * var(--t)); }
+  .lobby-hub .hub-plate { min-height: max(.7rem, 32px, calc(40px * var(--sp-ui, 1))); }
+  /* 鎵嬫満绔収鎼數鑴戠鐨勮娉曪紙涓氫富 2026-10-28锛氬畬鍏ㄤ竴鑷寸殑浣跨敤涓庢樉绀洪€昏緫锛夛細鎴愬氨缁熻鍗″湪宸︼紝涓や釜閫夐」鍦ㄥ彸銆?
+     杩欓噷涓嶅啀鎶婂乏鍒楁暣涓棌鎺夊啀寰€鍙冲垪濉炰竴鏋氬皬鍗＄墖 鈥斺€?宸﹀垪淇濈暀锛屽彧鏄敹绐勫埌涓€鍒楀崱鐗囩殑瀹藉害锛涘彸鍒楃殑涓や釜 plate
+     绔栨帓锛堜笌妗岄潰鍚屼竴椤哄簭锛歋.W.E.E.P. 鍦ㄤ笂銆佸共鍛樿皟閰嶅湪涓嬶級锛屽洜姝ゅ彸鍒楃煯浜嗕竴琛岋紝涓棿閭ｅ潡涓嶅啀琚尋鎺夈€?*/
+  .hub-stage {
+    grid-template-columns: minmax(0, calc(var(--hub-ach-w))) minmax(0, 1fr) minmax(0, calc(var(--hub-entry-w) * 3 + 2 * var(--hub-gap)));
+    grid-template-areas: "side center right" "side entries entries";
+  }
+  .hub-side { display: flex; grid-area: side; padding-top: .1rem; }
+  .hub-side .hub-tile--key, .hub-side .tips { display: none; }
+  .hub-ach { width: 100%; }
+  .hub-right { padding-top: .1rem; align-items: flex-end; }
+  .lobby-hub .hub-plate--ach { display: none; }
+  /* 鎵嬫満涓婁袱涓€夐」涓嶉摵婊″彸鍒楋紙涓氫富 2026-10-28锛氬彸渚ц繖涓や釜閫夐」鍙堝お澶т簡锛夛細鍙崰鍐呭瀹藉害銆侀潬鍙冲榻愶紝楂樺害涔熸敹鍥?
+     .56rem銆傛闈笂閾烘弧涓€鍒楁槸 479 px 瀹斤紝鎵嬫満鍙冲垪鍙湁 395 px锛屽悓鏍风殑 width:100% 鍔?.7rem 涓嬮檺浼氭妸涓€鍧?plate 鎷夋垚
+     鍙堝鍙堟墎鐨勯暱鏉°€傛枃瀛椾粛鎸夎嚜宸辩殑闀垮害鎹㈣锛堜笉鎴柇锛夛紝鍙槸涓嶅啀鎾戞弧銆?*/
+  /* `.lobby-hub .hub-plate` (0,2,0) sets width:100%, so a bare `.hub-right > *` (0,1,0) never wins 鈥?match its specificity. */
+  .hub-right .hub-plate, .hub-right .lo-entry { width: auto; max-width: 100%; }
+  .hub-right .hub-plate, .hub-right .lo-entry { min-height: max(.56rem, 32px, calc(34px * var(--sp-ui, 1))); padding-top: .02rem; padding-bottom: .02rem; }
+  .hub-right .hub-plate__glyph, .hub-right .hub-plate > .btn__icon, .hub-right .hub-plate .lo-entry__icon { width: .36rem; height: .36rem; padding: .04rem; }
+  /* 瀛楀彿鍥炲埌 .24锛堜笟涓?2026-10-28锛氬張鏈夌偣灏忎簡锛夆€斺€?涓庡崱鐗囧悕鍚屾。锛屾瘮妗岄潰鐨?.2 杩樺ぇ涓€妗ｏ紝鍥犱负鎵嬫満涓婄湅鐨勬槸缂╁皬鐨勬暣灞忥紱
+     瀹藉害涓嬮檺璺熺潃鎶埌 7.4rem锛屽閲忕暀缁欒繖鍙峰瓧锛岄暱璇█浠嶆寜 max-width:100% 鎹㈣銆?*/
+  .hub-right .hub-plate__label, .hub-right .hub-plate .btn__label { font-size: clamp(15px, calc(.24 * var(--t)), 19px); }
+  .hub-right .hub-plate, .hub-right .lo-entry { min-width: max(7.4rem, 32px, calc(216px * var(--sp-ui, 1))); }
+  /* 鍐呭瀹藉害浼氶殢瀛楀彿鍙樼獎锛堛€孲.W.E.E.P.鎶ュ憡銆嶅湪 92 px 閲屾姌鎴愪袱琛岋級锛岀粰涓€涓笅闄愭妸瀹冩拺鍥炲彲璇荤殑涓€琛岋紱涓婇檺浠嶆槸鍙冲垪瀹斤紝
+     鎵€浠ラ暱璇█鐓ф牱鎹㈣鑰屼笉鏄孩鍑恒€?*/
+  .hub-right .hub-plate__glyph, .hub-right .hub-plate > .btn__icon, .hub-right .hub-plate .lo-entry__icon { width: .4rem; height: .4rem; }
+  /* (here the hub's height is the limit: a top padding for the icon made the English and Korean cards so tall at 澶?/
+     鐗瑰ぇ that the line above them ran into the title on a 640 / 740 px phone. The decorative line keeps clear of the icon
+     beside it instead, .44rem 鈥?at 灏?it stays on one line there in every language) */
+  .hub-entry { min-height: max(1.1rem, 32px, calc(64px * var(--sp-ui, 1))); padding: .1rem .14rem; }
+  .hub-entry__icon .icon { width: .42rem; height: .42rem; }
+
+  .proto-top { padding-top: 8px; }
+  /* 閫夋嫨妯℃嫙鍗忚 (搂35.18's leftover: at 鏂囧瓧澶у皬 涓?and above the four cards ran under 寮€濮嬬嫭绔嬫ā鎷?鈥?缁堟瀬妯℃嫙 out of sight,
+     the label cut 鈥?in every language, 844脳390 and smaller): a wider column (7.4rem as 閫夋嫨鍚岀洘鏂瑰紡's, 296 px here), the cards one
+     line each 鈥?the name, 16鈥?0 px, an ellipsis in the chosen card of a long language (the brief names it in full) 鈥? the
+     chosen difficulty's description in the brief at the left (11鈥?3 px, the event's own place for it, as on a desktop),
+     the header and the label capped (below) and the label wrapping onto a second line rather than being cut. The list
+     still scrolls should a pack's names not fit. [ASSUMED] every cap */
+  /* the column and the brief keep their unscaled widths under 鐣岄潰澶у皬 (梅 --sp-ui): the names' 16 px floor, the brief's
+     11 px floor and the px paddings and stamp space do not shrink, so at 75 % a 222 px column cut 'Perilous Simulation'
+     in English and the brief broke a Korean word (DESIGN 搂35.47) */
+  .proto-body { grid-template-columns: minmax(0, 1fr) min(calc(7.4rem / var(--sp-ui, 1)), 50vw); gap: 10px; padding-bottom: 10px; }
+  .ally-body { grid-template-columns: minmax(0, 1fr) min(calc(7.4rem / var(--sp-ui, 1)), 54vw); }
+  .proto__pic { inset: 0 0 1.6rem; }
+  .proto-brief { max-width: min(calc(6.4rem / var(--sp-ui, 1)), 100%); padding: 6px 10px 7px; }
+  .proto-brief p { margin-top: 2px; font-size: clamp(11px, calc(.26 * var(--t)), 13px); line-height: 1.35; }
+  .proto-list { gap: 6px; padding-left: 22px; justify-content: flex-start; }
+  .pcard { padding: 6px 10px; gap: 2px; border-radius: 10px; }
+  .pcard.is-on { transform: translateX(-16px); }
+  .pcard__desc, .pcard__effects, .pcard__meta { display: none; }
+  .pcard__head { min-width: 0; }
+  .pcard__glyph { flex: none; }
+  .pcard__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .pcard.is-on .pcard__head { padding-right: 46px; }
+  .pcard.is-on .pcard__stamp { right: 6px; width: 40px; height: 34px; }
+  .pcard.is-on .pcard__tick { width: 22px; height: 22px; }
+  .pcard__ok { display: none; }
+  .proto-foot { padding-left: 22px; }
+  .proto-hint { display: none; }
+  .proto-start { height: auto; min-height: 44px; gap: 10px; padding: 3px 0 3px 10px; }
+  .proto-start__label { letter-spacing: .02em; }
+  /* a column still taller than its space (a long language, the recent keys, the test-room box) scrolls rather than being
+     cut off; the 4 px pad on the three other sides keeps the focus ring and the shadows inside the clip */
+  .ally-side { gap: 8px; margin: -4px -4px -4px 0; padding: 4px 4px 4px 10px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .ally-card__art { display: none; }
+  .ally-key { margin: 6px 10px; }
+  .ally-recent { margin: 0 10px 6px; }
+  .mf-radar { inset: 0 0 .6rem; height: calc(100% - .6rem); }
+  /* 1rem is ~40 px here: the text gets its own sizes (still following 鏂囧瓧澶у皬) */
+  .hub-center__en { font-size: calc(.24 * var(--t)); }
+  /* the plates' labels, the entries' names and their decorative English capped so they stay whole (搂35.18 review: at 澶?/
+     鐗瑰ぇ the plates ended in an ellipsis and the entries cut both lines); each cap is its size at 涓?and grows a pixel a
+     step above it (--t-step, theme.css), the entries 7 px wider a step for the name's longest word (銆孲imulation銆?~6.2em).
+     [ASSUMED] the caps */
+  .lobby-hub .hub-plate { font-size: min(calc(.3 * var(--t)), calc(18px + var(--t-step))); }
+  .hub-plate__tag { display: none; }
+  .hub-entry__group { height: auto; font-size: calc(.22 * var(--t)); }
+  /* 鍚岀洘妯℃嫙's line keeps only 銆?鈥? 鍚嶅崥澹€?here (搂35.51: the whole line, nowrap, ran 81鈥?20 px past its entry at 鐗瑰ぇ 鈥?
+     two to four lines if it wrapped; the AI teammates are the room's to show) */
+  .hub-entry__long { display: none; }
+  .hub-entry__short { display: inline; }
+  .hub-entry { width: calc(var(--hub-entry-w) + 7 * max(0px, var(--t-step))); }
+  .hub-entry__en { padding-right: .44rem; font-size: min(calc(.16 * var(--t)), calc(10px + var(--t-step))); letter-spacing: .12em; }
+  .hub-entry__name { font-size: min(calc(.42 * var(--t)), calc(18px + var(--t-step))); }
+  .proto-title .modal__title { font-size: min(calc(.46 * var(--t)), 24px); white-space: nowrap; }
+  .proto-title__mode, .proto-title__mode i { font-size: min(calc(.24 * var(--t)), 16px); }
+  /* the mode line stays one line at a big 鏂囧瓧澶у皬 in a long language (en 鐗瑰ぇ broke 銆孴eam Simulation銆?in two, the
+     header growing by a line the column needs): the decorative ALLIANCE / SOLO SIMULATION stops at 15 px [ASSUMED] and
+     drops under as a whole if it still does not fit */
+  .proto-title__mode { flex-wrap: wrap; justify-content: flex-end; row-gap: 0; white-space: nowrap; }
+  .proto-title__mode i { font-size: min(calc(.24 * var(--t)), 15px); }
+  .proto-brief__code { font-size: min(calc(.22 * var(--t)), 14px); }
+  .proto-brief__name { font-size: min(calc(.34 * var(--t)), 20px); }
+  .pcard__name { font-size: clamp(16px, calc(.4 * var(--t)), 20px); }
+  .proto-foot .proto-start__label { font-size: min(calc(.5 * var(--t)), 20px); }
+  .proto-foot .proto-start__rook { font-size: min(calc(.36 * var(--t)), 16px); }
+  .proto-foot .proto-start__mark small { font-size: min(calc(.08 * var(--t)), 6px); }
+  /* the bars' names 16鈥?6 px here ([ASSUMED] the cap: en 銆孋reate Alliance銆?on its row at 鐗瑰ぇ, the column on the screen) */
+  .ally-card__bar { font-size: clamp(16px, calc(.3 * var(--t)), 26px); }
+  /* 鍒涘缓鍚岀洘 keeps its difficulty line (搂35.18's leftover: it was hidden here): two columns, the icon and the name on the
+     first row, the line under the name on the second, wrapping rather than cut short; 11鈥?4 px, [ASSUMED] the cap */
+  .ally-card--create .ally-card__bar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: center; row-gap: 1px; height: auto;
+    min-height: max(.74rem, 32px, calc(42px * var(--sp-ui, 1))); padding-top: 5px; padding-bottom: 5px; }
+  .ally-card--create .ally-card__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  .ally-card--create .ally-card__bar small { grid-column: 2; margin-left: 0; overflow: visible; white-space: normal; text-align: left; font-size: clamp(11px, calc(.28 * var(--t)), 14px); line-height: 1.3; }
+  .ally-key input { font-size: calc(.32 * var(--t)); }
+  /* the key field's placeholder fits beside 瑙傛垬 (搂35.18's leftover: clipped at 鐗瑰ぇ in English and Japanese): the short
+     text (screens/lobby.js AllianceSelect `short`), 11鈥?3 px, and 瑙傛垬 at most 14 px; an ellipsis should a pack's
+     name still be longer. [ASSUMED] the caps */
+  .ally-key input::placeholder { font-size: clamp(11px, calc(.26 * var(--t)), 13px); }
+  /* the empty field takes the placeholder's size, so the placeholder sits in the middle like the key will (搂35.51: on the
+     28 px key's baseline it sat 6鈥? px below the key icon and 瑙傛垬 at 鐗瑰ぇ) */
+  .ally-key input:placeholder-shown { font-size: clamp(11px, calc(.26 * var(--t)), 13px); }
+  .ally-key__spec { font-size: min(calc(.26 * var(--t)), 14px); }
+  .ally-recent { font-size: min(calc(.24 * var(--t)), 14px); line-height: 1.35; } /* [ASSUMED] the cap, like the difficulty line's */
+  .code-chip { font-size: calc(.28 * var(--t)); }
+  .ally-guide { font-size: calc(.3 * var(--t)); }
+  /* 鎷撳睍妯″紡锛堥€夋嫨鎷撳睍鐜╂硶锛夊湪鐭睆涓婂彧鐣欒涓庢寜閽細琛?56px / gap 6px锛涙。妗堢殑璇存槑琛屻€佸垪琛ㄥ璇笌搴曢儴璇存槑璁╀綅
+     锛堝弬鑰冨疄鏈洪〉鍚屾牱鍦ㄨ繖閲屾敹璧峰畠浠紝鍚﹀垯涓ゅ垪鐨勫唴瀹逛細鍦?360鈥?20px 楂樼殑绐楀彛閲屼簰鐩稿帇锛?*/
+  .ext-body .ext-stage { gap: .09rem; padding: .11rem .12rem; }
+  .ext-body .ext-hero__art { width: .48rem; height: .48rem; border-radius: .12rem; }
+  .ext-body .ext-hero__art .icon { width: .26rem; height: .26rem; }
+  .ext-body .ext-hero__name { font-size: calc(.21 * var(--t)); }
+  .ext-body .ext-hero__en, .ext-body .ext-hero__code { display: none; }
+  .ext-body .ext-stats { gap: .08rem; }
+  .ext-body .ext-stat { padding: .05rem .08rem; }
+  .ext-body .ext-stat b { font-size: calc(.165 * var(--t)); }
+  .ext-body .ext-stat span { font-size: calc(.13 * var(--t)); }
+  .ext-body .ext-desc { font-size: calc(.16 * var(--t)); line-height: 1.4; }
+  .ext-body .ext-feats { gap: .03rem; }
+  .ext-body .ext-feats li { padding-left: .14rem; font-size: calc(.14 * var(--t)); line-height: 1.35; }
+  .ext-body .ext-note { display: none; }
+  .ext-body .ext-pane__lead { display: none; }
+  .ext-body .ext-note-line { display: none; }
+  .ext-body .ext-row { height: 56px; padding: 0 .12rem; }
+  .ext-body .ext-row__name { font-size: calc(.23 * var(--t)); }
+  .ext-body .ext-row__desc { font-size: calc(.165 * var(--t)); }
+  .ext-body .ext-list { gap: 6px; }
+  .ext-body .ext-foot { padding-top: .12rem; }
+  .ext-body .ext-foot__start { min-width: 110px; min-height: 44px; font-size: calc(.21 * var(--t)); }
+  .ext-body .ext-party { gap: .04rem; }
+  .ext-body .ext-party__chip { min-width: max(.26rem, 24px); min-height: max(.26rem, 24px); padding: 0 .06rem; font-size: calc(.14 * var(--t)); }
+}
+/* ---- 杞満 (PR #643, the event's screen changes): a screen comes up from black, its panels slide in one after another ---- */
+.lobby-hub, .modal__box.proto, .modal__box.ally, .modal__box.ext { --tr-ease: cubic-bezier(.16, .84, .3, 1); }
+@keyframes tr-fade { from { opacity: 0; } }
+@keyframes tr-veil { from { background-color: transparent; } }
+@keyframes tr-right { from { opacity: 0; transform: translateX(.36rem); } }
+@keyframes tr-left { from { opacity: 0; transform: translateX(-.36rem); } }
+@keyframes tr-rise { from { opacity: 0; transform: translateY(.22rem); } }
+@keyframes tr-zoom { from { opacity: 0; transform: scale(1.04); } }
+@keyframes tr-draw { to { stroke-dashoffset: 0; } }
+@keyframes tr-diamond { 0% { opacity: 0; transform: translateX(-50%) rotate(45deg) scale(.5); } 30%, 72% { opacity: 1; transform: translateX(-50%) rotate(45deg) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) rotate(45deg) scale(1.1); } }
+/* the hub */
+.lobby-hub .hub-bg { animation: tr-fade 560ms ease-out backwards; }
+.lobby-hub > .topbar { animation: tr-fade 320ms ease-out 120ms backwards; } /* opacity only: its dialogs are fixed */
+.lobby-hub .hub-center { animation: tr-zoom 600ms var(--tr-ease) 140ms backwards; }
+.lobby-hub .hub-side { animation: tr-left 480ms var(--tr-ease) 220ms backwards; }
+.lobby-hub .hub-right { animation: tr-right 480ms var(--tr-ease) 260ms backwards; }
+.hub-entries .hub-entry-wrap { animation: tr-rise 440ms var(--tr-ease) 300ms backwards; }
+.hub-entries .hub-entry-wrap:nth-child(2) { animation-delay: 360ms; }
+.hub-entries .hub-entry-wrap:nth-child(3) { animation-delay: 420ms; }
+.hub-entries .hub-entry-wrap:nth-child(4) { animation-delay: 480ms; }
+/* 閫夋嫨妯℃嫙鍗忚 / 閫夋嫨鍚岀洘鏂瑰紡: from black, then the title, the stage and the cards */
+.modal__box.proto, .modal__box.ally, .modal__box.ext { animation: tr-veil 150ms linear backwards; }
+.proto__bg { animation: tr-fade 340ms ease-out 140ms backwards; }
+.proto-top { animation: tr-fade 260ms ease-out 170ms backwards; }
+.proto-title { animation: tr-right 400ms var(--tr-ease) 200ms backwards; }
+.proto-stage, .ally-stage { animation: tr-zoom 480ms var(--tr-ease) 190ms backwards; }
+.proto-list .pcard { animation: tr-right 400ms var(--tr-ease) backwards; animation-delay: calc(240ms + var(--n, 0) * 60ms); }
+.proto-list .pcard:nth-child(2) { --n: 1; }
+.proto-list .pcard:nth-child(3) { --n: 2; }
+.proto-list .pcard:nth-child(4) { --n: 3; }
+.proto-list .pcard:nth-child(5) { --n: 4; }
+/* 鐗规畩闅惧害 sits outside .proto-list (it is the list's sibling, see .proto-list__special below), so it never matched the
+   rule above and appeared on the first frame while the four official cards were still fading in 鈥?the one entry that did
+   not wait its turn. It joins the same timeline as the LAST official card: the same keyframes and duration, and the delay
+   the list's fifth row gets (240ms + 4 脳 60ms), so 瓒呴檺 comes in with them instead of ahead of them. */
+.proto-list__special { animation: tr-right 400ms var(--tr-ease) 480ms backwards; }
+.proto-foot { animation: tr-rise 400ms var(--tr-ease) 440ms backwards; }
+.ally-card--create { animation: tr-right 420ms var(--tr-ease) 240ms backwards; }
+.ally-card--join { animation: tr-right 420ms var(--tr-ease) 380ms backwards; }
+/* 瓒呴檺妯℃嫙 路 鍚岀洘锛堢传鑹插叆鍙ｏ級琛ュ悓涓€濂楀叆鍦猴細tr-right / var(--tr-ease) / 420ms 涓庝笂闈袱寮犲畬鍏ㄤ竴鑷达紝鍙妸寤惰繜鍙栧湪
+   鍒涘缓 240ms 涓庡姞鍏?380ms 涔嬮棿鐨?310ms 鈥斺€?DOM 閲屽畠鎭板ソ鎺掑湪杩欎袱寮犱腑闂达紙lobby.js 鐨?.ally-side锛氬垱寤?鈫?瓒呴檺 鈫?鍔犲叆锛夛紝
+   浜庢槸瀹冭窡鐫€鍚屼竴鏉℃椂闂磋酱渚濇杩涘満锛岃€屼笉鏄瓑鍓嶄袱寮犺惤瀹氬悗鑷繁鈥滃嚟绌衡€濊烦鍑烘潵銆傛病鏈夋柊鍏抽敭甯с€?
+   杩欐潯瑕佺暀鍦ㄤ笅闈㈤偅鏉°€屽噺灏戝姩鏁堬紙reduced-motion锛夈€嶅獟浣撴煡璇㈢殑褰掗浂鍚嶅崟涔嬪墠锛氬獟浣撴煡璇笉鎻愬崌浼樺厛绾э紝鍚屼紭鍏堢骇鎸夋簮鐮?
+   椤哄簭鍙栧悗鑰咃紝鍐欒繘鏂囦欢鏈熬閭ｅ潡绱壊閰嶈壊瑙勫垯锛堝湪鍚嶅崟涔嬪悗锛変細鎶婂悕鍗曢噷鐨?animation: none 鍙嶅帇鎺夛紝鍑忓皯鍔ㄦ晥灏卞け鏁堜簡銆?*/
+.ally-guide { animation: tr-rise 380ms var(--tr-ease) 450ms backwards; }
+/* the diamond at the bottom while it comes up */
+.proto__body::after, .ally__body::after { content: ''; position: absolute; left: 50%; bottom: .5rem; z-index: 9; width: .3rem; height: .3rem; pointer-events: none; opacity: 0;
+  border: 2px solid rgba(223, 230, 226, .55); box-shadow: inset 0 0 0 3px #0a0b0b, inset 0 0 0 5px rgba(223, 230, 226, .3); animation: tr-diamond 720ms ease-out 60ms both; }
+/* the stamp's ring is drawn each time a difficulty is chosen */
+.pcard.is-on .pcard__ring path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tr-draw 380ms ease-out 90ms forwards; }
+.pcard.is-on .pcard__ring path + path { animation-delay: 260ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-bg__ship, .hub-center, .hub-entry-wrap, .hub-radar__sweep, .proto__pic, .modal__box.proto, .modal__box.ally, .modal__box.ext, .pcard.is-on .pcard__stamp,
+  .mf-radar__sweep, .mf-radar__blip, .mf-blk.is-lit, .hub-bg__own, .lobby-hub .hub-bg, .lobby-hub > .topbar, .lobby-hub .hub-center, .lobby-hub .hub-side,
+  .lobby-hub .hub-right, .hub-entries .hub-entry-wrap, .proto__bg, .proto-top, .proto-title, .proto-stage, .ally-stage, .proto-list .pcard, .proto-foot,
+  .proto-list__special,
+  .ally-card--create, .ally-card--join, .ally-guide, .pcard.is-on .pcard__ring path, .ps, .ps-fig, .ps-spike, .ps-call, .ps-beacon, .ps-scan,
+  .ext-body .ext-row, .ext-body .ext-stage { animation: none; }
+  /* 鍗℃睜璋冩暣锛堜笟涓?2026-10-28 鏅氾級锛氫簩绾ч〉涓庨〉鑴氶偅棰楅敭鍙湁搴曡壊杩囨浮锛屾病鏈夊姩鐢伙紱鍑忓姩鏁堜笅杩炶繃娓′篃褰掗浂 */
+  .ext-foot__pool, .ext-theme__rules, .ext-theme__pool { transition: none; }
+  /* 涓婚澶у巺鐨勪富 CTA 涓庤钀介偅棰椼€屽崱姹犺皟鏁淬€嶇獎鏉★細鍑忓姩鏁堜笅涓嶅仛浣嶇Щ銆佷笉鍋氭彁浜繃娓?*/
+  .ext-theme__start.is-cta { transition: none; }
+  .ext-theme__start.is-cta:hover:not(:disabled), .ext-theme__start.is-cta:active:not(:disabled) { transform: none; }
+  .ext-theme__slot { transition: none; }
+  /* 鍔熻兘璁剧疆锛堟巩鐏級鐨勬粦鍧楋細浣嶇Щ鏄姩鏁堬紝鍑忓姩鏁堜笅鐩存帴璺冲埌缁堢偣 */
+  .annmods__track, .annmods__track i { transition: none; }
+  .ps-cable__pulse { display: none; }
+  .pcard.is-on .pcard__ring path { stroke-dashoffset: 0; }
+  .proto__body::after, .ally__body::after { display: none; }
+}
+
+/* official versions (DESIGN 搂35.23): the version under the title, the cards' wait while a version's data loads */
+.hub-center__ver { position: relative; margin-top: .04rem; font-size: calc(.22 * var(--t)); font-weight: 700; letter-spacing: .08em; color: #9fd3ff; text-shadow: 0 1px .08rem rgba(0, 0, 0, .85); overflow-wrap: anywhere; }
+.proto-list__wait { display: flex; align-items: center; gap: .08rem; margin: 0; color: var(--text-lo); font-size: calc(.15 * var(--t)); }
+.proto-list__wait.is-failed { flex-wrap: wrap; color: var(--amber); }
+.proto-list__wait.is-failed .icon { flex: none; width: 1.1em; height: 1.1em; }
+
+/* ---- 瓒呴檺妯℃嫙锛氶毦搴﹀垪琛ㄦ渶涓嬫柟鐨勭壒娈婇」锛堜笟涓?2026-10-26锛?------------------------------------------------
+   绱壊 = 瓒呴檺锛坈ss/theme.css 鐨?--inf-* 鍚屼竴濂楄壊锛夈€傚畠涓嶆槸瀹樻柟闅惧害锛屽崱闈㈢敤 鈭?浠ｆ浛闅惧害寰借锛?
+   杈规 / 鍚嶇О / 閫変腑鍏夋檿鍏ㄩ儴璧扮传鑹诧紝涓庝笂闈㈠洓寮犲畼鏂归毦搴﹀崱鏄庢樉鍖哄垎銆?*/
+.pcard.is-infinite {
+  border-color: rgba(168, 85, 247, .55);
+  background: linear-gradient(180deg, rgba(38, 20, 62, .92), rgba(16, 12, 24, .96));
+  box-shadow: inset 0 0 1.2rem rgba(122, 62, 220, .18);
+}
+.pcard.is-infinite .pcard__glow {
+  background: radial-gradient(60% 120% at 50% 0%, rgba(168, 85, 247, .45), transparent 70%);
+}
+.pcard.is-infinite .pcard__name { color: var(--inf-300); text-shadow: 0 0 .18rem var(--inf-glow); }
+.pcard.is-infinite .pcard__desc { color: #c9b9e8; border-bottom-color: rgba(168, 85, 247, .28); }
+.pcard.is-infinite .pcard__effects { color: #b9a6dd; }
+.pcard.is-infinite .pcard__effects span::before { color: var(--inf-400); }
+.pcard.is-infinite .pcard__meta { color: #a99ac9; }
+.pcard.is-infinite .pcard__meta .num { color: var(--inf-300); }
+.pcard.is-infinite .pcard__infmeta { color: var(--inf-300); font-weight: 700; letter-spacing: .06em; }
+.pcard__inf {
+  display: inline-grid; place-items: center; width: max(.3rem, 18px); height: max(.3rem, 18px);
+  font: 900 calc(.26 * var(--t))/1 var(--font-num); color: var(--inf-300);
+  text-shadow: 0 0 .16rem var(--inf-glow);
+}
+.pcard.is-infinite.is-on { border-color: var(--inf-400); box-shadow: inset 0 0 1.4rem rgba(122, 62, 220, .3), 0 0 .4rem rgba(150, 90, 255, .35); }
+/* the other cards' grey hover / focus ring would read as "no longer special": keep the purple one */
+.pcard.is-infinite:hover:not(.is-on), .pcard.is-infinite:focus-visible:not(.is-on) { border-color: var(--inf-400); }
+/* the special difficulty is not a row of the scrollable list: it sits under it, always visible, behind a 鐗规畩闅惧害 rule
+   (the four official cards keep their own centring inside the list) */
+.proto-list__special { flex: none; display: flex; flex-direction: column; gap: .05rem; padding: .02rem .06rem .08rem .5rem; }
+.proto-list__special .diff-card { width: 100%; }
+.proto-list__special-label {
+  display: flex; align-items: center; gap: .08rem; padding-left: .02rem;
+  font-size: max(calc(.1 * var(--t)), 10px); font-weight: 700; letter-spacing: .22em; color: var(--inf-400);
+}
+.proto-list__special-label::after {
+  content: ''; flex: 1 1 auto; height: 1px;
+  background: linear-gradient(90deg, rgba(168, 85, 247, .5), rgba(168, 85, 247, 0));
+}
+@media (max-width: 900px) { .proto-list__special { padding-left: 22px; } }
+/* a short screen (鈮?20 px tall) has no room for the group label; the purple card alone still reads as special */
+@media (max-height: 520px) { .proto-list__special-label { display: none; } }
+.proto__body[data-difficulty="INFINITE"] .proto-title__mode,
+.proto__body[data-difficulty="INFINITE"] .proto-brief__name { color: var(--inf-300); }
+
+/* ---- 涓婚澶у巺 路 灏忓睆锛堜笟涓?2026-10-28锛?----------------------------------------------------------------
+   鏀惧湪鏂囦欢鏈熬鏄湁鎰忕殑锛歭obby-hub / extension-modes 涓や釜娴嬭瘯閮芥寜銆岀涓€鏉?max-width:900px / max-height:520px 濯掍綋鍧椼€?
+   鍙栫敤锛屾柊鐨勫悓鏌ヨ鍧楁彃鍒板墠闈細璁╁畠浠鍒伴敊鐨勫潡銆傝繖閲屽彧瑕嗙洊 .ext-theme*锛屼笉纰板ぇ鍘呬笌鍗忚椤电殑浠讳綍閫夋嫨鍣ㄣ€?*/
+@media (max-width: 900px) {
+  .ext-theme { padding: .22rem .24rem .2rem; }
+  .ext-theme__name { font-size: min(calc(.46 * var(--t)), .46rem); }
+  .ext-theme__body { max-width: 74%; }
+  .ext-theme__ring { display: none; }
+}
+@media (max-height: 520px) {
+  .ext-theme { gap: .1rem; padding: .16rem .2rem .14rem; }
+  .ext-theme__kicker { font-size: max(10px, calc(.11 * var(--t))); }
+  .ext-theme__name { font-size: min(calc(.34 * var(--t)), .34rem); }
+  /* 绠€浠嬩笌瑕佺偣璁╀綅锛堢煯灞忔病鏈夌┖闂达級锛屼絾銆屾敾鐣ヨ鏄庛€嶅繀椤荤暀涓嬫潵 鈥斺€?瀹冩槸杩欎竴灞忓敮涓€鐨勯槄璇诲叆鍙ｏ紝钘忔帀瀹冪瓑浜庢墜鏈轰笂
+     鐪嬩笉浜嗙帺娉曞寘鐨勬墜鍐屻€傛墍浠?body 鍙敹鎴愪竴琛岋細鎸夐挳鍦ㄥ乏锛屾枃瀛楅兘涓嶇敾銆?*/
+  .ext-theme__body { display: flex; flex-direction: row; align-items: center; gap: .1rem; max-width: none; }
+  .ext-theme__desc, .ext-theme__feats { display: none; }
+  .ext-theme__guide { margin-top: 0; padding: .06rem .12rem; min-height: max(.44rem, 30px); font-size: calc(.15 * var(--t)); }
+  .ext-theme__foot { gap: .12rem; padding-top: .1rem; }
+  .ext-theme__start { min-width: 1.3rem; font-size: calc(.17 * var(--t)); }
+}
+
+/* ==========================================================================================
+   涓婚澶у巺鐨勪富瑙嗚涓庝富 CTA锛堜笟涓?2026-10-28 绗簩杞?UI 鏀归€?P1-3 / P1-4 / P1-5锛?
+   路 鑳屾櫙鍥?816脳564 鍦?2376脳1080 涓?cover 浼氭斁澶?~2.9脳锛氬彔涓€灞傝交妯＄硦 + 鏆楀寲娓愬彉鍘嬫帀鏀惧ぇ鍣偣锛?
+     骞舵妸姝ｆ枃鍖哄帇鍒?鈮?4.5:1锛堢櫧瀛?on 5%鈥?8% 鐨勬殫灞傦級銆?
+   路 鍙綔鐢ㄤ簬澹版槑浜?art 鐨勪富棰橈紙[data-theme]锛夛細婀伃閭ｄ竴灞忕殑鏃㈡湁瑙傛劅涓嶅姩銆?
+   路 鐭睆锛堚墹520 楂橈級涓庡噺鍔ㄦ晥锛氬浘鍙渷锛岄伄缃╀笌瀵规瘮搴﹁鍒欎繚鐣欍€?
+   ========================================================================================== */
+.ext-theme[data-theme] .ext-theme__art-img {
+  filter: blur(4px) saturate(1.05) brightness(.72);
+  transform: scale(1.04);
+  opacity: .9;
+}
+.ext-theme[data-theme] .ext-theme__veil {
+  background:
+    radial-gradient(58% 52% at 16% 8%, rgba(23, 217, 160, .18), transparent 62%),
+    linear-gradient(100deg, rgba(5, 9, 8, .95) 0%, rgba(5, 9, 8, .82) 46%, rgba(5, 9, 8, .5) 78%, rgba(5, 9, 8, .34) 100%),
+    linear-gradient(0deg, rgba(5, 9, 8, .96) 0%, rgba(5, 9, 8, .3) 44%, rgba(5, 9, 8, .12) 100%);
+}
+/* 宸︿晶銆岀帺娉曟。妗堛€嶄篃鐢ㄥ悓涓€寮犲簳鍥撅紙P1-5锛夛細鍘嬫殫鍒板彧鍓╄疆寤擄紝鍙充晶鍒楄〃淇濇寔绾壊锛屼袱灞傚浘涓嶆墦鏋?*/
+.ext-stage[data-art] .ext-stage__art-img { filter: blur(5px) saturate(1.05) brightness(.5); transform: scale(1.05); }
+.ext-stage[data-art]::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: linear-gradient(180deg, rgba(5, 9, 8, .9) 0%, rgba(5, 9, 8, .78) 52%, rgba(5, 9, 8, .94) 100%);
+}
+/* 骞插憳璋冮厤 / S.W.E.E.P. 鎶ュ憡锛氫簩绾ч〉宸︿笅鐨勪竴鎽炵獎鍏ュ彛锛堜笉鍗犳鏂囨祦锛屼笟涓?2026-10-29锛夈€?
+   瑙掓爣鎸傚湪 .ext-theme__foot 閲岋紝`bottom: 100%` 灏遍敋鍦ㄩ〉鑴氶偅鏉?border-top锛堝乏涓嬮偅鏉℃í绾匡級涓?鈥斺€?椤佃剼楂樺害闅忓瓧鍙蜂笌
+   鐣岄潰澶у皬鍙橈紝涓嶇敤鎵嬬畻鍋忕Щ銆傚垪搴忥細S.W.E.E.P. 鎶ュ憡 鈫?骞插憳璋冮厤锛堣秺闈犱笂鐨勮秺鍏堣鐪嬪埌锛夈€?
+   2026-10-29 淇锛氬師鍏堣繕鏈変竴棰椼€屽崱姹犺皟鏁淬€嶏紝涓庛€屽共鍛樿皟閰嶃€嶆墦寮€鍚屼竴灞忥紙閲嶅锛夛紝宸插垹锛涗袱鏋氭寜閽?*鍚屽**銆?*/
+.ext-theme__corner {
+  /* 涓氫富 2026-10-29锛堢湡鏈猴級锛氫袱鏋氬叆鍙ｈ鍐嶄笂绉讳竴鐐?鈥斺€?鎵嬫満绔í鍚戞尋鍘嬫椂瀹冧滑浼氬拰椤佃剼涓?CTA 璐村埌涓€璧枫€?*/
+  position: absolute; left: 0; bottom: calc(100% + .22rem); z-index: 2;
+  display: flex; flex-direction: column; align-items: flex-start; gap: .06rem;
+}
+/* 涓€鏍煎鐢?*杈冨鐨勯偅涓€鏋?*鍐冲畾锛屼袱鏋氶兘鎾戞弧锛屾墍浠ュ搴﹀ぉ鐒朵竴鑷达紙涓氫富锛氬共鍛樿皟閰嶈鍜?S.W.E.E.P. 妗ｆ鍚屽锛?*/
+.ext-theme__dock { display: grid; grid-auto-rows: auto; justify-items: stretch; gap: .05rem; width: max-content; }
+.ext-theme__dock > button { width: 100%; justify-content: flex-start; }
+.ext-theme__slot {
+  display: inline-flex; align-items: center; gap: .06rem;
+  min-height: max(.36rem, 32px); padding: 0 .14rem;
+  font: inherit; font-size: max(11px, calc(.16 * var(--t))); font-weight: 700; letter-spacing: .04em;
+  color: #bfeee2; cursor: pointer; background: rgba(6, 12, 11, .78);
+  border: 1px solid rgba(23, 217, 160, .38); border-radius: .06rem;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.ext-theme__slot .icon { flex: none; width: 1.05em; height: 1.05em; }
+.ext-theme__slot:hover { color: #eafff8; background: rgba(23, 217, 160, .16); border-color: #17d9a0; }
+.ext-theme__slot:focus-visible { outline: 2px solid #17d9a0; outline-offset: 2px; }
+/* 骞插憳璋冮厤锛氬ぇ鍘呴椤甸偅棰?.hub-plate--loadout 鐨勫悓涓€濂楁祬鑹茶杽鏉胯姹囷紙娴呭簳 + 澧ㄨ壊瀛?+ 澧ㄧ豢瀛楀舰鍧楋級锛?
+   浣嗗搴﹂殢鏂囧瓧銆侀珮搴﹀彧鍒?32px 绾?鈥斺€?姣斿ぇ鍘呴偅棰楃獎涓€妗ｏ紝鍘嬪湪涓ゆ潯绐勬潯涔嬮棿涔熶笉鎶富 CTA銆?*/
+.ext-theme__loadout {
+  display: inline-flex; align-items: center; gap: .08rem;
+  min-height: max(.34rem, 32px); padding: .02rem .16rem .02rem .08rem;
+  font: inherit; font-size: max(12px, calc(.17 * var(--t))); font-weight: 900; letter-spacing: .04em;
+  color: #111816; text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, #e8edea, #c6cfcb);
+  border: 1px solid rgba(255, 255, 255, .5); border-radius: .06rem;
+  box-shadow: 0 .03rem .12rem rgba(0, 0, 0, .45), inset 0 -2px 0 rgba(0, 0, 0, .14);
+}
+.ext-theme__loadout-glyph {
+  flex: none; display: grid; place-items: center; width: .26rem; height: .26rem;
+  color: var(--mint-400, #5df0c6); background: #182120;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.ext-theme__loadout-glyph .icon { width: 100%; height: 100%; }
+.ext-theme__loadout-label { min-width: 0; white-space: nowrap; }
+.ext-theme__loadout:hover { filter: brightness(1.06); }
+.ext-theme__loadout:focus-visible { outline: 2px solid var(--mint-400, #5df0c6); outline-offset: 2px; }
+/* 涓氫富 2026-10-29锛歋.W.E.E.P. 鎶ュ憡涓庡共鍛樿皟閰嶇敤**鍚屼竴濂楃櫧鏉?*锛堝師鍏堜竴涓槸娣辫壊缁胯竟绐勬潯銆佷竴涓槸娴呰壊钖勬澘锛岀湅鐫€鍍忎袱绉嶆帶浠讹級銆?
+ * 鍙湪浜岀骇椤靛乏涓嬭繖涓€鎽為噷瑕嗙洊锛屽ぇ鍘呴椤甸偅棰?.ext-theme__slot 涓嶅彈褰卞搷銆?*/
+.ext-theme__dock > .ext-theme__slot {
+  background: linear-gradient(180deg, #e8edea, #c6cfcb);
+  color: #111816;
+  border-color: rgba(255, 255, 255, .5);
+  box-shadow: 0 .03rem .12rem rgba(0, 0, 0, .45), inset 0 -2px 0 rgba(0, 0, 0, .14);
+}
+.ext-theme__dock > .ext-theme__slot .icon { color: #1d6f5c; }
+.ext-theme__dock > .ext-theme__slot:hover {
+  background: linear-gradient(180deg, #f4f8f6, #d4ddd9);
+  color: #0b1210;
+  border-color: #ffffff;
+  filter: none;
+}
+/* 涓?CTA锛圥1-3锛夛細姣斿師鏉ュぇ涓€妗ｏ紝甯︽弿杈瑰厜鏅曪紱hover 鎻愪寒銆佹寜涓嬪洖寮癸紱鍑忓姩鏁堜笉鍋氫綅绉?*/
+.ext-theme__start.is-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: .1rem;
+  min-width: 2.1rem; min-height: max(.56rem, 32px, calc(52px * var(--sp-ui, 1)));
+  padding: 0 .34rem; font-size: max(15px, calc(.24 * var(--t))); letter-spacing: .08em;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .18) inset, 0 .06rem .3rem rgba(232, 92, 58, .42);
+  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+}
+.ext-theme__start.is-cta .ext-theme__starticon { flex: none; width: .26rem; height: .26rem; }
+.ext-theme__start.is-cta:hover:not(:disabled) {
+  filter: brightness(1.1); transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .28) inset, 0 .1rem .42rem rgba(232, 92, 58, .55);
+}
+.ext-theme__start.is-cta:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 0 0 1px rgba(0, 0, 0, .25) inset; }
+.ext-theme__start.is-cta:disabled { box-shadow: none; }
+/* 鐐告儕閭ｄ竴灞忕殑 CTA 鐢ㄨ嚜宸辩殑缁匡紙涓庡畠鐨?theme 閰嶈壊涓€鑷达級 */
+.ext-theme[data-theme="zhajing"] .ext-theme__start.is-cta {
+  color: #04210f; background: linear-gradient(180deg, #4fe8c0, #2fcf9f); border-color: #9ff5d8;
+  box-shadow: 0 0 0 1px rgba(159, 245, 216, .5) inset, 0 .06rem .3rem rgba(23, 217, 160, .42);
+}
+.ext-theme[data-theme="zhajing"] .ext-theme__start.is-cta:hover:not(:disabled) {
+  box-shadow: 0 0 0 1px rgba(159, 245, 216, .75) inset, 0 .1rem .42rem rgba(23, 217, 160, .55);
+}
+/* 鐭睆锛氳钀介偅棰椾笌 CTA 閮芥敹灏忎絾浠?鈮?0px 瑙︽懜鍦版澘銆?
+   涓氫富 2026-10-30锛?*鑳屾櫙鍥炬墜鏈轰笂涔熻鐢?*锛堝拰妗岄潰鍚屼竴寮狅級锛屽彧鎶婁笉閫忔槑搴︽敹涓€妗ｃ€侀伄缃╃収鏃э紝淇濊瘉瀛椾粛鍙
+   锛堝師鏉ヨ繖閲屾槸 `display: none`锛屾墜鏈轰簩绾ч〉鏄函娣辫壊搴曪級銆?*/
+@media (max-height: 520px) {
+  .ext-theme[data-theme] .ext-theme__art-img { display: block; opacity: .5; }
+  .ext-theme__corner { left: 0; bottom: calc(100% + .06rem); gap: .04rem; }
+  .ext-theme__dock { gap: .04rem; }
+  .ext-theme__slot { min-height: max(.34rem, 30px); padding: 0 .1rem; }
+  /* 骞插憳璋冮厤鍦ㄧ煯灞忎粛鏄?32px 瑙︽懜鍦版澘锛堝畠鏄竴鎵囬棬锛屼笉鏄楗帮級锛屽彧鏀剁獎涓嶆敹楂?*/
+  .ext-theme__loadout { min-height: max(.32rem, 32px); padding: .02rem .12rem .02rem .06rem; font-size: max(11px, calc(.15 * var(--t))); }
+  /* 鐭睆涔熷畧浣?44px 瑙︽懜鍦版澘锛堜笟涓?2026-10-28 e2e锛?44/667 鏇炬帀鍒?32px锛夆€斺€?鍙敹绐勶紝涓嶆敹楂橈紱鍗℃睜璋冩暣绐勬潯涓嶄綆浜?30px */
+  .ext-theme__start.is-cta { min-width: 1.5rem; min-height: max(.56rem, 32px, calc(44px * var(--sp-ui, 1))); padding: 0 .22rem; font-size: max(13px, calc(.2 * var(--t))); }
+}
+/* 鍑忓姩鏁堬細CTA 涓嶅仛浣嶇Щ涓庢彁浜繃娓★紙瑙勫垯鍐欏湪涓婇潰鐨?reduce 鍧楅噷锛屽悓涓€涓潡 鈥斺€?鏈枃浠剁殑銆屾渶鍚庝竴涓?reduce 鍧椼€嶅繀椤昏繕鏄畠锛?*/
+
+/* ==========================================================================================
+   鍗℃睜璋冩暣锛堜笟涓?2026-10-28 鏅氾紝鍙ｅ緞 =銆岀淮鎸佸師鐗堢殑鐣岄潰閫昏緫銆嶏級锛氫簩绾ч〉閭ｉ閿墦寮€鐨勬槸**鏃㈡湁鐨勫共鍛樿皟閰嶆暣灞?*
+   锛?lo-mode 鍙屾。鍒囨崲鍦?loadout.css 閲岋級锛岃繖閲屽彧鍓╀簩绾ч〉鑷繁鐨勪袱棰楅敭锛氳鍒?/ 鍗℃睜璋冩暣銆?
+   瀹冧滑涓庛€屾敾鐣ヨ鏄庛€嶅悓涓€褰㈢姸锛?ext-theme__guide锛夛紝鍙槸鍚勫甫鑷繁鐨勫浘鏍囦笌鑹层€?
+   ========================================================================================== */
+.ext-theme__rules, .ext-theme__pool { color: #bfeee2; border-color: rgba(23, 217, 160, .45); }
+.ext-theme__rules:hover, .ext-theme__pool:hover { color: #eafff8; border-color: #17d9a0; }
+/* 娌℃湁 theme 鐨勭帺娉曞寘浠嶇敤鍒楄〃椤佃剼閭ｉ锛堜繚鐣欙細鏉＄洰澹版槑 poolEdit 鑰屾殏鏃舵病鏈変簩绾ч〉鏃讹級 */
+.ext-foot__pool {
+  flex: none;
+  min-height: max(.44rem, 32px, calc(44px * var(--sp-ui, 1)));
+  padding: 0 .2rem;
+  font-size: max(12px, calc(.2 * var(--t)));
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #bfeee2;
+  cursor: pointer;
+  border: 1px solid rgba(23, 217, 160, .45);
+  border-radius: .1rem;
+  background: rgba(23, 217, 160, .1);
+  transition: background var(--t-fast), border-color var(--t-fast);
+}
+.ext-foot__pool:hover { background: rgba(23, 217, 160, .18); border-color: #17d9a0; }
+.ext-foot__pool:focus-visible { outline: 2px solid #17d9a0; outline-offset: 2px; }
+
+/* 鐭睆锛堚墹520 楂橈級锛氫簩绾ч〉閭ｄ袱棰楅敭鏀跺皬锛屼粛鍦ㄨ鍙ｉ噷 */
+@media (max-height: 520px) {
+  .ext-foot__pool { min-height: max(.44rem, 32px); font-size: max(11px, calc(.17 * var(--t))); padding: 0 .14rem; }
+  .ext-theme__rules, .ext-theme__pool { min-height: max(.44rem, 30px); padding: .04rem .1rem; }
+}
+
+/* 鐐告儕妯℃嫙鐨勪簩绾ч〉锛氭病鏈変富瑙嗚鏃舵妸妗ｆ涓庤鐐?*鍨傜洿灞呬腑**锛堜笟涓?2026-10-28 鏅氾級鈥斺€旇绌虹櫧鐪嬭捣鏉ユ槸鎺掔増锛岃€屼笉鏄己鍥俱€?
+   鍙綔鐢ㄤ簬 [data-theme="zhajing"]锛氭巩鐏偅涓€灞忔湁涓昏瑙夛紝閫愬瓧鑺備笉鍙樸€傜煯灞忎粛浠庨《閮ㄦ帓鍒楋紙瑙佷笅闈㈢殑 media锛夈€?*/
+.ext-theme[data-theme="zhajing"] .ext-theme__body { flex: 1; justify-content: center; }
+@media (max-height: 520px) {
+  .ext-theme[data-theme="zhajing"] .ext-theme__body { flex: none; justify-content: flex-start; }
+}
+
+/* ==========================================================================================
+   婀伃妯℃嫙 路 浜岀骇椤电殑銆屽姛鑳借缃€嶏紙涓氫富 2026-10-28 鏅氾級锛? 涓紑鍏筹紙4 鏉¤鍒?+ 4 鏉″唴瀹癸級銆?
+   瑙勫垯琛岀洿鎺ョ敤瑙勫垯琛ㄨ嚜宸辩殑 `phrase[option]`锛屽唴瀹硅鐢ㄥ洓鏉℃柊璇嶆潯锛涘紑鍏虫槸 role="switch" 鐨勬暣琛屾寜閽紝瑙︽懜鍦版澘 24px銆?
+   ========================================================================================== */
+.annmods__body { display: flex; flex-direction: column; gap: .1rem; min-height: 0; }
+.annmods__ro { display: flex; align-items: center; gap: .08rem; margin: 0; font-size: max(11px, calc(.15 * var(--t))); color: var(--amber, #f0b429); }
+.annmods__ro .icon { width: max(.16rem, 11px); height: max(.16rem, 11px); flex: none; }
+.annmods__list { display: flex; flex-direction: column; gap: .04rem; margin: 0; padding: 0; list-style: none;
+  max-height: 54vh; overflow: auto; }
+.annmods__sw { display: flex; align-items: center; gap: .1rem; width: 100%; min-height: max(.4rem, 32px); padding: .04rem .06rem;
+  font: inherit; text-align: left; color: var(--text-md); cursor: pointer; background: none; border: 0; border-radius: .06rem; }
+.annmods__sw:hover:not(:disabled) { background: rgba(23, 217, 160, .08); }
+.annmods__sw:disabled { cursor: default; opacity: .7; }
+.annmods__sw:focus-visible { outline: 2px solid #17d9a0; outline-offset: 2px; }
+.annmods__track { flex: none; position: relative; width: max(.6rem, 32px); height: max(.28rem, 16px); border-radius: 999px;
+  background: rgba(255, 255, 255, .12); border: 1px solid var(--line-2); transition: background var(--t-fast), border-color var(--t-fast); }
+.annmods__track i { position: absolute; top: 1px; left: 1px; width: max(.22rem, 12px); height: max(.22rem, 12px); border-radius: 50%;
+  background: #9fb6c6; transition: transform var(--t-fast), background var(--t-fast); }
+.annmods__sw[aria-checked="true"] .annmods__track { background: rgba(23, 217, 160, .28); border-color: rgba(23, 217, 160, .55); }
+.annmods__sw[aria-checked="true"] .annmods__track i { background: #17d9a0; transform: translateX(.3rem); }
+.annmods__label { min-width: 0; font-size: max(12px, calc(.18 * var(--t))); line-height: 1.45; }
+.annmods__row.is-content .annmods__label { color: var(--text-lo); }
+.annmods__foot { display: flex; align-items: center; justify-content: flex-end; gap: .12rem; padding-top: .1rem; border-top: 1px solid var(--line); }
+.annmods__note { margin-right: auto; font-size: max(10px, calc(.14 * var(--t))); color: var(--text-dim); }
+.annmods__count { font-family: var(--font-num); font-weight: 800; color: #17d9a0; }
+.annmods__save { min-height: max(.44rem, 32px, calc(44px * var(--sp-ui, 1))); padding: 0 .28rem;
+  font-size: max(13px, calc(.21 * var(--t))); font-weight: 900; color: #04210f; cursor: pointer;
+  border: 0; border-radius: .1rem; background: linear-gradient(180deg, #4fe8c0, #2fcf9f); }
+.annmods__save:disabled { cursor: not-allowed; color: var(--text-lo); background: rgba(255, 255, 255, .07); }
+.annmods__save:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* 鐭睆锛堚墹520 楂橈級锛氬垪琛ㄨ嚜宸辨粴锛岄〉鑴氭寜閽缁堝湪瑙嗗彛閲?*/
+@media (max-height: 520px) {
+  .annmods__list { max-height: 46vh; }
+  .annmods__sw { min-height: max(.36rem, 28px); }
+}
+.ext-theme[data-theme="zhajing"] .ext-theme__kicker { color: rgba(200, 255, 240, .7); }
+.ext-theme[data-theme="zhajing"] .ext-theme__meta b { color: #4fe8c0; }
+.ext-theme[data-theme="zhajing"] .ext-theme__feats li::before { background: #17d9a0; }
+.ext-theme[data-theme="zhajing"] .ext-theme__ring {
+  border-color: rgba(23, 217, 160, .5);
+  box-shadow: 0 0 1.1rem rgba(23, 217, 160, .3), inset 0 0 .9rem rgba(23, 217, 160, .24);
+}
+.ext-theme[data-theme="zhajing"] .ext-theme__guide { color: #bfeee2; background: rgba(23, 217, 160, .1); border-color: rgba(23, 217, 160, .42); }
+.ext-theme[data-theme="zhajing"] .ext-theme__guide:hover { color: #eafff8; background: rgba(23, 217, 160, .18); border-color: #17d9a0; }
+.ext-theme[data-theme="zhajing"] .ext-theme__start {
+  color: #04210f; background: linear-gradient(180deg, #4fe8c0, #2fcf9f); border-color: #9ff5d8;
+}
+.ext-theme[data-theme="zhajing"] .ext-theme__start:disabled { color: var(--text-lo); background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .12); }
+/* 鍗曚汉 / 鍚岀洘涓庯紙鑻ュ皢鏉ュ０鏄庯級铓€娴佹。浣嶅湪浜岀骇椤甸噷涔熸槸浣欑儸绾細鐐告儕鎹㈡垚鑷繁鐨勭豢 */
+.ext-theme[data-theme="zhajing"] .ext-party__chip.is-on,
+.ext-theme[data-theme="zhajing"] .ext-tier.is-on {
+  color: #04210f; background: linear-gradient(180deg, #4fe8c0, #2fcf9f); border-color: #9ff5d8;
+}
+.ext-theme[data-theme="zhajing"] .ext-theme .ext-party__chip:hover,
+.ext-theme[data-theme="zhajing"] .ext-party__chip:hover,
+.ext-theme[data-theme="zhajing"] .ext-tier:hover { border-color: #17d9a0; }
+
+/* 鎯婂彉涓€瑙堬紙涓氫富 task-16锛?026-10-29锛夛細鐐告儕浜岀骇椤典笂鐨勫彧璇诲叆鍙ｃ€傚舰鐘朵笌銆岃鍒欍€嶃€屾敾鐣ヨ鏄庛€嶅悓涓€棰?.ext-theme__guide锛?
+   杩欓噷鍙ˉ涓€浠朵簨 鈥斺€?鎵嬫満妯睆锛堚墹520 楂橈級鏃?.ext-theme__guide 琚帇鍒?30px锛屾妸瀹冩姮鍥?32px 瑙︽懜涓嬮檺銆傚埆鐨勫昂瀵告部鐢?
+   閭ｄ竴棰楄嚜宸辩殑 max(.52rem, 32px, 36px * --sp-ui)锛氫笉鍦ㄥ闈㈤噸澶嶅０鏄庯紝鍏嶅緱 鐗瑰ぇ 瀛楀彿涓嬪弽鑰屽彉灏忋€?*/
+@media (max-height: 520px) {
+  .ext-theme__codex { min-height: max(.44rem, 32px); }
+}
+/* 鎯婂彉涓€瑙堬紙task-16锛夋部鐢ㄧ殑鏄眬鍐?.zjpanel 澹炽€傚眬鍐呭畠鎸傚湪鎴垮唴灞忎笂锛涘湪澶у爞瀹冩槸涓€鏉?.ext-theme 閲岀殑 fixed 灞傦紝
+   鐖剁骇 grid 鐨勯殣寮忚鏄?auto锛堟寜鍐呭鎾戦珮锛夛紝.zjpanel__box 鐨?max-height: 84% 娌℃湁鍙В鏋愮殑楂樺害鑰屽け鏁?鈥斺€?
+   792脳360 瀹炴祴鐩掑瓙 788px 楂樸€佷笅娌夸几鍑鸿鍙ｃ€傝繖閲屽彧鎶婇偅涓€琛岄拤鎴愯鍙ｉ珮锛岀櫨鍒嗘瘮 max-height 閲嶆柊鐢熸晥锛?
+   99 寮犱粛鐢?.zjpanel__body 鑷繁婊氥€傚彧浣滅敤浜庡ぇ鍫傦紝灞€鍐呴偅浠戒笉鍙楀奖鍝嶃€?*/
+.ext-theme .zjpanel { grid-template-rows: minmax(0, 1fr); }
+
+/* ==========================================================================================
+   鎵嬫満绔殑鎸夐挳闂磋窛锛堜笟涓?2026-11-01锛岀湡鏈烘墍瑙侊級锛氥€岀湅鏉ユ槸鍙犲湪涓€璧枫€嶅疄闄呴兘涓嶆槸鍑犱綍鐩镐氦锛岃€屾槸**璐村緱澶繎** 鈥斺€?
+   瀹炴祴锛?92脳360 / 667脳375 / 844脳390锛変富棰樺ぇ鍘呭乏涓?S.W.E.E.P.鎶ュ憡 涓?骞插憳璋冮厤 鍙殧 2px銆佸ぇ鍘呬笁寮犳ā寮忓崱涔嬮棿 6px銆?
+   閫夋嫨鎷撳睍鐜╂硶 鐨勪袱琛岀帺娉曞寘 6px銆佸ぇ鍘呭彸渚т袱鍧楁澘 5px銆傚洓瀵规帶浠舵寜鍚屼竴鍙ｅ緞鍚勬媺寮€涓€妗ｏ細
+   鈮?00 瀹?+6px銆佲墹520 楂?+4px锛堜袱妗ｄ簰鏂ワ紝涓?`.ext-row` 鐨?64/8銆?6/6 閭ｅ闃舵鍚屼竴绾﹀畾锛夈€?
+   路 鍙敼闂磋窛锛屼笉鏀逛换浣曞彲鐐瑰尯鍩熺殑楂樺害/瀹藉害锛屼篃涓嶅姩 `.ext-list` 鐨?8 / 6锛坱est/ui/extension-modes.test.js:617-624
+     閫愭潯鏂█閭ｄ袱涓暟锛夈€?
+   路 鍏ㄩ儴鍐欏湪濯掍綋鏌ヨ閲岋細1280脳720 涓?1920脳1080 涓ゆ潯鏌ヨ閮戒笉鍛戒腑锛屾闈?rect 閫愬€间笉鍙樸€?
+   路 鏀惧湪鏂囦欢鏈熬鏄湁鎰忕殑锛堣涓婇潰銆屼富棰樺ぇ鍘?路 灏忓睆銆嶄笌 搂35 鐨勮鏄庯級锛歭obby-hub / extension-modes / zhajing-loadout
+     鍑犱釜娴嬭瘯閮芥寜銆岀涓€鏉″悓鏌ヨ濯掍綋鍧椼€嶅彇鐢紝鏂扮殑鍚屾煡璇㈠潡鎻掑埌鍓嶉潰浼氳瀹冧滑璇诲埌閿欑殑鍧椼€?*/
+@media (max-width: 900px) and (min-height: 521px) {
+  /* 鈶?澶у巺绗笁寮犲崱锛堟嫇灞曟ā寮?= 鍐欑潃銆孨 涓帺娉曘€嶇殑閭ｅ紶锛変笌宸﹀彸涓ゅ紶锛?-hub-gap 鍚屾椂鍠?.hub-entries 鐨?gap 涓庢暣鍒?
+     瀹藉害鐨勭畻寮忥紙3 * --hub-entry-w + 2 * --hub-gap锛夛紝鏀硅繖涓€澶勶紝闂磋窛涓庡垪瀹戒竴璧疯蛋锛岃涓嶄細婧㈠嚭涓€鍒椼€?*/
+  .lobby-hub { --hub-gap: calc(.14rem + 6px); }
+  /* 鈶?涓婚澶у巺宸︿笅閭ｄ竴鎽烇細S.W.E.E.P.鎶ュ憡 鍦?骞插憳璋冮厤 涔嬩笂锛堢煯灞忕殑 4px 涓€妗ｅ湪涓嬮潰閭ｆ潯鍧楅噷锛?*/
+  .ext-theme__dock { gap: calc(.05rem + 6px); }
+  /* 鈶?澶у巺鍙充晶锛歋.W.E.E.P.鎶ュ憡 / 骞插憳璋冮厤 涓ゅ潡鏉?*/
+  .hub-right { gap: calc(.12rem + 6px); }
+  /* 鈶?閫夋嫨鎷撳睍鐜╂硶 鐨勪袱琛岀帺娉曞寘锛堣楂?64 / gap 8 涓嶅彉锛屽彧鍦ㄨ涓庤涔嬮棿鍐嶈鍑?6px锛涢€夋嫨鍣ㄦ槸 li锛岃涓婇潰閭ｆ潯娉ㄩ噴锛?*/
+  .ext-body .ext-list > li + li { margin-top: calc(.06rem + 6px); }
+}
+@media (max-height: 520px) {
+  .lobby-hub { --hub-gap: calc(.14rem + 4px); }
+  .ext-theme__dock { gap: calc(.04rem + 4px); }
+  .hub-right { gap: calc(.12rem + 4px); }
+  .ext-body .ext-list > li + li { margin-top: 4px; }
+}
+
+/* 缂轰汉鍚岀洘 (port over the Yuan lobby): card, rows, 鍏ㄩ儴 dialog */
+.hub-recruit { flex: none; background: linear-gradient(180deg, rgba(9, 17, 16, .88), rgba(6, 11, 10, .9)); border: 1px solid var(--line); border-top: 2px solid var(--mint-500);
+  box-shadow: 0 .06rem .24rem rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.hub-recruit__head { display: flex; align-items: center; gap: .08rem; height: .42rem; padding: 0 .08rem 0 .14rem; border-bottom: 1px solid var(--line); }
+.hub-recruit__pulse { width: .08rem; height: .08rem; flex: none; border-radius: 50%; background: var(--text-dim); }
+.hub-recruit__pulse.is-live { background: var(--mint-400); animation: hub-pulse 1.8s ease-out infinite; }
+@keyframes hub-pulse { 0% { box-shadow: 0 0 0 0 rgba(79, 227, 184, .5); } 70%, 100% { box-shadow: 0 0 0 .1rem rgba(79, 227, 184, 0); } }
+.hub-recruit__title { font-size: calc(.17 * var(--t)); font-weight: 800; color: var(--text-hi); letter-spacing: .06em; white-space: nowrap; }
+.hub-recruit__en { font: 700 .1rem/1 var(--font-num, ui-monospace); letter-spacing: .2em; color: var(--mint-400); opacity: .7; }
+.hub-recruit__n { min-width: .24rem; padding: .02rem .06rem; text-align: center; font-size: calc(.13 * var(--t)); font-weight: 800; color: #04140f; background: var(--mint-500); }
+.hub-recruit__all { margin-left: auto; display: inline-flex; align-items: center; gap: .02rem; padding: .04rem .06rem; font-size: calc(.13 * var(--t));
+  color: var(--text-lo); background: none; border: 0; cursor: pointer; white-space: nowrap; }
+.hub-recruit__all:hover { color: var(--mint-400); }
+.hub-recruit__all .icon { width: .14rem; height: .14rem; }
+/* A fixed row height for every language: long translations wrap to two lines inside it instead of changing the card's
+   size (the whole point is that switching language never moves the hub). */
+.hub-recruit__list { --row-h: .64rem; height: calc(var(--row-h) * 3 + .08rem + .16rem); padding: .08rem; display: flex; flex-direction: column; gap: .04rem; }
+.hub-recruit__row { position: relative; display: flex; align-items: center; gap: .1rem; height: var(--row-h); flex: none; padding: 0 .08rem 0 .14rem;
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--line); transition: background var(--t-fast), border-color var(--t-fast); }
+.hub-recruit__row::before { content: ''; position: absolute; left: 0; top: .08rem; bottom: .08rem; width: 3px; background: var(--d-color, var(--mint-500)); }
+.hub-recruit__row:hover { background: var(--mint-a10); border-color: var(--mint-a20); }
+.hub-recruit__info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .03rem; }
+.hub-recruit__name { font-size: calc(.15 * var(--t)); font-weight: 700; color: var(--text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* two lines at most (the meta line is where en / ja / ko run long) */
+.hub-recruit__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 .06rem; font-size: calc(.12 * var(--t)); color: var(--d-color, var(--text-lo));
+  white-space: normal; line-height: 1.35; max-height: 2.7em; overflow: hidden; }
+.hub-recruit__meta .diff-glyph { width: .14rem; height: .14rem; flex: none; }
+.hub-recruit__fp { color: var(--amber); }
+.hub-recruit__sep { color: var(--text-dim); }
+.hub-recruit__top { display: flex; align-items: center; gap: .06rem; min-width: 0; }
+.hub-recruit__name { flex: 0 1 auto; }
+.hub-recruit__host { min-width: 0; overflow: hidden; word-break: break-word; }
+.hub-recruit__bots { flex: none; font-size: calc(.11 * var(--t)); color: var(--text-lo); border: 1px solid var(--line); padding: 0 .05rem; line-height: 1.5; }
+.hub-recruit__need .num { font-variant-numeric: tabular-nums; }
+.hub-recruit__seats { display: flex; flex-direction: column; align-items: flex-end; gap: .04rem; flex: none; min-width: 1.05rem; }
+.hub-recruit__need { font-size: calc(.12 * var(--t)); color: var(--amber); white-space: normal; text-align: right; line-height: 1.35; max-height: 2.7em; overflow: hidden; }
+.hub-recruit__pips { display: flex; gap: 2px; }
+.hub-recruit__pips i { width: .07rem; height: .12rem; background: rgba(255, 255, 255, .16); }
+.hub-recruit__pips i.is-on { background: var(--mint-400); }
+.hub-recruit__need b { margin: 0 .02rem; font-size: calc(.14 * var(--t)); }
+.hub-recruit__join { flex: none; height: .36rem; padding: 0 .16rem; font-size: calc(.14 * var(--t)); font-weight: 800; color: #04140f; background: var(--mint-500);
+  border: 0; cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% 68%, 84% 100%, 0 100%); transition: background var(--t-fast); }
+.hub-recruit__join:hover:not(:disabled) { background: var(--mint-400); }
+.hub-recruit__join:disabled { opacity: .45; cursor: default; }
+.hub-recruit__empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem;
+  color: var(--text-dim); font-size: calc(.14 * var(--t)); border: 1px dashed var(--line); }
+.hub-recruit__create { display: inline-flex; align-items: center; gap: .02rem; padding: .05rem .14rem; font-size: calc(.13 * var(--t)); font-weight: 700;
+  color: var(--mint-400); background: transparent; border: 1px solid var(--mint-a35); cursor: pointer; }
+.hub-recruit__create:hover { background: var(--mint-a10); }
+.hub-recruit__create .icon { width: .14rem; height: .14rem; }
+
+/* 閸忋劑鍎? the same rows in one scrollable dialog list */
+.recruit-all { display: flex; flex-direction: column; gap: .06rem; max-height: min(9rem, 56vh); overflow: auto; }
+.recruit-all .hub-recruit__row { height: .64rem; }
+.recruit-all__empty { margin: .3rem 0; text-align: center; color: var(--text-dim); }
+
+/* 缂轰汉鍚岀洘 header: 鎼滃闃熷弸 + 鍏ㄩ儴 */
+.hub-recruit__search { display: inline-flex; align-items: center; gap: .04rem; margin-left: auto; padding: 0 .06rem; height: .2rem;
+  font-size: calc(.11 * var(--t)); font-weight: 700; color: var(--mint-400); background: var(--mint-a10);
+  border: 1px solid var(--mint-a35); cursor: pointer; white-space: nowrap; }
+.hub-recruit__search .icon { width: .12rem; height: .12rem; }
+.hub-recruit__search:hover { background: var(--mint-a20); }
+.hub-recruit__head .hub-recruit__all { margin-left: .04rem; }
+
+/* 鎼滃闃熷弸 dialog */
+.hub-matchmodes { display: flex; flex-direction: column; gap: .06rem; }
+.hub-matchmodes__hint { margin: 0 0 .02rem; color: var(--text-lo); font-size: calc(.13 * var(--t)); }
+.hub-matchmodes__row { display: flex; align-items: center; gap: .1rem; padding: .08rem .1rem; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .03); }
+.hub-matchmodes__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .02rem; }
+.hub-matchmodes__name { font-weight: 700; color: var(--text-hi); }
+.hub-matchmodes__meta { font-size: calc(.11 * var(--t)); color: var(--text-dim); letter-spacing: .08em; }
+.hub-matchmodes__go { flex: none; height: .3rem; padding: 0 .14rem; font-weight: 800; color: #04140f; background: var(--mint-500);
+  border: 0; cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% 68%, 84% 100%, 0 100%); }
+.hub-matchmodes__go:hover { background: var(--mint-400); }
+
+/* 鎼滃涓殑娴潯 */
+.hub-match { position: fixed; left: 50%; bottom: .3rem; transform: translateX(-50%); z-index: 70; display: flex; align-items: center; gap: .08rem;
+  padding: .1rem .12rem; background: rgba(8, 16, 12, .94); border: 1px solid var(--mint-a35); box-shadow: 0 .08rem .3rem rgba(0,0,0,.5);
+  color: var(--text-hi); font-size: calc(.13 * var(--t)); }
+.hub-match__dot { width: .1rem; height: .1rem; border-radius: 50%; background: var(--mint-400); animation: hub-match-pulse 1.2s ease-in-out infinite; }
+.hub-match__text { display: flex; align-items: baseline; gap: .06rem; }
+.hub-match__text b { color: var(--mint-400); font-weight: 800; }
+.hub-match__text span { color: var(--text-dim); font-size: calc(.11 * var(--t)); }
+.hub-match__cancel { margin-left: .04rem; height: .24rem; padding: 0 .1rem; font-weight: 700; color: var(--text-hi);
+  background: transparent; border: 1px solid var(--line); cursor: pointer; }
+.hub-match__cancel:hover { border-color: var(--mint-a35); }
+@keyframes hub-match-pulse { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+
+
+/* 同盟模拟 dialog: 搜寻队友 entry */
+.ally-search { display: flex; align-items: center; gap: .08rem; width: 100%; padding: .08rem .1rem; margin-top: .06rem;
+  background: var(--mint-a10); border: 1px solid var(--mint-a35); color: var(--text-hi); cursor: pointer; text-align: left; }
+.ally-search .ally-card__icon { width: .22rem; height: .22rem; display: inline-flex; align-items: center; justify-content: center; color: var(--mint-400); }
+.ally-search .ally-card__name { font-weight: 800; }
+.ally-search small { color: var(--text-lo); font-size: calc(.11 * var(--t)); }
+.ally-search:hover { border-color: var(--mint-500); }
+.ally-search:disabled { opacity: .45; cursor: default; }
+
+/* 拓展模式 theme hall: 搜寻队友 next to 开始 */
+.ext-theme__search { display: inline-flex; align-items: center; gap: .06rem; height: .44rem; padding: 0 .18rem;
+  font-weight: 800; font-size: calc(.15 * var(--t)); color: var(--mint-400); background: transparent;
+  border: 1px solid var(--mint-a35); cursor: pointer; }
+.ext-theme__search:hover:not(:disabled) { background: var(--mint-a10); }
+.ext-theme__search:disabled { opacity: .45; cursor: default; }
+.ext-theme__search .ext-theme__starticon { width: .18rem; height: .18rem; }
+
+/* 搜寻队友 difficulty picker */
+.hub-matchpick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .06rem; max-height: min(7rem, 56vh); overflow: auto; padding: .02rem; }
+
+/* --- 按键融入周围界面：同盟页的搜寻队友是「玻璃条」，不是主 CTA ----------------------------- */
+.ally-search { display: flex; align-items: center; gap: .08rem; width: 100%; padding: .07rem .1rem; margin-top: .06rem;
+  background: rgba(255, 255, 255, .03); border: 1px solid var(--line); color: var(--text-hi); cursor: pointer; text-align: left; }
+.ally-search .ally-card__icon { width: .22rem; height: .22rem; display: inline-flex; align-items: center; justify-content: center; color: var(--mint-400); }
+.ally-search .ally-card__name { font-weight: 800; font-size: calc(.15 * var(--t)); }
+.ally-search small { margin-left: auto; color: var(--text-lo); font-size: calc(.11 * var(--t)); }
+.ally-search:hover { border-color: var(--mint-a35); background: var(--mint-a10); }
+.ally-search:disabled { opacity: .45; cursor: default; }
+
+/* --- 主题大厅：搜寻队友与蚀流档位同为页脚小件，配色取主题色（湮灭红 / 炸惊绿） ------------ */
+.ext-theme__search { display: inline-flex; align-items: center; gap: .05rem; height: .34rem; padding: 0 .12rem;
+  font-size: calc(.13 * var(--t)); font-weight: 700; letter-spacing: .04em; color: var(--text-md);
+  background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .16); border-radius: .04rem; cursor: pointer; }
+.ext-theme__search .ext-theme__starticon { width: .16rem; height: .16rem; }
+.ext-theme__search:hover:not(:disabled) { border-color: var(--x-color, #ff8a6a); color: var(--x-color, #ffb59f); }
+.ext-theme[data-theme="zhajing"] .ext-theme__search:hover:not(:disabled) { border-color: #4fe8c0; color: #9ff5d8; }
+.ext-theme__search:disabled { opacity: .45; cursor: default; }
+
+/* 同盟页搜寻队友：与「加入同盟」的玻璃条同高、左图标 + 左标题 + 右侧小字 ------------------------ */
+.ally-search { flex-direction: row; align-items: center; justify-content: flex-start; height: auto; min-height: .44rem; }
+.ally-search .ally-card__icon { flex: none; }
+.ally-search .ally-card__name { flex: none; text-align: left; }
+.ally-search small { flex: 1; margin-left: .08rem; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 搜寻队友：同盟页的显眼操作条（薄荷徽标 + 左强调边 + 渐变底） */
+.ally-search { display: flex; align-items: center; gap: .1rem; width: 100%; min-height: .6rem; padding: .08rem .14rem;
+  margin-top: .06rem; text-align: left; cursor: pointer; color: var(--text-hi);
+  background: linear-gradient(100deg, rgba(71, 201, 169, .16), rgba(71, 201, 169, .03) 70%);
+  border: 1px solid var(--mint-a35); border-left: 3px solid var(--mint-500); }
+.ally-search__icon { flex: none; width: .34rem; height: .34rem; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--mint-a10); border: 1px solid var(--mint-a35); color: var(--mint-400); }
+.ally-search__icon .icon { width: .18rem; height: .18rem; }
+.ally-search__text { display: flex; flex-direction: column; gap: .03rem; min-width: 0; }
+.ally-search__text b { font-size: calc(.17 * var(--t)); font-weight: 900; letter-spacing: .04em; color: var(--mint-400); }
+.ally-search__text small { color: var(--text-lo); font-size: calc(.11 * var(--t)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ally-search__go { flex: none; margin-left: auto; width: .2rem; height: .2rem; color: var(--mint-400); }
+.ally-search:hover { background: linear-gradient(100deg, rgba(71, 201, 169, .24), rgba(71, 201, 169, .06) 70%); border-color: var(--mint-500); }
+.ally-search:disabled { opacity: .45; cursor: default; }
+
+/* 拓展大厅：搜寻队友提升为与开始同高的次级 CTA，边框取玩法主题色 */
+.ext-theme__search { height: .46rem; padding: 0 .2rem; font-size: calc(.16 * var(--t)); font-weight: 800;
+  color: var(--text-hi); background: rgba(0, 0, 0, .45);
+  border: 1px solid var(--x-color, #ff8a6a); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+.ext-theme__search .ext-theme__starticon { width: .22rem; height: .22rem; }
+.ext-theme__search:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
+.ext-theme[data-theme="zhajing"] .ext-theme__search { border-color: #2fcf9f; }
+
+/* 排队条也要容易被看到 */
+.hub-match { padding: .12rem .16rem; border-color: var(--mint-500);
+  box-shadow: 0 0 .2rem rgba(71, 201, 169, .25), 0 .08rem .3rem rgba(0, 0, 0, .5); font-size: calc(.15 * var(--t)); }
+.hub-match__text b { font-size: calc(.16 * var(--t)); }
+
+/* 拓展玩法大厅里的「缺人同盟」：只列本玩法的房间 */
+.ext-recruit { margin-top: .14rem; width: min(4.6rem, 100%); display: flex; flex-direction: column; gap: .04rem;
+  padding: .08rem .1rem; background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .14); border-left: 3px solid var(--x-color, #ff8a6a); }
+.ext-recruit__title { display: flex; align-items: baseline; gap: .06rem; font-weight: 800; font-size: calc(.14 * var(--t)); color: var(--text-hi); }
+.ext-recruit__title b { color: var(--x-color, #ff8a6a); font-variant-numeric: tabular-nums; }
+.ext-recruit__row { display: flex; align-items: center; gap: .08rem; padding: .05rem .06rem; background: transparent;
+  border: 1px solid transparent; color: var(--text-md); cursor: pointer; text-align: left; }
+.ext-recruit__row:hover { border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .05); }
+.ext-recruit__code { color: var(--text-hi); font-weight: 700; }
+.ext-recruit__host { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ext-recruit__seats { color: var(--text-lo); }
+.ext-recruit__join { color: var(--x-color, #ff8a6a); font-weight: 800; }
+.ext-recruit__empty { color: var(--text-dim); font-size: calc(.12 * var(--t)); }
+.ext-theme[data-theme="zhajing"] .ext-recruit { border-left-color: #2fcf9f; }
+.ext-theme[data-theme="zhajing"] .ext-recruit__title b,
+.ext-theme[data-theme="zhajing"] .ext-recruit__join { color: #4fe8c0; }
+
+/* 主题大厅：单人/同盟与「开始」同高；搜寻队友模仿开始按键（同尺寸，次级配色） */
+.ext-theme__foot { --ext-cta-h: max(.56rem, 32px, calc(52px * var(--sp-ui, 1))); gap: .08rem; }
+.ext-theme__foot .ext-party { gap: .06rem; }
+.ext-theme__foot .ext-party__chip { min-width: 0; min-height: var(--ext-cta-h); height: var(--ext-cta-h);
+  padding: 0 .22rem; font-size: max(14px, calc(.19 * var(--t))); letter-spacing: .08em; border-radius: .1rem; }
+.ext-theme__foot .ext-theme__start.is-cta { min-height: var(--ext-cta-h); }
+.ext-theme__foot .ext-theme__search { min-height: var(--ext-cta-h); height: var(--ext-cta-h); padding: 0 .3rem;
+  font-size: max(15px, calc(.22 * var(--t))); font-weight: 900; letter-spacing: .06em; border-radius: .1rem;
+  color: var(--x-color, #ff8a6a);
+  background: linear-gradient(180deg, rgba(255, 138, 106, .16), rgba(232, 92, 58, .08));
+  border: 1px solid var(--x-color, #ff8a6a);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .06) inset; }
+.ext-theme__foot .ext-theme__search:hover:not(:disabled) { filter: brightness(1.12); }
+.ext-theme[data-theme="zhajing"] .ext-theme__foot .ext-theme__search {
+  color: #4fe8c0;
+  background: linear-gradient(180deg, rgba(79, 232, 192, .16), rgba(47, 207, 159, .08));
+  border-color: #2fcf9f; }
+
+@media (max-height: 520px) {
+  .ext-theme__foot { --ext-cta-h: max(.56rem, 32px, calc(44px * var(--sp-ui, 1))); }
+  .ext-theme__foot .ext-party__chip { padding: 0 .16rem; font-size: max(12px, calc(.16 * var(--t))); }
+  .ext-theme__foot .ext-theme__search { padding: 0 .2rem; font-size: max(13px, calc(.18 * var(--t))); }
+}
+
+/* 搜寻队友：与开始同一套填充式 CTA 造型（同高同圆角同字重），用较暗的主题色做次级 */
+.ext-theme__foot .ext-theme__search {
+  color: #ffe2d8;
+  background: linear-gradient(180deg, #7a2b22, #4a1712);
+  border: 1px solid #b84634;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08) inset, 0 .04rem .2rem rgba(0, 0, 0, .45);
+}
+.ext-theme__foot .ext-theme__search:hover:not(:disabled) { filter: brightness(1.12); }
+.ext-theme[data-theme="zhajing"] .ext-theme__foot .ext-theme__search {
+  color: #d9fff3;
+  background: linear-gradient(180deg, #1e7f66, #0f4c3d);
+  border-color: #2fcf9f;
+}
+
+/* 同盟弹窗：搜寻队友与创建/加入同一条缓进动画（延迟介于两者之间：240 / 310 / 380ms） */
+.ally-search { animation: tr-right 420ms var(--tr-ease) 310ms backwards; }
+
+/* 搜寻队友难度网格：超限与主游戏难度同一组；超限卡片拉通两列，宽度=原来两张卡 */
+.hub-matchpick { grid-auto-flow: row; }
+.hub-matchpick .diff-card[data-difficulty="INFINITE"] { grid-column: 1 / -1; width: 100%; }
+
+/* 匹配难度弹窗：只留难度名/要点，去掉简介与效果行，一屏放下不滚动 */
+.hub-matchpick--compact { max-height: none; overflow: visible; gap: .05rem; }
+.hub-matchpick--compact .diff-card { min-height: 0; padding: .07rem .1rem; }
+.hub-matchpick--compact .pcard__desc,
+.hub-matchpick--compact .pcard__effects { display: none; }
+.hub-matchpick--compact .pcard__name { font-size: calc(.2 * var(--t)); }
+.hub-matchpick--compact .pcard__meta { margin-top: .02rem; }
+.hub-matchpick--compact .pcard__stamp { display: none; }
+
+/* 四张主难度卡等高；超限保留简介（其他卡仍不显示简介/效果） */
+.hub-matchpick--compact .diff-card { min-height: max(calc(.74 * var(--t)), 52px); justify-content: flex-start; }
+.hub-matchpick--compact .diff-card[data-difficulty="INFINITE"] { min-height: 0; }
+.hub-matchpick--compact .diff-card[data-difficulty="INFINITE"] .pcard__desc { display: block; }
+
+/* 四张主难度卡等高：按设计单位（1rem≈58px）取最高的那张 */
+.hub-matchpick--compact .diff-card { min-height: max(calc(1.08 * var(--t)), 62px); }

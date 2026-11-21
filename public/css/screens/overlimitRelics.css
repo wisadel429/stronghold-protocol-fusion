@@ -1,0 +1,166 @@
+/* public/css/screens/overlimitRelics.css — 超限「词条」三选一浮层的补充规则（业主 2026-10-31）。
+ *
+ * .zjov / .zjov__* / .zjcard / .zjcard__* 的版式、尺寸与 --zj-u 缩放全部来自 css/screens/jibian.css ——
+ * 词条三选一与惊变三选一是**同一套浮层**，这里只补三样它没有的东西：
+ *   1. 分组色条：--zj-r 按 data-group 覆写（.zjcard::before 直接读它）；
+ *   2. 卡面右上角那枚极小的「未实装」角标（第一批 36 条效果全是 pending 的桩）；
+ *   3. 眉题（OVERLIMIT // RELIC）的冷色调，与惊变的荧光绿区分开。
+ * 所有尺寸照旧写 calc(k * var(--zj-u))，字号 max(px, calc(k * var(--t)))，与惊变浮层一起随「文字大小」缩放。
+ */
+
+.zjov--relic .zjov__micro { color: #7fa8ff; }
+.zjov--relic .zjcard[data-group="lc"] { --zj-r: #f0b429; }
+.zjov--relic .zjcard[data-group="sp"],
+.zjov--relic .zjcard[data-group="fgoSP"] { --zj-r: #17d9a0; }
+.zjov--relic .zjcard[data-group="ex"],
+.zjov--relic .zjcard[data-group="fgoX"] { --zj-r: #d64bff; }
+.zjov--relic .zjcard[data-group="fgo"] { --zj-r: #7fa8ff; }
+.zjov--relic .zjcard[data-group="neg"] { --zj-r: #ff4d4d; }
+
+/* ---- 负面词条（业主 2026-10-31 第二批）：同一套浮层，警示色区分 ---------------------------------------------
+ * 三处区分，全部是**视觉**（没有一个字节的新文案）：
+ *   1. 眉题：OVERLIMIT // NEGATIVE（技术字，与 RELIC 同一个写法）+ 红色；
+ *   2. 卡框：.zjcard.is-neg 的描边 / 底色偏红，分组色条 --zj-r 走 data-group="neg" 的 #ff4d4d；
+ *   3. 档位：名字末尾自带当前档（ui/overlimitRelics.js 的 tierName），**编号旁那枚档位小片已撤掉**（业主 2026-11-01
+ *      收尾：名字带档以后它是重复信息）；档位只剩分档三行的行首标记，见下面「档位分条」。
+ * 尺寸照旧 calc(k * var(--zj-u)) / max(px, calc(k * var(--t)))，与惊变浮层一起随「文字大小」缩放。 */
+
+.zjov--neg .zjov__micro { color: #ff4d4d; }
+.zjov--neg .zjov__title { text-shadow: 0 0 calc(.18 * var(--zj-u)) rgba(255, 77, 77, .35); }
+
+.zjov--relic .zjcard.is-neg {
+  border-color: rgba(255, 77, 77, .55);
+  background-image: linear-gradient(180deg, rgba(255, 77, 77, .10), rgba(255, 77, 77, 0) 46%);
+}
+.zjov--relic .zjcard.is-neg .zjcard__rarity { color: #ff8a8a; }
+
+.zjov--relic .zjcard__pending {
+  flex: none;
+  margin-left: auto;
+  align-self: flex-start;
+  padding: calc(.02 * var(--zj-u)) calc(.08 * var(--zj-u));
+  border: 1px solid rgba(159, 182, 198, .4);
+  border-radius: calc(.06 * var(--zj-u));
+  background: rgba(6, 14, 13, .62);
+  color: var(--text-lo);
+  font-size: max(9px, calc(.16 * var(--t)));
+  letter-spacing: .08em;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---- 档位分条（业主 2026-11-01）：带 Ⅰ/Ⅱ/Ⅲ 的负面词条在局内**按档拆行**画 -----------------------------
+ * 数据里一个名称、一段 desc 里三个数值（「-2 / -4 / -6」），局内原来合并成一条，读不出自己拿到的是哪一档。
+ * 现在三选一卡面与已选面板都画成三行（档位标记 `.zjcard__tierlab` / `.zjsel__tierlab` + 该档自己的 effect 全文，
+ * 切法在 ui/overlimitRelics.js `tierTexts`）：当前这一档 `.is-cur` 正常亮度 + 红底，其余两档压暗但**不隐藏、
+ * 不省略号** —— 卡面要知道这一张是哪一档，面板要知道这条词条的整条阶梯。没有档位的条目一律不画这块。
+ * 尺寸照旧 calc(k * var(--zj-u)) / max(px, calc(k * var(--t)))，与浮层一起随「文字大小」缩放。 */
+
+.zjov--relic .zjcard__tiers,
+.zjpanel--relics .zjsel__tiers { display: flex; flex-direction: column; gap: calc(.04 * var(--zj-u)); min-width: 0; }
+.zjov--relic .zjcard__tierline,
+.zjpanel--relics .zjsel__tierline { display: flex; align-items: baseline; gap: calc(.06 * var(--zj-u)); min-width: 0;
+  font-size: max(11px, calc(.22 * var(--t))); line-height: 1.6; color: var(--text-lo); overflow-wrap: anywhere; }
+.zjov--relic .zjcard__tierline.is-cur,
+.zjpanel--relics .zjsel__tierline.is-cur { color: var(--text-hi); }
+.zjov--relic .zjcard__tierlab,
+.zjpanel--relics .zjsel__tierlab { flex: none; min-width: 1.1em; font-style: normal; text-align: center;
+  border: 1px solid rgba(255, 138, 138, .45); border-radius: calc(.05 * var(--zj-u)); color: #ffb4b4; }
+.zjov--relic .zjcard__tierline.is-cur .zjcard__tierlab,
+.zjpanel--relics .zjsel__tierline.is-cur .zjsel__tierlab { background: rgba(255, 77, 77, .18); border-color: rgba(255, 138, 138, .8); color: #fff; }
+
+/* ---- 已选词条面板（左下角那颗「词条」独立键，业主 2026-10-31）---------------------------------------------
+ * 做法照抄炸惊的「已选惊变」：外壳 .zjpanel（.zjpanel__head / __body / __box）、列表 .zjpanel__grid、
+ * 行 .zjsel 全部来自 css/screens/jibian.css，尺寸与文字缩放一起继承 —— 本文件只补三样它没有的东西：
+ *   1. 分组色条：.zjsel::before 那根 3px 竖条读 --zj-r，这里按 data-group 覆写（与词条三选一的卡面同一套颜色）；
+ *   2. 矮屏限高（792×360 上正文自己滚，外壳留在视口里）；
+ *   3. ✕ 的 32px 触控地板（jibian.css 是 max(.44rem, 24px)，手机上低于本仓认可的可点下限）。
+ */
+
+/* 1. 分组色条（颜色表与上面 .zjcard[data-group] 那组逐字相同） */
+.zjpanel--relics .zjsel[data-group="lc"] { --zj-r: #f0b429; }
+.zjpanel--relics .zjsel[data-group="sp"],
+.zjpanel--relics .zjsel[data-group="fgoSP"] { --zj-r: #17d9a0; }
+.zjpanel--relics .zjsel[data-group="ex"],
+.zjpanel--relics .zjsel[data-group="fgoX"] { --zj-r: #d64bff; }
+.zjpanel--relics .zjsel[data-group="fgo"] { --zj-r: #7fa8ff; }
+/* 负面词条行（业主 2026-10-31 第二批）：同一块列表，警示红色条 + 名字偏红。
+   档位不再单独画小片（业主 2026-11-01 收尾：名字已带当前档），只由分档三行的行首标记表达。 */
+.zjpanel--relics .zjsel[data-group="neg"] { --zj-r: #ff4d4d; }
+.zjpanel--relics .zjsel--neg .zjsel__name { color: #ffb4b4; }
+
+/* 效果全文（业主 2026-11-01）：「已选」里每条词条都要能读到完整效果，与三选一卡面同一份 desc 文案。
+ * jibian.css 的 .zjsel__desc 是「两行 + 省略号」（惊变面板那一行放不下就收），这里覆盖成整段换行、不截断 ——
+ * 还是同一枚 class、同一套 RichText，不另起第二套版式；太长时由 .zjpanel__body 自己滚。 */
+.zjpanel--relics .zjsel__desc { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible;
+  font-size: max(11px, calc(.2 * var(--t))); line-height: 1.5; }
+
+/* ---- 图标放大（业主 2026-11-02「图标小了」）：两处都长到身边那块文字的高度 ------------------------------------
+ * 量出来的旧值（真超限房、UI 层注入 sp 与 m.private.relicsOverlimit；值 = 792×360 / 1920×1080，见 handoff 对照表）：
+ *   · 卡面 .zjcard__icon 26 / 78 px（= .78 * --zj-u），可它所在的 .zjcard__top 行高由「名字 + 编号」两块文字决定，
+ *     实测 38.64 / 80 px —— 图标比自己的行矮一截，同一行里看着就小；
+ *   · 面板行 .zjsel__icon 17.59 / 44 px（= .44rem），而一行里的名字就 18 / 36 px、三档效果块 69 / 153 px。
+ * 改法（只动这两处盒子与它们内部 img 的尺寸，数据 / 切档 / 配色一个字节不动）：
+ *
+ * 1. 卡面：**图标 = 它自己那一行的高度**。.zjcard__top 在词条卡上改成同一套三列网格（图标 / 标题 / 角标），
+ *    图标 align-self: stretch + aspect-ratio: 1 长到行高，img 绝对定位居中填满框 —— 内容不再参与图标自身的
+ *    尺寸计算（flex 里 img 的 128 px 自然宽会把图标撑到半张卡宽，实测过），所以**行高仍只由文字决定**：
+ *    卡 rect、三档三行、矮屏等高契约一个像素都不动（792×360 26 → 38.64；1920×1080 78 → 80）。
+ *    行高随字号变，图标就跟着变 —— 这就是「与标题同级」的口径，不另立一套数字。
+ * 2. 面板行：.44rem → .68rem、图 .38rem → .60rem（792×360 17.59 → 27.2；1920×1080 44 → 68），
+ *    网格列宽跟着长，行高照旧由文字撑（三档三行不动）。
+ * 两处仍随「文字大小」缩放：卡面跟 --zj-u（与惊变浮层同一枚变量），面板跟 rem（与惊变面板同一套）。 */
+.zjov--relic .zjcard__top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+  column-gap: calc(.12 * var(--zj-u)); }
+.zjov--relic .zjcard__icon { position: relative; flex: none; width: auto; height: auto; align-self: stretch;
+  aspect-ratio: 1 / 1; }
+.zjov--relic .zjcard__icon img { position: absolute; inset: 0; margin: auto; max-width: 92%; max-height: 92%; }
+/* 兜底占位（图标缺失 / 加载失败时 Img 落回 GIcon 的 <svg class="icon">）：跟着框一起放大。
+   量过：不写这条时框长到 38.64 / 80，里面那枚 bolt 只有 7.19 / 18 —— 一个大空框里一颗小图，比改前更难看。 */
+.zjov--relic .zjcard__icon > .icon { width: 62%; height: 62%; }
+.zjpanel--relics .zjsel__icon { width: .68rem; height: .68rem; }
+.zjpanel--relics .zjsel__icon img { max-width: .60rem; max-height: .60rem; }
+.zjpanel--relics .zjsel__icon > .icon { width: 62%; height: 62%; }
+
+/* 2. 矮屏限高：.zjpanel__box 只有 max-height: 84%，内容撑高时百分比不生效（与局内惊变面板同一条问题的同一条解法，
+      见 css/screens/game.css 的 .gm .zjpanel[data-testid="jibian-panel"]），正文 .zjpanel__body 本来就是 overflow: auto。 */
+.gm .zjpanel--relics .zjpanel__box { max-height: calc(100dvh - .6rem); overflow: hidden; }
+
+/* 3. 触控地板：面板只有一个可点件（右上角 ✕），最小边按 32px 给；遮罩点击整片都是关闭。 */
+.zjpanel--relics .zjpanel__x { width: max(.44rem, 32px); height: max(.44rem, 32px); }
+
+/* 4. 抬头两枚合计（业主 2026-11-02：一左一右、一蓝一红）：蓝 = 正面条数，红 = 负面条数。颜色与左下角那颗「词条」键的
+ *    双色角标同源 —— 浅底深字 + 1px 亮色内描边，色值直接读 theme.css 的 --ice / --red-premium（= #9fd4ff / #ff5454；
+ *    css/screens/game.css 的 .gm__relics__n--pos / --neg 用的就是这两个变量，字色 #0a1c2b / #2a0603 逐字相同）。
+ *    字体 / 字号 / 字距仍沿用 jibian.css 的 .zjcodex__total（Rajdhani、.22 * --t），两枚小片只是多一层 flex 容器；
+ *    某侧为 0 时渲染侧就不画那一枚，所以这里不写空态。 */
+.zjpanel--relics .zjcodex__totals { display: inline-flex; align-items: center; margin-left: auto;
+  gap: max(calc(3px * var(--sp-ui, 1)), .03rem); }
+.zjpanel--relics .zjcodex__total { margin-left: 0; min-width: max(14px, .18rem); text-align: center; border-radius: 99px;
+  padding: max(calc(1px * var(--sp-ui, 1)), .02rem) max(calc(5px * var(--sp-ui, 1)), .06rem); }
+.zjpanel--relics .zjcodex__total--pos { color: #0a1c2b; background: var(--ice); box-shadow: inset 0 0 0 1px #cfe8ff; }
+.zjpanel--relics .zjcodex__total--neg { color: #2a0603; background: var(--red-premium); box-shadow: inset 0 0 0 1px #ff9c9c; }
+
+/* ---- 矮屏（≤520 高，792×360 手机横屏）：三张卡等高，短卡在卡底留白 ------------------------------------------
+ * 业主 2026-11-02：792×360 上三选一这一排是「破坏力Ⅱ / 肉体强化Ⅲ / 自体发电」，三张卡各按自己的内容高
+ * （实测 118.1 / 164.9 / 91.8 px），整排参差；「破坏力Ⅱ」的 Ⅲ 行底边正好等于内容盒底（191.2 vs 191.2），
+ * 卡底再往下只有 7 px 内边距 —— 整排一参差，那一行看起来就像被卡底切掉（业主给的面板截图里同样三行是完整的，
+ * 所以问题只在卡面这一层的高度分配，不在数据 / 拆档）。
+ *
+ * 本块只在矮屏生效（1920×1080 与所有 >520 高的窗口一个像素都不动，见 handoff 的对照 rect）：
+ *   1. 整排按最高那张撑满：.zjov__grid 由 align-items: start 改 stretch，卡自身 height: 100%（行高仍由内容决定，
+ *      所以内容一张都不会被压；矮的那两张在卡底留白）；
+ *   2. 卡内任何一档都不许被裁：.zjcard__tiers 留 min-height: 0 + overflow-y: auto 作兜底 —— 正常情况卡已长高到装下
+ *      三行（不出现滚动条），只有在极端窄高（特大字号 + 超矮视口）时才由 tiers 区在卡内滚动，而不是被 .zjcard 的
+ *      overflow: hidden 切掉。
+ *
+ * 为什么写在这份补充表、而不是 jibian.css 的两个 @media 块：jibian.css 的 (max-width: 900px) 与 (max-height: 520px)
+ * 被 test/ui/zhajing-adapt.test.js 钉成「三选一在这两个断点里一个字都不改」（惊变三选一与词条三选一共用 .zjov/.zjcard，
+ * 但惊变卡还有 .zjcardwrap + 重抽键，版式不同）；等高是词条卡面这一屏的诉求，作用域也因此收在 .zjov--relic 上，
+ * 惊变浮层一个字节都不变。 */
+@media (max-height: 520px) {
+  .zjov--relic .zjov__grid { align-items: stretch; }
+  .zjov--relic .zjcard { height: 100%; }
+  .zjov--relic .zjcard__tiers { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+}

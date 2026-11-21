@@ -1,0 +1,69 @@
+# ============================================================
+#  铁律：本仓库只存源码，绝不包含美术资源
+#  （业主 2026-11-22：不允许二次分发美术资源）
+# ============================================================
+
+# ---- 美术 / 音频 / 字体（素材本体）----
+public/assets/
+public/ui-art/
+public/icons/
+public/fonts/
+public/dev/
+assets/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+*.ico
+*.svg
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.mp3
+*.ogg
+*.wav
+*.m4a
+*.mp4
+*.webm
+*.pptx
+*.psd
+*.ai
+*.fbx
+*.glb
+*.gltf
+*.atlas
+*.skel
+
+# ---- 玩家数据 / 密钥（绝不能公开）----
+data/
+packed/
+admin-password.json
+admin-update-key.json
+launcher-config.json
+protected-allow-login.flag
+*.log
+
+# ---- 运行时、依赖与构建产物 ----
+webview2/
+node/
+node_modules/
+.cache/
+dist/
+pkg/
+profiles/
+plugins*/
+packs/
+tmp/
+_pkg-stage/
+bundle-staging/
+*.zip
+*.rar
+*.7z
+*.apk
+*.exe
+*.dll
+*.bak*
+*.old

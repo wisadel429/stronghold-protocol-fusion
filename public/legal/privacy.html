@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>隐私政策 · 卫戍协议：盟约</title>
+  <style>
+    body { margin: 0; padding: 32px 20px 64px; background: #080b0a; color: #dbe4e0;
+      font: 15px/1.85 "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 24px; margin: 0 0 6px; }
+    h2 { font-size: 16px; margin: 28px 0 8px; color: #17d9a0; }
+    p, li { color: #b4c0bb; }
+    .micro { color: #17d9a0; letter-spacing: .24em; font-size: 11px; text-transform: uppercase; }
+    .muted { color: #6f7f79; font-size: 13px; }
+    a { color: #17d9a0; }
+    ol { padding-left: 22px; }
+    code { background: #141a18; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="micro">Stronghold Protocol // Privacy</p>
+  <h1>隐私政策</h1>
+  <p class="muted">最近更新：2026-11-14 · 本服务器自建自营，数据只存在运营者自己的机器上。</p>
+
+  <h2>1. 我们收集什么</h2>
+  <ol>
+    <li><b>账号信息</b>：用户名、密码的加盐哈希（<code>scrypt</code>，我们看不到明文密码）、昵称、四位 <code>#tag</code>、头像/头像框/名片选择、注册时间、最后登录时间。</li>
+    <li><b>云存档</b>：战绩与统计、干员调配、皮肤与名片、成就、设置。用于换设备后恢复你的进度。</li>
+    <li><b>登录会话</b>：一枚随机令牌，存在你的浏览器 HttpOnly cookie 里（<code>sp_acc</code>，30 天有效）；服务器只保存它的哈希。</li>
+    <li><b>必要的技术日志</b>：连接时间、IP（用于限速与封禁）、异常日志。不用于画像或广告。</li>
+  </ol>
+
+  <h2>2. 我们不会做什么</h2>
+  <ol>
+    <li>不收集邮箱、手机号、真实姓名、身份证件等身份信息。</li>
+    <li>不把你的数据卖给、共享给任何第三方。</li>
+    <li>不接入第三方统计、广告或追踪脚本；页面除游戏素材外不向外部域名发请求（感谢名单接口除外）。</li>
+  </ol>
+
+  <h2>3. 数据保存与删除</h2>
+  <ol>
+    <li>数据保存在服务器运营者的机器上（<code>data/accounts.json</code>、<code>data/saves.json</code>），仅运营者与管理员可访问。</li>
+    <li>会话 30 天不活跃自动失效；账号数据在你主动要求删除前一直保留。</li>
+    <li>要注销并删除账号与云存档：请联系管理员，或在后续版本使用「注销账号」入口。</li>
+  </ol>
+
+  <h2>4. 你可以要求什么</h2>
+  <p>你可以要求查看、导出、更正或删除自己的账号数据；联系管理员即可。封禁记录与必要的安全日志会在删除账号后保留一段时间，用于防止反复违规。</p>
+
+  <h2>5. 未成年人</h2>
+  <p>本作品面向能够理解并接受本政策的玩家；未成年人请在监护人指导下使用。</p>
+
+  <p class="muted" style="margin-top:32px"><a href="/">← 返回游戏</a> · <a href="/legal/terms.html">用户协议</a></p>
+</main>
+</body>
+</html>

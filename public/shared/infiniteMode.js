@@ -1,0 +1,261 @@
+// shared/infiniteMode.js — 超限模拟（无限模式）独立规则与数值公式
+// 保持 100% 独立解耦，纯 ESM，双端共用。
+
+/** 无限模式专用房间模式标识（单人） */
+export const SOLO_INFINITE = 'solo_infinite';
+
+/** 超限模拟 · 同盟（2–4 人，业主 2026-10-26）：与单人同一套无限规则，数值按人数放大 */
+export const COOP_INFINITE = 'coop_infinite';
+
+/**
+ * 超限模拟单次伤害限额（业主 2026-10-20：99,999,999 → 9,999,999,999）。
+ * 这是**单次**伤害的上限，不是总伤害；9,999,999,999 仍在 Number 的安全整数范围内
+ * （2^53 ≈ 9.007e15），也远小于 Boss 血池随轮次的增长。
+ */
+export const BOSS_HIT_LIMIT_INFINITE = 9999999999;
+
+/** 超限模拟里盟约层数的上限（原版与普通模式是 999） */
+export const INFINITE_BOND_LAYER_CAP = 9999;
+
+/** 理论最大轮次 */
+export const INFINITE_MAX_ROUND = 9999;
+
+/** 物理最小攻击间隔（秒）：15 次/秒上限，防止高攻速爆帧 */
+export const MIN_ATTACK_INTERVAL_SEC = 0.066;
+
+/**
+ * 超限模拟「基本时间」加成：**每一回合的作战基本时限 +15 秒**（业主 2026-11-02 要求）。
+ *
+ * 「基本时间」= 一回合的作战时限，也就是顶栏那枚七段倒计时本身（数据源 `config.modes[m].rounds[r].combatTimeLimit`；
+ * 超限 R16+ 的无尽轮由 `server/match/infiniteWaves.js` 按出怪节奏合成）。这条需求只加在**超限模拟**上：
+ * 普通 / 湮灭 / 炸惊 / 同盟四个模式读到的是原值，一个字节都不变（叠加点的门是 `Match.isInfinite`）。
+ *
+ * 唯一叠加点在 `server/match/match/phases.js` 的 `startRound`（R1–R15 的 `gd.combatTimeLimit(r)` 与 R16+ 的合成时限
+ * 都汇进 `this.wave.timeLimit`，所以一处就覆盖整局每一回合）。**单位是真实秒**——与 data 的 `combatTimeLimit` 同口径；
+ * 战斗时限在引擎内部按**游戏秒**记，所以叠加点乘一次 `gd.combatTimeScale`（默认 2 ⇒ +30 游戏秒 = +15 显示秒）。
+ *
+ * 以后要调，只改这一个数；要撤掉整条需求，把它设成 0 即可（0 时叠加点自动跳过）。
+ */
+export const OVERLIMIT_TIME_BONUS_MS = 15000;
+/** 同一个数的秒制写法（叠加点按秒叠加 `wave.timeLimit`）。 */
+export const OVERLIMIT_TIME_BONUS_SEC = OVERLIMIT_TIME_BONUS_MS / 1000;
+
+/**
+ * 超限模拟「基础资金」加成：**每一回合的基础资金 +2**（业主 2026-11-02 要求）。
+ *
+ * 「基础资金」= 一回合的回合收入那一笔（`gamedata.income(r)` = 模式经济表的 `income[r]`，官方 = min(3 + r, 12)），
+ * 不是利息 / 悬赏 / 出售所得，也不进 `pendingFunds`。这条只加在**超限模拟**上：普通 / 湮灭 / 炸惊 / 同盟读到的仍是
+ * 原值，一个字节都不变（叠加点的门是 `Match.isInfinite`）。
+ *
+ * 唯一叠加点在 `server/match/player/round.js` 的 `PlayerState.startRound`：在派发 `onIncome` **之前**加到
+ * `ev.income` 上，所以它是基础收入的一部分 —— 老鲤这类「本回合收入不发 / 改写收入」的钩子照旧对含加成的基础收入
+ * 生效，利息、`onIncome` 的倍率也一起算在它上面。以后要调，只改这一个数；要撤掉整条需求，把它设成 0 即可
+ * （0 时叠加点自动跳过）。
+ */
+export const OVERLIMIT_FUNDS_BONUS = 2;
+
+/**
+ * 判定当前模式是否为超限模拟
+ * @param {string} mode
+ * @returns {boolean}
+ */
+/**
+ * 「独占单人」的房间模式：`solo` 与 `solo_infinite`（超限模拟）。房间的座位上限、能否加入、能否加 AI、
+ * 续局窗口这些判定都必须走它 —— 之前它们写成 `mode === 'solo'`，于是超限模拟被当成同盟房：能被别人加入、
+ * 能加 AI 队友、对外报 4 个座位（owner 报告：进超限模拟结果进了同盟房）。
+ * @param {string|undefined|null} mode
+ * @returns {boolean}
+ */
+export function isSoloRoomMode(mode) {
+  return mode === 'solo' || mode === SOLO_INFINITE;
+}
+
+/**
+ * @param {string|undefined|null} mode
+ * @returns {boolean}
+ */
+export function isInfiniteMode(mode) {
+  return mode === SOLO_INFINITE || mode === COOP_INFINITE;
+}
+
+/**
+ * 超限·同盟的人数倍率（业主 2026-10-26）：Boss 血池按人数放大，2 人 1.6×、3 人 2.2×、4 人 2.8×。
+ * 单人恒为 1；只用于 coop_infinite，不影响普通同盟。
+ * @param {number} n alive players
+ */
+export function partyBossHpMul(n) {
+  return 1 + 0.6 * Math.max(0, (Number(n) || 1) - 1);
+}
+
+/**
+ * 超限·同盟的普通波次数量倍率：2 人 1.15×、3 人 1.3×、4 人 1.45×。
+ * @param {number} n alive players
+ */
+export function partyWaveCountMul(n) {
+  return 1 + 0.15 * Math.max(0, (Number(n) || 1) - 1);
+}
+
+/**
+ * 随着波次计算敌方控制抗性 (Tenacity Scaling)
+ * R <= 15: 0% 抗性（遵循原版）
+ * R >= 16: 每波递增 2%，最高 75%
+ * @param {number} round
+ * @returns {number} 0.0 ~ 0.75
+ */
+export function getInfiniteCcResist(round) {
+  const r = Number(round) || 1;
+  if (r <= 15) return 0;
+  return Math.min(0.75, 0.02 * (r - 15));
+}
+
+/**
+ * 一档敌方属性倍率 —— 战斗侧的 `enemyScale` 就是这个形状。
+ * `enemyInfiniteScale` 两种入参都收：按回合取倍率的函数，或者旧代码直接给的倍率对象（见下面的「向后兼容」）。
+ * @typedef {{ hpMul?: number, atkMul?: number, speedMul?: number, defMul?: number, resMul?: number }} EnemyScale
+ */
+
+/**
+ * 敌方属性指数膨胀公式（分段式）
+ * R1-R15: 使用终极模式（ABYSS）的逐回合曲线
+ * R16+: 在 R15 基础上使用更高的指数增长
+ * @param {number} round
+ * @param {((round: number) => EnemyScale) | EnemyScale | null | undefined} enemyScaleFn 获取指定回合倍率的函数
+ * @returns {{ hpMul: number, atkMul: number, speedMul: number, defMul: number, resMul: number }}
+ */
+export function enemyInfiniteScale(round, enemyScaleFn) {
+  const r = Number(round) || 1;
+  
+  // R1-R15: 使用终极模式的逐回合曲线
+  if (r <= 15) {
+    if (typeof enemyScaleFn === 'function') {
+      const scale = enemyScaleFn(r) || { hpMul: 1, atkMul: 1, speedMul: 1 };
+      return {
+        hpMul: Number(scale.hpMul) || 1,
+        atkMul: Number(scale.atkMul) || 1,
+        speedMul: Number(scale.speedMul) || 1,
+        defMul: 1,
+        resMul: 1
+      };
+    }
+    // 向后兼容：如果传入的是对象（旧代码），直接返回
+    const base = enemyScaleFn || { hpMul: 1, atkMul: 1, speedMul: 1 };
+    return {
+      hpMul: Number(base.hpMul) || 1,
+      atkMul: Number(base.atkMul) || 1,
+      speedMul: Number(base.speedMul) || 1,
+      defMul: 1,
+      resMul: 1
+    };
+  }
+  
+  // R16+: 获取 R15 的倍率作为基础
+  let baseR15;
+  if (typeof enemyScaleFn === 'function') {
+    baseR15 = enemyScaleFn(15) || { hpMul: 1, atkMul: 1, speedMul: 1 };
+  } else {
+    // 向后兼容：如果传入的是对象，直接使用
+    baseR15 = enemyScaleFn || { hpMul: 1, atkMul: 1, speedMul: 1 };
+  }
+  
+  const base = {
+    hpMul: Number(baseR15.hpMul) || 1,
+    atkMul: Number(baseR15.atkMul) || 1,
+    speedMul: Number(baseR15.speedMul) || 1,
+  };
+
+  // 业主 2026-10-17：「改成原指数，曲线稍微陡一点点」。
+  //
+  // 原版最高难度（ABYSS）R1–R15 的倍率是**纯指数**：hp = 1.2^k、atk = 1.1^k，k 基本每 5 回合 +1
+  // （R1 k=1 … R15 k=7）。超限以前用的是二次多项式 base×(1+0.12Δ+0.008Δ²)，到 R60 已经比
+  // 原版指数高 4.4 倍 —— 等于「原版的加速版」而不是「原版的延长」，玩家强度必然跟不上。
+  //
+  // 现在改成延续同一条指数，只把每档的底数从 1.2 抬到 1.24（hp）/ 1.12（atk）：
+  // 5 回合累计 ×1.71（原版 ×1.49），比原版陡一点，但仍是**同一种曲线形状**，后期不会失控。
+  // 业主 2026-10-19：「进入无限轮次时依旧每回合平滑增长，中间不断」。
+  //
+  // 之前是每 5 回合跳一档（R16–R20 全一样、R21–R25 全一样），玩家打起来是「几轮没变，突然跳一下」。
+  // 现在把同一档的倍数摊到 5 个回合上：每回合 ×(1.24^(1/5)) ≈ ×1.0439，
+  // R15→R60 的总倍数和原来完全一致（1.24^9），只是曲线变成了连续上升。
+  //
+  // 业主 2026-10-19：「数值依旧参考最难模式，但我要求一路以指数形式进行，而不是以模拟形式」。
+  // 三种量以前各走各的曲线（血量按档复利、攻击另一个底数、速度是线性 1+0.015Δ）——
+  // 现在统一成**同一条逐回合指数**：hp ×1.0439、atk ×1.0371、speed ×1.01 每回合，
+  // 从绝境 R15 的真实数值接着往上，不再有线性段、也不再有 5 回合台阶。
+  const k = Math.max(0, r - 15);
+  // 业主 2026-10-20：「攻击力的曲线降低一点，生命力抬高一点」——A 方案。
+  //   hp  每回合 ×1.06（从 ×1.05 抬高：R60 32.2 → 49.3 倍）
+  //   atk 每回合 ×1.16^(1/5) = ×1.0301（从 1.20^(1/5) 降低，和防御同底数：
+  //       R60 10.05 → 7.41 倍）
+  //   speed 保持 ×1.01，硬上限 2.5
+  // 效果：atk/hp 从 0.31 降到 0.15（R60），威胁从「会被打死」偏向「打不动」。
+  // 分段式增长率（业主 2026-10-23）：后期放缓，延长可玩性
+  // R16-R30: HP ×1.06/回合
+  // R31-R50: HP ×1.05/回合
+  // R51+:    HP ×1.04/回合
+  let HP_STEP = 1.06;
+  if (r >= 51) {
+    HP_STEP = 1.04;
+  } else if (r >= 31) {
+    HP_STEP = 1.05;
+  }
+  
+  const ATK_STEP = Math.pow(1.16, 1 / 5);   // 1.0301
+  const DEF_STEP = Math.pow(1.16, 1 / 5);   // 防御 ×1.0301/回合
+  const RES_STEP = Math.pow(1.12, 1 / 5);   // 法抗 ×1.0229/回合（成长比防御慢：法抗是百分比，涨太快会免疫）
+  
+  // 分段计算：不同区间使用不同增长率
+  let hpMul = base.hpMul;
+  if (r <= 30) {
+    // R16-R30: 统一 ×1.06
+    hpMul = base.hpMul * Math.pow(1.06, k);
+  } else if (r <= 50) {
+    // R31-R50: R16-R30 用 1.06，R31-R50 用 1.05
+    const k1 = 30 - 15;  // R16-R30 的回合数
+    const k2 = r - 30;    // R31-当前 的回合数
+    hpMul = base.hpMul * Math.pow(1.06, k1) * Math.pow(1.05, k2);
+  } else {
+    // R51+: R16-R30 用 1.06，R31-R50 用 1.05，R51+ 用 1.04
+    const k1 = 30 - 15;
+    const k2 = 50 - 30;
+    const k3 = r - 50;
+    hpMul = base.hpMul * Math.pow(1.06, k1) * Math.pow(1.05, k2) * Math.pow(1.04, k3);
+  }
+  const atkMul = base.atkMul * Math.pow(ATK_STEP, k);
+  const defMul = Math.pow(DEF_STEP, k);
+  const resMul = Math.pow(RES_STEP, k);
+  const speedMul = Math.min(2.5, base.speedMul * Math.pow(1.01, k));
+
+  return { hpMul, atkMul, speedMul, defMul, resMul };
+}
+
+/**
+ * R16+ Boss 领袖生命值递增计算
+ * @param {number} baseHp
+ * @param {number} round
+ * @returns {number}
+ */
+export function getInfiniteBossHp(baseHp, round) {
+  const r = Number(round) || 15;
+  if (r <= 15) return baseHp;
+  // 与杂兵同一条曲线、同样**每回合平滑**（业主 2026-10-19：「中间不断」）。
+  // 之前是每 5 回合跳一档（R20–R24 一样、R25–R29 一样），Boss 血量在两次 Boss 战之间完全不变。
+  // 与杂兵同一条指数：逐回合复利，不再每 5 回合跳一档。
+  // 业主 2026-10-20（A 方案）：Boss 血跟着杂兵一起抬到每回合 ×1.06，
+  // 否则杂兵变厚而 Boss 相对变软。
+  const k = Math.max(0, r - 15);
+  // 分段式增长率（与杂兵一致）
+  let multiplier = 1;
+  if (r <= 30) {
+    multiplier = Math.pow(1.06, k);
+  } else if (r <= 50) {
+    const k1 = 30 - 15;
+    const k2 = r - 30;
+    multiplier = Math.pow(1.06, k1) * Math.pow(1.05, k2);
+  } else {
+    const k1 = 30 - 15;
+    const k2 = 50 - 30;
+    const k3 = r - 50;
+    multiplier = Math.pow(1.06, k1) * Math.pow(1.05, k2) * Math.pow(1.04, k3);
+  }
+  return Math.round(baseHp * multiplier);
+}

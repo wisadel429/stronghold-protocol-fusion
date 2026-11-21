@@ -1,0 +1,96 @@
+/* Closure bond discs, measured from the 07-04-02 recording at 392.267 s.
+   One --cbp is one pixel on the 1280x720 design grid; bg_active 75x75 / bg_inactive 66x66.
+   The original BondStrip retains counts, disabled reasons, popups and sorting. */
+.bstrip--closure { --cbp: calc(1rem / 66.6667); }
+.cbond__defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+
+/* The old overlay added an unconditional boss emblem above this row. The final
+   assault window already owns the phase-specific bat; ordinary rounds have none. */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds::before,
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds::after { content: none; }
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .ac-closure-bat { display: none; }
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds { scale: .8; transform-origin: 50% 0; }
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond__count,
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bslot__count.num {
+  letter-spacing: -.05em; font-variant-numeric: proportional-nums;
+}
+
+/* Extra scroll padding lets the 200ms column rise past the disc without clipping.
+   Matching negative margins leave the existing row baseline and board hit areas in place. */
+.gm__bonds .bstrip-scroll .bstrip.bstrip--closure {
+  padding-top: calc(var(--cbp) * 34); padding-bottom: calc(var(--cbp) * 36);
+  margin-top: calc(var(--cbp) * -34); margin-bottom: calc(var(--cbp) * -36);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__disc {
+  box-shadow: none;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__board {
+  width: calc(var(--cbp) * 77); height: calc(var(--cbp) * 77);
+  z-index: 1; filter: url(#closure-bond-blue);
+}
+/* The blue ring sits over the theme glow. Remove the old mint disc's opaque centre. */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board.is-active .bond__board {
+  filter: url(#closure-bond-active-ring);
+  -webkit-mask-image: radial-gradient(circle, transparent calc(var(--cbp) * 22.6), #000 calc(var(--cbp) * 23.3));
+  mask-image: radial-gradient(circle, transparent calc(var(--cbp) * 22.6), #000 calc(var(--cbp) * 23.3));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__core {
+  z-index: 2; background: none !important; box-shadow: none; transition: none;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__disc::after {
+  width: calc(var(--cbp) * 66); height: calc(var(--cbp) * 66);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/bg_inactive.png") center / 100% 100% no-repeat !important;
+  opacity: 1 !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board.is-active .bond__disc::after {
+  width: calc(var(--cbp) * 75); height: calc(var(--cbp) * 75);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/bg_active.png") !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__icon {
+  width: 70%; height: 70%; filter: brightness(0) invert(.52); opacity: 1;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board.is-active .bond__icon {
+  filter: url(#closure-bond-glyph); opacity: 1;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond__name {
+  font-family: 'ArkCN', sans-serif; font-weight: 500; font-synthesis: none; color: #a5a5a7 !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.is-active .bond__name { color: #fff !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board .bond__count {
+  font-family: 'ArkWide', sans-serif; font-weight: 400; font-synthesis: none; color: #b9b9bc !important; text-shadow: 0 1px 3px #000 !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip--closure .bond.has-board.is-active .bond__count { color: #fff !important; }
+
+.cbond__marks { position: absolute; left: 50%; top: 0; width: calc(var(--cbp) * 54); height: calc(var(--cbp) * 54);
+  translate: -50% 0; pointer-events: none; z-index: 3; }
+.cbond__rank { position: absolute; left: 50%; top: calc(var(--cbp) * -1); translate: -50% 0;
+  display: flex; gap: calc(var(--cbp) * 2); }
+.cbond__rank > i { display: block; width: calc(var(--cbp) * 1.8); height: calc(var(--cbp) * 10);
+  background: #f5ffff; box-shadow: 0 0 calc(var(--cbp) * 2) rgba(215, 255, 255, .6); }
+.cbond__burst { position: absolute; inset: 0; pointer-events: none; }
+.cbond__beam { position: absolute; left: 50%; top: calc(var(--cbp) * -24); width: calc(var(--cbp) * 40); height: calc(var(--cbp) * 122);
+  translate: -50% 0; transform-origin: 50% 85%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(106,255,220,.12) 16%, transparent 24%, rgba(130,255,233,.10) 48%, rgba(156,255,239,.25) 50%, transparent 54%, rgba(106,255,220,.12) 84%, transparent),
+    linear-gradient(0deg, transparent, rgba(48,255,208,.08) 25%, rgba(72,255,223,.16) 63%, transparent);
+  -webkit-mask-image: linear-gradient(0deg, transparent, #000 20%, #000 65%, transparent);
+  mask-image: linear-gradient(0deg, transparent, #000 20%, #000 65%, transparent);
+  filter: blur(calc(var(--cbp) * .6)); animation: cbond-rise 200ms ease-out both;
+}
+.cbond__flash { position: absolute; left: 50%; top: 50%; width: calc(var(--cbp) * 81); height: calc(var(--cbp) * 81);
+  translate: -50% -50%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(230,255,244,.12) 25%, rgba(152,255,228,.34) 46%, transparent 68%);
+  animation: cbond-flash 200ms ease-out both;
+}
+@keyframes cbond-rise {
+  0% { opacity: 0; transform: translateY(calc(var(--cbp) * 15)) scaleY(.55); }
+  20% { opacity: 1; }
+  60% { opacity: .7; }
+  100% { opacity: 0; transform: translateY(calc(var(--cbp) * -10)) scaleY(1.1); }
+}
+@keyframes cbond-flash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  65% { opacity: .5; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .cbond__burst { display: none; } }

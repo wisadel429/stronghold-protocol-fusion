@@ -1,0 +1,27 @@
+/* Non-Chinese packs run longer than the Chinese source. Let long labels wrap inside their own box (two lines at most
+   where the box has a fixed height) instead of pushing the layout around. Numbers, timers and badges keep nowrap.
+   zh-TW is excluded with zh (the :lang range lets :lang(zh) match zh-TW). */
+html:not(:lang(zh)) .btn__label,
+html:not(:lang(zh)) .title-tag,
+html:not(:lang(zh)) .title-invite,
+html:not(:lang(zh)) .title-foot,
+html:not(:lang(zh)) .hub-entry__name,
+html:not(:lang(zh)) .hub-entry__desc,
+html:not(:lang(zh)) .hub-plate__label,
+html:not(:lang(zh)) .hub-tile__label,
+html:not(:lang(zh)) .hub-tile__desc,
+html:not(:lang(zh)) .modal__title,
+html:not(:lang(zh)) .modal__text,
+html:not(:lang(zh)) .set-row__label,
+html:not(:lang(zh)) .set-hint,
+html:not(:lang(zh)) .tips__text,
+html:not(:lang(zh)) .pcard__name,
+html:not(:lang(zh)) .pcard__desc {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+/* the two title-screen asset buttons carry a longer label + hint: let them grow downward instead of clipping */
+html:not(:lang(zh)) .title-assets .btn { height: auto; min-height: .5rem; }
+html:not(:lang(zh)) .title-assets { align-items: stretch; }

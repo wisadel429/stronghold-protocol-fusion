@@ -1,0 +1,264 @@
+/* ==========================================================================================
+   ac-closure-battle.css — 「全能的」可露希尔 theme, in-match parts drawn by the theme's own components
+   (js/ui/acClosureHud.js …). Loaded by the theme build only (index.html, next to ac-theme-closure.css).
+   Units: --cp = one px of the 1280×720 design grid in rem (1 rem = 66.67 design px), so the parts follow the HUD's
+   own scaling (UI size setting, safe-area fit). Positions are the theme footage's (2026-11-09, 1280×588 capture:
+   design px = footage px / 0.8167, x from the screen's centre), sprites 1:1.
+   ========================================================================================== */
+.gtop--closure { --cp: calc(1rem / 66.6667); font-synthesis: none; }
+
+/* ---- top bar centre (group_hud) ---------------------------------------------------------------------------- */
+/* the default band's grid column stays (an empty, unpositioned slot); everything hangs from the screen's top centre */
+.gtop--closure .gtopc-slot { position: static; width: 0; height: 0; margin: 0; translate: none; }
+.gtopc { position: absolute; left: 50%; top: 0; width: 0; height: 0; margin: 0; pointer-events: none; }
+.gtopc > * { position: absolute; }
+.gtopc img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+.gtopc__shadow { left: calc(var(--cp) * -315); top: calc(var(--cp) * 6); width: calc(var(--cp) * 630); height: calc(var(--cp) * 99); opacity: .9; }
+.gtopc__board { left: calc(var(--cp) * -328); top: calc(var(--cp) * 4); width: calc(var(--cp) * 656); height: calc(var(--cp) * 83); }
+/* the monitor bezel above the bar (acClosureHud.js Bezel: redrawn, no sprite) */
+.gtopc__bezel { left: calc(var(--cp) * -260); top: 0; width: calc(var(--cp) * 520); height: calc(var(--cp) * 40); overflow: visible; }
+.gtopc__bezelline { fill: var(--bz); }
+.gtopc__bezelline.is-inner { opacity: .9; }
+/* the two lit slots beside the window: teal stripes in prep, amber in battle (footage 45 s / 100 s) */
+.gtopc__glow { top: calc(var(--cp) * 18); width: calc(var(--cp) * 32); height: calc(var(--cp) * 27);
+  background: repeating-linear-gradient(180deg, var(--gl) 0 calc(var(--cp) * 4), transparent calc(var(--cp) * 4) calc(var(--cp) * 7));
+  opacity: .32; transition: opacity .3s; }
+.gtopc__glow--l { left: calc(var(--cp) * -113); -webkit-mask: linear-gradient(90deg, transparent, #000 90%); mask: linear-gradient(90deg, transparent, #000 90%); }
+.gtopc__glow--r { left: calc(var(--cp) * 84); -webkit-mask: linear-gradient(270deg, transparent, #000 90%); mask: linear-gradient(270deg, transparent, #000 90%); }
+.gtopc--rest { --gl: #4c8fa8; --bz: #24504d; }
+.gtopc--battle, .gtopc--unite { --gl: #a8823c; --bz: #593c1c; }
+.gtopc--boss { --gl: #b0404c; --bz: #5a1f26; }
+.cfinal { position: absolute; left: calc(var(--cp) * -191); top: calc(var(--cp) * 1.2); width: calc(var(--cp) * 332); height: calc(var(--cp) * 59); }
+.cfinal.is-loading { visibility: hidden; }
+.cfinal.is-loading * { animation-play-state: paused !important; }
+.cfinal > *, .cfinal__intro > * { position: absolute; display: block; background: center / 100% 100% no-repeat; }
+.cfinal__begin { left: calc(var(--cp) * 108.5); top: 0; width: calc(var(--cp) * 165); height: 100%;
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_window_back_begin.png"); animation: cfinal-begin 3560ms linear both; }
+.cfinal__expanded { inset: 0; background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_window_back_expand.png"); animation: cfinal-expand 280ms ease-out 3440ms both; }
+.cfinal__intro { left: calc(var(--cp) * 108.5); top: 0; width: calc(var(--cp) * 165); height: 100%; animation: cfinal-out 130ms 3440ms linear both; }
+.cfinal__tv { left: calc(var(--cp) * 25); top: calc(var(--cp) * 10); width: calc(var(--cp) * 115); height: calc(var(--cp) * 41);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_begin_tv.png"); animation: cfinal-tv 2100ms ease-out both; }
+.cfinal__light { left: calc(var(--cp) * 44); top: calc(var(--cp) * -6); width: calc(var(--cp) * 77); height: calc(var(--cp) * 71);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat_light.png"); animation: cfinal-light 2050ms linear both; }
+.cfinal__bat { left: calc(var(--cp) * 61); top: calc(var(--cp) * 10); width: calc(var(--cp) * 43); height: calc(var(--cp) * 39);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat.png"); animation: cfinal-bat 2100ms ease-out both; }
+.cfinal__stick { left: calc(var(--cp) * 58.5); top: calc(var(--cp) * 13); width: calc(var(--cp) * 48); height: calc(var(--cp) * 34);
+  background-image: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_begin_game_stick.png"); animation: cfinal-stick 1400ms ease-out 2000ms both; }
+.cfinal__word { left: calc(var(--cp) * 69); top: calc(var(--cp) * 24); white-space: nowrap; font: 900 calc(var(--cp) * 16.5) / 1 ArkCN, sans-serif;
+  color: #fa517a; text-shadow: 0 0 calc(var(--cp) * 6) #ef315d; animation: gtopc-in 170ms ease-out 2460ms both; }
+.cfinal__star { left: calc(var(--cp) * var(--x)); top: calc(var(--cp) * var(--y)); width: calc(var(--cp) * var(--s)); height: calc(var(--cp) * var(--s));
+  background: linear-gradient(155deg,#80fdff 10%,#00daef 40%,#5260ff 65%,#ff50b4 80%); mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_star.png") center / contain no-repeat;
+  animation: cfinal-star 1250ms linear var(--d) 2 both; }
+.cfinal__content { inset: 0; animation: gtopc-in 180ms linear 3540ms both; }
+.cfinal__crest { position: absolute; left: calc(var(--cp) * 99); top: calc(var(--cp) * 13); width: calc(var(--cp) * 43); height: calc(var(--cp) * 39);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_battle_bat.png") center / contain no-repeat; }
+.cfinal .capsule--boss { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; background: none !important; border: 0 !important; box-shadow: none !important; transform: none; }
+.cfinal .capsule--boss::before { content: ''; position: absolute; left: calc(var(--cp) * 18); top: calc(var(--cp) * 24); width: calc(var(--cp) * 22); height: calc(var(--cp) * 16);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_battle_count.png") center / contain no-repeat; }
+.cfinal .capsule--boss::after, .cfinal .capsule__icon { display: none; }
+.cfinal .capsule__kills { position: absolute; left: calc(var(--cp) * 43); top: calc(var(--cp) * 24); width: calc(var(--cp) * 55); text-align: center; font: 700 calc(var(--cp) * 16) / 1 ArkWide,sans-serif; color: #e9d3da; }
+.cfinal .bossbar { position: absolute; left: calc(var(--cp) * 145); top: calc(var(--cp) * 25); width: calc(var(--cp) * 176); height: calc(var(--cp) * 12); margin: 0; border: 0; border-radius: 0; overflow: visible;
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_hp_bar_back.png") center / 100% 100% no-repeat; }
+.cfinal .bossbar__fill { height: 100%; box-shadow: none; background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_hp_bar_fill.png") left center / calc(var(--cp) * 176) 100% no-repeat; }
+.cfinal .bossbar__fill::after { content: ''; position: absolute; right: calc(var(--cp) * -12); top: calc(var(--cp) * -4); width: calc(var(--cp) * 28); height: calc(var(--cp) * 20);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_hp_mark.png") center / contain no-repeat; animation: cfinal-hp-tip 500ms ease-in-out infinite alternate; }
+.cfinal__hp-trail { position: absolute; right: 0; top: 50%; width: 0; height: 0; pointer-events: none; }
+.cfinal .bossbar__fill:not(:has(.cfinal__hp-trail))::after { display: none; }
+.cfinal__hp-trail i { position: absolute; right: calc(var(--cp) * -1); top: calc(var(--cp) * (var(--i) * 3 - 5)); width: calc(var(--cp) * 9); height: calc(var(--cp) * 7);
+  background: #85f9ff; mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/parti_triangle.png") left center / 200% 100% no-repeat;
+  animation: cfinal-hp-shard 650ms linear calc(var(--i) * -217ms) infinite; }
+@keyframes cfinal-hp-shard { 0% { opacity: 0; translate: 0 0; scale: .2; } 15% { opacity: 1; scale: 1; } 70% { opacity: .85; } 100% { opacity: 0; translate: calc(var(--cp) * -36) calc(var(--cp) * 4); scale: .35; rotate: -35deg; } }
+@keyframes cfinal-hp-tip { from { opacity: .7; scale: 1 .8; } to { opacity: 1; scale: 1 1.1; } }
+.cfinal .bossbar__txt { clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
+.cfinal .bossbars { position: absolute; left: calc(var(--cp) * 145); top: calc(var(--cp) * 20); width: calc(var(--cp) * 176); display: flex; flex-direction: column; gap: calc(var(--cp) * 5); }
+.cfinal .bossbars .bossbar { position: relative; inset: auto; height: calc(var(--cp) * 8); }
+.cfinal__announcement { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); pointer-events: none; }
+@keyframes cfinal-begin { 0% { opacity: 0; scale: .7 .35; } 5%, 96% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: 1; } }
+@keyframes cfinal-expand { from { opacity: 0; clip-path: inset(0 17.6% 0 32.7%); } 20% { opacity: 1; } to { opacity: 1; clip-path: inset(0); } }
+@keyframes cfinal-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes cfinal-tv { 0% { opacity: 0; scale: .6; } 10%, 88% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .8; } }
+@keyframes cfinal-light { 0% { opacity: 0; scale: .2; } 15% { opacity: 1; scale: 1.2; } 30%, 70% { opacity: .6; scale: 1; } 100% { opacity: 0; scale: .5; } }
+@keyframes cfinal-bat { 0% { opacity: 0; scale: .2; } 10% { opacity: 1; scale: 1.25; } 22%, 88% { opacity: 1; scale: 1; } 100% { opacity: 0; scale: .65; } }
+@keyframes cfinal-stick { 0% { opacity: 0; scale: .5; translate: 0 0; } 14% { opacity: 1; scale: 1.1; translate: 0 0; } 22% { scale: 1; translate: 0 0; } 38%, 100% { opacity: 1; scale: 1; translate: calc(var(--cp) * -32) 0; } }
+@keyframes cfinal-star { 0%, 100% { opacity: 0; scale: .2; rotate: 0deg; } 20%, 70% { opacity: 1; scale: 1.2; } 85% { opacity: .5; scale: .5; rotate: 75deg; } }
+.gtopc:has(.cfinal) .gtopc__round { animation: cfinal-out 150ms linear 3440ms both; }
+.gtopc:has(.cfinal) .gtopc__lp { animation: cfinal-lp 280ms ease-out 3440ms both; }
+@keyframes cfinal-lp { from { translate: 0 0; } to { translate: calc(var(--cp) * 29) 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .cfinal *, .cfinal *::before, .cfinal *::after { animation: none !important; } .cfinal__intro, .cfinal__begin { display: none; }
+  .cfinal__expanded { opacity: 1; clip-path: none; } .cfinal__content { opacity: 1; }
+  .cfinal__hp-trail { display: none; }
+  .gtopc:has(.cfinal) .gtopc__round { opacity: 0; }
+  .gtopc:has(.cfinal) .gtopc__lp { translate: calc(var(--cp) * 29) 0; }
+}
+.gtopc--battle .gtopc__glow, .gtopc--unite .gtopc__glow, .gtopc--boss .gtopc__glow { opacity: .5; }
+.gtopc__tv { left: calc(var(--cp) * -63.7); top: calc(var(--cp) * 47.8); width: calc(var(--cp) * 124); height: calc(var(--cp) * 47); }
+
+/* 回合 + the cyan folder */
+.gtopc__round { left: calc(var(--cp) * -199); top: calc(var(--cp) * 15.9); height: calc(var(--cp) * 28); display: flex; align-items: center;
+  gap: calc(var(--cp) * 12); margin: 0; padding: 0; background: none; border: 0; }
+.gtopc__roundlabel { font-family: 'ArkCN', var(--font-cjk, sans-serif); font-size: calc(var(--cp) * 15); font-weight: 500; line-height: 1; letter-spacing: .04em; color: #b4b8b8; margin-top: calc(var(--cp) * 4); }
+.gtopc__folder { position: relative; width: calc(var(--cp) * 40); height: calc(var(--cp) * 28); }
+.gtopc__folderimg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gtopc__roundnum { position: absolute; left: 0; right: 0; top: calc(var(--cp) * 4); bottom: 0; display: grid; place-items: center;
+  font-family: 'ArkWide', var(--font-num, sans-serif); font-size: calc(var(--cp) * 21); font-weight: 400; line-height: 1; color: #10242e; animation: gtopc-pop 260ms var(--ease-out, ease-out) both; }
+
+/* LP: icon_hp + the value in white (the default tower's red / team / pending tones stay) */
+.gtopc__lp { left: calc(var(--cp) * 137.2); top: calc(var(--cp) * 22.2); pointer-events: auto; }
+.gtopc__lp .lp { display: flex; align-items: center; gap: calc(var(--cp) * 2.8); font-size: calc(var(--cp) * 21); line-height: 1; }
+.gtopc__lp .lp__icon { display: none; }
+.gtopc__lp .lp::before { content: ''; flex: none; width: calc(var(--cp) * 16); height: calc(var(--cp) * 24);
+  background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/icon_hp.png") 0 0 / 100% 100% no-repeat; }
+/* LP digits (footage 45 s: ink 13 px high, 8 px wide, 2 px apart, 5 px after the icon; light grey): Novecento Wide Normal —
+   the official face and its lightest weight — at 22 px, proportional figures, no tracking, the strokes eased by a 0.6 px
+   outline in the bar's own dark (paints over the glyph's edge: the footage's stroke area is ≈ 2/3 of the plain face's) */
+.gtopc__lp .lp__val { font-family: 'ArkWide', var(--font-num, sans-serif); font-weight: 400; font-size: calc(var(--cp) * 22); color: #dcdcdf;
+  font-variant-numeric: normal; letter-spacing: 0; -webkit-text-stroke: calc(var(--cp) * .6) #1d1e22; }
+.gtopc__lp .lp--danger .lp__val { -webkit-text-stroke-color: #1d1e22; }
+.gtopc__lp .lp--danger .lp__val { color: #ff5a62; }
+
+/* the loss of the round's battle (hud.js closureLp: SETTLE; 联防 while teammates may still save part of it): the LP keeps its
+   colour, −N after it in white on hp_miss_back's red glow (07-04-02 footage 378.8 s: 17 design px after the value, the
+   figures ~0.8 of the LP's), coming in at once */
+.gtopc__lp .lp.is-pending .lp__val { color: #dcdcdf; text-shadow: none; }
+.gtopc__lp .lp--danger.is-pending .lp__val { color: #ff5a62; }
+.gtopc__lp .lp__pend { position: relative; isolation: isolate; align-self: center; margin-left: calc(var(--cp) * 14); padding: 0;
+  font-family: 'ArkWide', var(--font-num, sans-serif); font-weight: 400; font-size: calc(var(--cp) * 18); line-height: 1; color: #fff0f0;
+  background: none; box-shadow: none; clip-path: none; animation: gtopc-pend 140ms ease-out both; }
+.gtopc__lp .lp__pend::before { content: ''; position: absolute; z-index: -1; left: 50%; top: 50%; width: calc(var(--cp) * 62); height: calc(var(--cp) * 42);
+  transform: translate(-50%, -50%); background: url("/ui-art/img/official/hub/ac/theme/almighty_closure/hp_miss_back.png") 0 0 / 100% 100% no-repeat; }
+@keyframes gtopc-pend { from { opacity: 0; } to { opacity: 1; } }
+
+/* the runner tag ×N (acClosureHud.js MissPill): miss_back at 0.96 (77 × 27), centred under the battle window over its lower
+   edge (footage 370–378 s: its top 40.6 design px under the window's), the count in orange in its right half; each new
+   leak flashes it red (~330 ms, the brightest at ~50 ms) */
+.gtopc__miss { position: absolute; z-index: 3; left: calc(var(--cp) * -36.8); top: calc(var(--cp) * 41.8); width: calc(var(--cp) * 77); height: calc(var(--cp) * 27);
+  pointer-events: auto; animation: gtopc-pend 120ms ease-out both; }
+.gtopc__miss > * { position: absolute; }
+.gtopc__missback { left: 0; top: 0; width: 100%; height: 100%; }
+.gtopc__missn { left: calc(var(--cp) * 50.5); top: 0; bottom: 0; display: flex; align-items: center;
+  font-family: 'ArkWide', var(--font-num, sans-serif); font-weight: 400; font-size: calc(var(--cp) * 15); line-height: 1; font-style: normal;
+  color: #ff7a3c; text-shadow: 0 0 calc(var(--cp) * 2.5) rgba(255, 96, 40, .55); }
+.gtopc__missflash { left: calc(var(--cp) * -7); top: calc(var(--cp) * -6); right: calc(var(--cp) * -7); bottom: calc(var(--cp) * -6); border-radius: 50%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255, 70, 50, .95) 0 35%, rgba(255, 40, 30, .45) 62%, rgba(255, 30, 30, 0) 100%);
+  mix-blend-mode: screen; opacity: 0; animation: gtopc-missflash 330ms ease-out both; }
+@keyframes gtopc-missflash { 0% { opacity: 0; } 15% { opacity: .85; } 65% { opacity: .45; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .gtopc__missflash, .gtopc__miss, .gtopc__lp .lp__pend { animation: none; } }
+
+/* the 🔍 buttons: btn_check_myself / btn_check_enemy (skin_config: 100×68 and 88×56) */
+.gtopc__chkwrap { pointer-events: auto; }
+.gtopc__chkwrap--l { left: calc(var(--cp) * -350.2); top: calc(var(--cp) * 2.4); }
+.gtopc__chkwrap--r { left: calc(var(--cp) * 264.5); top: calc(var(--cp) * 9.8); }
+.gtopc__chk { display: block; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; transition: transform .12s, filter .12s; }
+.gtopc__chk--l .gtopc__chkimg { width: calc(var(--cp) * 100); height: calc(var(--cp) * 67); }
+.gtopc__chk--r .gtopc__chkimg { width: calc(var(--cp) * 85); height: calc(var(--cp) * 53); }
+.gtopc__chk:hover { filter: brightness(1.15); }
+.gtopc__chk:active { transform: scale(.95); }
+.gtopc__chk.is-on { filter: brightness(1.25) drop-shadow(0 0 calc(var(--cp) * 6) rgba(89, 243, 254, .7)); }
+.gtopc__chk.is-grey { filter: grayscale(1) brightness(.6); cursor: default; }
+.gtopc.is-nochk .gtopc__chkwrap { visibility: hidden; }
+
+/* ---- the window ---------------------------------------------------------------------------------------- */
+.gtopc__win { left: calc(var(--cp) * -80.8); top: calc(var(--cp) * 1.2); width: calc(var(--cp) * 165); height: calc(var(--cp) * 58); overflow: hidden; }
+.gtopc__win > * { position: absolute; }
+.gtopc__winback { left: 0; top: 0; width: 100%; height: 100%; }
+.gtopc__content { inset: 0; }
+.gtopc__content > * { position: absolute; inset: 0; }
+/* prep: the winged cat + 休息一下 */
+.gtopc__cat { position: absolute; left: calc(var(--cp) * 19.6); top: calc(var(--cp) * 6.1); width: calc(var(--cp) * 53); height: calc(var(--cp) * 45); }
+.gtopc__catbody { position: absolute; left: calc(var(--cp) * 8.5); top: 0; width: calc(var(--cp) * 34); height: calc(var(--cp) * 45); }
+.gtopc__wing { position: absolute; width: calc(var(--cp) * 20); height: calc(var(--cp) * 20); }
+.gtopc__wing--l { left: 0; top: calc(var(--cp) * 13.5); transform-origin: 100% 60%; animation: gtopc-flap-l 900ms steps(1, end) infinite; }
+.gtopc__wing--r { left: calc(var(--cp) * 33); top: calc(var(--cp) * 9.8); transform-origin: 0 60%; animation: gtopc-flap-r 900ms steps(1, end) infinite; }
+.gtopc__word { position: absolute; left: calc(var(--cp) * 71); top: calc(var(--cp) * 24.7); font-family: 'ArkCN', var(--font-cjk, sans-serif); font-size: calc(var(--cp) * 15.5); font-weight: 900; line-height: 1;
+  letter-spacing: .02em; color: #f4f2f6; white-space: nowrap; }
+/* battle: the bat + kills n/m */
+.gtopc__bat { position: absolute; left: calc(var(--cp) * 20.8); top: calc(var(--cp) * 9.8); width: calc(var(--cp) * 52); height: calc(var(--cp) * 35); }
+.gtopc__batbody { position: absolute; left: calc(var(--cp) * 8.6); top: 0; width: calc(var(--cp) * 33); height: calc(var(--cp) * 35); }
+.gtopc__wing--bl { left: 0; top: calc(var(--cp) * 11); width: calc(var(--cp) * 24); height: calc(var(--cp) * 20); transform-origin: 100% 50%; animation: gtopc-flap-l 700ms steps(1, end) infinite; }
+.gtopc__wing--br { left: calc(var(--cp) * 31.8); top: calc(var(--cp) * 6.1); width: calc(var(--cp) * 20); height: calc(var(--cp) * 24); transform-origin: 0 50%; animation: gtopc-flap-r 700ms steps(1, end) infinite; }
+.gtopc__kills { position: absolute; left: calc(var(--cp) * 79.6); top: calc(var(--cp) * 19); font-family: 'ArkWide', var(--font-num, sans-serif); font-size: calc(var(--cp) * 19.5); font-weight: 500; line-height: 1;
+  letter-spacing: .04em; color: #d3d1d3; white-space: nowrap; }
+.gtopc__kills b { color: #f0bd3c; display: inline-block; animation: gtopc-pop 240ms var(--ease-out, ease-out) both; }
+/* 联防 / boss: the default capsule's content inside the window, without its own plate */
+.gtopc__other { display: grid; place-items: center; }
+.gtopc__other .capsule { transform: scale(.82); background: none !important; border: 0 !important; box-shadow: none !important; }
+.gtopc__other .capsule::before, .gtopc__other .capsule::after { content: none !important; }
+
+/* twinkling stars at the window's ends: sheet_star2's white four-point star as a mask, painted in the star's colour */
+.gtopc__star { --sz: calc(var(--cp) * var(--s) * 1.7); position: absolute; left: calc(var(--cp) * var(--x)); top: calc(var(--cp) * var(--y)); width: var(--sz); height: var(--sz);
+  margin: calc(var(--sz) / -2) 0 0 calc(var(--sz) / -2); background: var(--sc);
+  -webkit-mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/sheet_star2.png") 0 0 / 200% 100% no-repeat;
+  mask: url("/ui-art/img/official/hub/ac/theme/almighty_closure/sheet_star2.png") 0 0 / 200% 100% no-repeat;
+  filter: drop-shadow(0 0 calc(var(--cp) * 2) var(--sc)); opacity: 0; animation: gtopc-twinkle 1300ms var(--d) ease-in-out infinite; }
+.gtopc__star.is-p { --sc: #ff4fd8; } .gtopc__star.is-b { --sc: #4a6bff; } .gtopc__star.is-c { --sc: #5ef6ff; }
+.gtopc__star.is-g { --sc: #8dff3c; } .gtopc__star.is-y { --sc: #ffe23a; } .gtopc__star.is-o { --sc: #ff8a2a; }
+.gtopc__star.is-burst { animation: gtopc-burst 950ms var(--d) ease-out infinite; }
+
+/* ---- scenes ---------------------------------------------------------------------------------------------- */
+.gtopc__fx { inset: 0; }
+.gtopc__fx > * { position: absolute; }
+/* 回合开始: the spinning CD on its teal glow */
+.gtopc__disclight { left: calc(var(--cp) * 16.5); top: calc(var(--cp) * 14.3); width: calc(var(--cp) * 132); height: calc(var(--cp) * 24); animation: gtopc-glow 1100ms ease-in-out infinite alternate; }
+.gtopc__disc { left: calc(var(--cp) * 67); top: calc(var(--cp) * 10.8); width: calc(var(--cp) * 31); height: calc(var(--cp) * 31); animation: gtopc-spin 900ms linear infinite; }
+/* the dark cat peeking out from behind the CD (footage 41.1 s on) */
+.gtopc__peek { left: calc(var(--cp) * 54); top: calc(var(--cp) * 6.5); width: calc(var(--cp) * 26); height: calc(var(--cp) * 34); filter: brightness(0) drop-shadow(0 0 1px rgba(255, 255, 255, .25));
+  animation: gtopc-peek 500ms 700ms ease-out both; }
+@keyframes gtopc-peek { from { transform: translateX(calc(var(--cp) * 10)); opacity: 0; } to { transform: none; opacity: .85; } }
+.gtopc__shortcut { left: calc(var(--cp) * 60); top: calc(var(--cp) * 36); width: calc(var(--cp) * 16); height: calc(var(--cp) * 16); }
+.gtopc__win.is-fx-wait .gtopc__content { visibility: hidden; }
+/* → 休整期: the CD fades, the cat pops up in the middle, then slides left as the words wipe in */
+.gtopc__fx--rest { animation: gtopc-out 150ms ease-in forwards; }
+/* (the cat slides away from over the words, which only fade in: footage 42.6–42.8 s) */
+.gtopc__win.is-fx-rest .gtopc__cat { animation: gtopc-catpop 660ms 60ms var(--ease-out, ease-out) both; }
+.gtopc__win.is-fx-rest .gtopc__word { animation: gtopc-in 160ms 440ms ease-out both; }
+/* 开始作战 (≈2.5 s): dot → glowing bar with the bat's face → game stick → 开始作战 → the bat and the kills */
+.gtopc__win.is-fx-clash .gtopc__content { animation: gtopc-in 150ms 2560ms ease-out both; }
+.gtopc__fx--clash { animation: gtopc-out 180ms 2420ms ease-in forwards; }
+.gtopc__dot { left: calc(var(--cp) * 78.5); top: calc(var(--cp) * 24.6); width: calc(var(--cp) * 8); height: calc(var(--cp) * 8); border-radius: 50%;
+  background: #fff6d8; box-shadow: 0 0 calc(var(--cp) * 8) #ffd36a; animation: gtopc-dot 220ms ease-out both; }
+.gtopc__startlight { left: calc(var(--cp) * 36.5); top: calc(var(--cp) * 14.6); width: calc(var(--cp) * 92); height: calc(var(--cp) * 28);
+  animation: gtopc-bar 1250ms 80ms ease-out both; }
+.gtopc__startbat { left: calc(var(--cp) * 54); top: calc(var(--cp) * 8.6); width: calc(var(--cp) * 57); height: calc(var(--cp) * 40);
+  animation: gtopc-batface 1000ms 80ms ease-out both; }
+.gtopc__go { inset: 0; }
+.gtopc__stick { position: absolute; left: calc(var(--cp) * 58.5); top: calc(var(--cp) * 11.6); width: calc(var(--cp) * 48); height: calc(var(--cp) * 34);
+  animation: gtopc-stick 1650ms 900ms var(--ease-out, ease-out) both; }
+.gtopc__goword { position: absolute; left: calc(var(--cp) * 74); top: calc(var(--cp) * 22.4); font-family: 'ArkCN', var(--font-cjk, sans-serif); font-size: calc(var(--cp) * 16.5); font-weight: 900; line-height: 1;
+  letter-spacing: .02em; color: #ffd24a; text-shadow: 0 0 calc(var(--cp) * 6) rgba(255, 150, 30, .85); white-space: nowrap;
+  animation: gtopc-in 170ms 1260ms ease-out both; }
+.gtopc__win.is-fx-enter .gtopc__content { animation: gtopc-in 220ms ease-out both; }
+
+@keyframes gtopc-pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes gtopc-flap-l { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-14deg); } }
+@keyframes gtopc-flap-r { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(14deg); } }
+@keyframes gtopc-twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 40% { opacity: 1; transform: scale(1) rotate(20deg); } 60% { opacity: .9; transform: scale(.9) rotate(30deg); } }
+@keyframes gtopc-burst { 0% { opacity: 0; transform: translateX(0) scale(.4); } 25% { opacity: 1; transform: translateX(calc(var(--cp) * 4 * var(--k))) scale(1); }
+  100% { opacity: 0; transform: translateX(calc(var(--cp) * 16 * var(--k))) scale(.6) rotate(40deg); } }
+@keyframes gtopc-spin { to { transform: rotate(360deg); } }
+@keyframes gtopc-glow { from { opacity: .55; } to { opacity: 1; } }
+@keyframes gtopc-out { to { opacity: 0; visibility: hidden; } }
+@keyframes gtopc-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gtopc-catpop {
+  0% { transform: translateX(calc(var(--cp) * 37.5)) scale(.5); opacity: 0; }
+  12% { transform: translateX(calc(var(--cp) * 37.5)) scale(1.06); opacity: 1; }
+  20%, 56% { transform: translateX(calc(var(--cp) * 37.5)) scale(1); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes gtopc-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 -10% 0 0); } }
+@keyframes gtopc-dot { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes gtopc-bar { 0% { transform: scaleX(0); opacity: 0; } 12% { transform: scaleX(1); opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gtopc-batface { 0% { transform: scale(.2); opacity: 0; } 15% { transform: scale(1.08); opacity: 1; } 25%, 85% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(.7); opacity: 0; filter: blur(calc(var(--cp) * 2)); } }
+@keyframes gtopc-stick {
+  0% { transform: scale(.6); opacity: 0; filter: blur(calc(var(--cp) * 2)); }
+  8% { transform: scale(1); opacity: .9; filter: none; }
+  18% { transform: translateX(0); opacity: 1; }
+  25%, 100% { transform: translateX(calc(var(--cp) * -27)); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gtopc *, .gtopc__win > * { animation: none !important; }
+  .gtopc__fx { display: none; }
+}

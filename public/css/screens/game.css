@@ -1,0 +1,1563 @@
+/* ==========================================================================================
+   screens/game.css — in-match screen layout & HUD (js/screens/game.js, js/ui/hud.js, bondStrip.js,
+   teamPanel.js, emotes.js, ticker.js, effectsList.js, combatHud.js, settings.js, matchChrome.js,
+   fallbackField.js). Shop: game-shop.css. Panels / overlays / rich text: game-panels.css.
+   Sizes in rem (1rem = 100 design px at 1920×1080).
+   ========================================================================================== */
+
+/* ---- screen shell ---------------------------------------------------------------------------- */
+.gm { background: transparent; }
+/* Host test dock (public/js/ui/testDock.js DOCK_REM). Unitless rem, shared by the HUD and the dock.
+   team-right = .team left .22 + avatar .8 + gap .1 + name 1.5 + info padding .18.
+   bond-bottom = fieldHost.js HUD_REM.bondStripBottom. shop-top = HUD_REM.shopBarTop.
+   hand-clear = prep hudPadding bottom 3.2 + the bench piece 1.56. top = bottom of .gtop.
+   ready-h = .gtop padding .2 + clock --cd-h .7 + gap .1 + .readybtn .56. */
+.gm, .testconsole {
+  --dock-w: 3.6;
+  --dock-margin: 0.08;
+  --dock-team-left: 0.22;
+  --dock-team-right: 2.8;
+  --dock-team-top: 2.36;
+  --dock-team-avatar: 0.8;
+  --dock-team-gap: 0.14;
+  --dock-team-rows: 4;
+  --dock-bond-left: 1.56;
+  --dock-bond-top: 1.36;
+  --dock-bond-bottom: 2.16;
+  --dock-bond-slot: 0.74;
+  --dock-bond-gap: 0.1;
+  --dock-top: 1.02;
+  --dock-hand-clear: 4.76;
+  --dock-hand-left: 2.85;
+  --dock-ready-right: 0.3;
+  --dock-ready-w: 2.6;
+  --dock-ready-h: 1.56;
+  --dock-shop-top: 2.64;
+  --dock-funds-w: 1.18;
+  --dock-shop-right: 0.26;
+}
+.gm__field { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.gm__field canvas { display: block; }
+.gm__vignette {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(6, 9, 8, .78) 0%, rgba(6, 9, 8, 0) 18%),
+    linear-gradient(0deg, rgba(6, 9, 8, .6) 0%, rgba(6, 9, 8, 0) 22%),
+    radial-gradient(120% 90% at 45% 50%, transparent 60%, rgba(0, 0, 0, .5) 100%);
+}
+.gm__loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+.gm__hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.gm__hud > * { pointer-events: auto; }
+.gload { align-items: center; justify-content: center; gap: .2rem; }
+
+/* Host test console (DESIGN §34.8). A floating field panel. Its default left/top is the dock home
+   (right of .team, below the bond strip, above the hand) from the --dock-* rem above. The host drags
+   it by the header; JS then sets left/top in px. At ≤720px the top sheet wins, including over a stored position. */
+.testconsole {
+  position: fixed;
+  left: calc((var(--dock-team-right) + var(--dock-margin)) * 1rem);
+  top: calc((var(--dock-bond-bottom) + var(--dock-margin)) * 1rem);
+  z-index: 20; display: flex; flex-direction: column; align-items: flex-start;
+  gap: .06rem; width: auto; max-width: min(calc(var(--dock-w) * 1rem), 28vw);
+  max-height: calc(100vh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem);
+  pointer-events: auto; box-sizing: border-box;
+}
+.testconsole.is-open {
+  width: min(calc(var(--dock-w) * 1rem), 28vw);
+  overflow: hidden;
+}
+.testconsole__tab, .testconsole__run, .testconsole__row button {
+  color: #1a1408; background: #e8b84a; border: 0; font-weight: 700; padding: .04rem .1rem; cursor: pointer;
+}
+.testconsole__run { flex: 0 0 auto; }
+.testconsole__body {
+  width: 100%; display: grid; gap: .06rem; padding: .1rem; background: rgba(12, 14, 12, .94);
+  border: 1px solid rgba(232, 184, 74, .7); color: var(--text-hi); font-size: calc(.15 * var(--t));
+  max-height: calc(100vh - (var(--dock-hand-clear) + var(--dock-bond-bottom) + var(--dock-margin) * 2) * 1rem - .4rem);
+  overflow: auto; box-sizing: border-box;
+}
+.testconsole.is-open .testconsole__body { flex: 1 1 auto; min-height: 0; max-height: none; }
+.testconsole__head, .testconsole__row, .testconsole__field, .testconsole__check { display: flex; flex-wrap: wrap; align-items: center; gap: .06rem; }
+.testconsole__head { cursor: grab; touch-action: none; user-select: none; }
+.testconsole__head:active { cursor: grabbing; }
+.testconsole__field { display: grid; gap: .02rem; min-width: 0; }
+.testconsole__row .testconsole__field { flex: 1 1 8em; }
+.testconsole__field input, .testconsole__field select {
+  color: var(--text-hi); background: var(--bg-2); border: 1px solid var(--line-2); padding: .03rem .06rem;
+  min-width: 0; width: 100%; box-sizing: border-box;
+}
+/* the audit log keeps about five rows: a scroll container's automatic minimum is 0, so in the open panel's grid the
+   other controls squeezed it to a few px at the default height (the panel body scrolls instead) */
+.testconsole__log { margin: 0; padding: 0; list-style: none; min-height: 1.1rem; max-height: 2.4rem; overflow: auto; overflow-wrap: anywhere; }
+.testconsole__log .is-bad { color: #ff8a5c; }
+@media (max-width: 720px) {
+  .testconsole {
+    top: 8px !important; left: 8px !important; width: auto !important;
+    max-width: calc(100vw - 16px) !important; max-height: none !important; font-size: 14px;
+  }
+  .testconsole.is-open { width: calc(100vw - 16px) !important; max-width: calc(100vw - 16px) !important; max-height: 55vh !important; }
+  .testconsole__body, .testconsole.is-open .testconsole__body { font-size: 14px; max-height: 48vh !important; flex: none; }
+  .testconsole__tab, .testconsole__run, .testconsole__row button,
+  .testconsole__field input, .testconsole__field select {
+    min-height: 32px; min-width: 32px; font-size: 14px; padding: 6px 10px;
+  }
+}
+
+/* ---- top bar -------------------------------------------------------------------------------------- */
+.gtop {
+  position: absolute; left: 0; right: 0; top: 0;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start;
+  /* --gtop-gap 就是格线间距：`.gtop__moderow` 的居中位靠它把「左格右缘」推到中栏左缘（见下面那一段），
+     改 gap 时只改这一个变量，别让两处各写一份 .2rem。 */
+  --gtop-gap: .2rem;
+  padding: .2rem .3rem 0 .26rem; gap: var(--gtop-gap); pointer-events: none;
+}
+.gtop > * { pointer-events: auto; }
+.gtop__left { display: flex; align-items: center; gap: .16rem; }
+.gtop__meta { display: flex; flex-direction: column; align-items: flex-start; gap: .06rem; flex: 1 1 auto; min-width: 0; }
+/* 模式工具那一行（业主 2026-10-29；第三次改版把胶囊挪到「两侧组件的正中」）：难度名 + 锻造器胶囊同一行 ——
+   `.gtop__meta` 是竖列，这里只是那一行里面的横排；竖排里其余条目（ping / 测试标 / MOD / 规则）照旧各占一列。
+   居中位不写死 px：`.gtop__meta` 吃满左格剩下的宽度，这一行再 align-self: stretch 撑到左格右缘，并用
+   margin-right: calc(-1 * var(--gtop-gap)) 把顶栏格线那道 gap 也算进右边界 —— 于是这一行的右缘正好是
+   **中栏（.gtop__center，🔍 括号框）的左缘**；行内是 grid [难度名 auto | 1fr]，胶囊在 1fr 的那一格
+   （`.gtop__modeslot`，2026-10-30 起是 0 高的独立层，见下面那条注释）里居中 ⇒ 胶囊中心 = (难度名右缘 + 中栏左缘) / 2，
+   任何宽度都自动成立（不按模式分支，也不靠 JS 量）。
+   792×360 实测：难度名右缘 85.03px、中栏左缘 185.14px ⇒ 中心 135.08px（改前 119.7px，右移 15.4px；
+   左右余量 24.02 / 24.03px —— 误差 0.01px）。 */
+.gtop__moderow { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 0;
+  align-self: stretch; margin-right: calc(-1 * var(--gtop-gap)); min-width: 0; }
+/* 模式工具胶囊的**独立层**（业主 2026-10-30 / task-27：「两个模式的左上角模式位为什么显示位置不一样…你把炸惊
+   也和原本那样的显示一样」）：胶囊原来是这一行 grid 第二列里的一个格子，它自己的 min-height 32px 把只有 9px 高的
+   模式行撑到 32px —— `.gtop__meta` / `.gtop__left`（flex 居中）/ 整条顶栏跟着长高，模式位再被居中进那 32px ⇒
+   炸惊比官方低 6.6px、退出键低 6.6px、ping 高 4.9px（792×360 实测，见 handoff 报告的改前/改后对照表）。
+   现在胶囊装进 `.gtop__modeslot`：槽位仍是第二列（宽度 = 难度名右缘 → 中栏左缘），但**高度为 0**，不参与这一行
+   的定高；胶囊自身脱出布局流（absolute），以槽位中心为锚（left/top 50% + translate(-50%,-50%)）——
+   横向中心仍是 (难度名右缘 + 中栏左缘) / 2（792×360 = 135.08px，与改前逐像素相同，业主上一轮定的位置不动），
+   纵向跟着模式位中线走（胶囊相对难度名的上下关系与改前一致：板子中线比模式位中线高 .06rem 的视觉抬升还在
+   `.gm__modetools__plate` 的 transform 里）。**官方模式没有 modeEntry ⇒ 没有槽位、moderow 连 has-tools 都不带**，
+   DOM 与几何逐字段不变（`modeEntry` 为空时这里一行都不加）。
+   胶囊比槽位宽时（数字变长）两侧同时溢出，不会把模式位挤走 —— 槽位没有宽度下限（min-width: 0）。 */
+.gtop__modeslot { grid-column: 2; position: relative; align-self: center; height: 0; min-width: 0; pointer-events: none; }
+.gtop__modeslot > .gm__modetools { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; }
+/* 锻造器胶囊（业主 2026-10-29 第三次改版，照原版重画；当晚两改内部）：**绿色细发光边框 + 细黑线内里隔开
+   + 更淡的超浅青绿半透明底**。外壳 `button` 只负责点击热区（min-height 仍是 32px，压扁的只有看得见的那块板子 ——
+   `.gm__modetools__plate` 的高度 = 32 × 0.9 = 28.8px），所以触控一点没缩小。颜色：
+     background rgba(246, 255, 254, .74)  ← 业主「背景再淡一点」：在原来那版 rgba(214,255,250,.66) 上把颜色
+       再往白推两档（#f6fffe，只留一丝青绿），alpha 提到 .74（26% 透）—— 压在暗底上也不再发灰；
+       深色墨字对比度只会更好。更淡 / 更实的对照（同一胶囊只换底 + 黑线）：
+         handoff/shots/zhajing-redesign-fill3-V1|V2|V3|current-…-792x360.png，V5 = 近白 rgba(250,255,255,.8)
+         （还要更白就把底换成 V5 那一行）。
+     border     1px solid rgba(23, 217, 160, .55)   ← 业主说的「现在这个绿色的描边」，不动
+     box-shadow 0 0 .08rem rgba(23, 217, 160, .45)（发光）+ 一道很浅的深色落影，压住亮底与战场背景的接缝
+   浅底让那条绿描边终于读得出来（原来 .8 的薄荷底把描边吃掉了一半）。中间那根分隔线 = 1px 黑线
+   rgba(4, 26, 21, .55)（「细白线改黑线」；用与数字同族的墨绿黑，纯黑在浅底上会显得生硬，
+   要纯黑就改成 rgba(0, 0, 0, .55)）—— 压在这块浅底上实测 3.6:1，是清楚的一条细线；
+   红点（.has-roll = rolled != null，选完就消失）贴板子右上角。
+   竖向仍留原版那 -.06rem 的抬升（板子的视觉中线对齐难度名的字肩）；水平方向不再平移 —— 中心就是上面量出来的中点。 */
+.gm__modetools { grid-column: 2; justify-self: center; display: inline-flex; align-items: center; justify-content: center;
+  min-height: max(.44rem, 32px); min-width: 0; padding: 0; background: none; border: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.gm__modetools__plate { position: relative; display: inline-flex; align-items: center;
+  gap: max(.05rem, calc(3px * var(--sp-ui, 1)));
+  height: max(calc(.44rem * .9), 28.8px);
+  padding: 0 max(.12rem, calc(6px * var(--sp-ui, 1))) 0 max(.1rem, calc(5px * var(--sp-ui, 1)));
+  border-radius: 99px; color: #06241d;
+  background: rgba(246, 255, 254, .74);
+  border: 1px solid rgba(23, 217, 160, .55);
+  box-shadow: 0 0 .08rem rgba(23, 217, 160, .45), 0 .04rem .14rem rgba(0, 0, 0, .42);
+  transform: translateY(-.06rem);
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast); }
+.gm__modetools:hover .gm__modetools__plate, .gm__modetools.is-on .gm__modetools__plate {
+  background: rgba(250, 255, 255, .86); border-color: rgba(23, 217, 160, .8);
+  box-shadow: 0 0 .12rem rgba(23, 217, 160, .6), 0 .04rem .14rem rgba(0, 0, 0, .42);
+  transform: translateY(calc(-.06rem - 1px)); }
+.gm__modetools:active .gm__modetools__plate { transform: translateY(-.06rem) scale(.97); }
+.gm__modetools:focus-visible { outline: 2px solid var(--mint-500); outline-offset: 2px; border-radius: 99px; }
+.gm__modetools__cell { display: inline-flex; align-items: center; gap: max(.03rem, calc(2px * var(--sp-ui, 1))); min-width: 0; }
+.gm__modetools__icon { width: max(.2rem, 12px); height: max(.2rem, 12px); flex: none; color: #06241d; }
+.gm__modetools__cell--kills .gm__modetools__icon { color: rgba(6, 36, 29, .74); }
+.gm__modetools__n { font-size: max(12px, calc(.2 * var(--t))); font-weight: 800; color: #03130f; font-variant-numeric: tabular-nums; }
+/* 内里那道细线（业主 2026-10-29 晚：「细白线改黑线」）：1px 墨绿黑，高度跟着板子走，别用固定 rem 缩成一小截 */
+.gm__modetools__sep { width: 1px; height: 56%; flex: none; margin: 0 max(.04rem, calc(3px * var(--sp-ui, 1))); background: rgba(4, 26, 21, .55); }
+/* 红点（rolled != null）：板子右上角一颗，不抢点击（胶囊本体才是按钮）。 */
+.gm__modetools__dot { position: absolute; top: max(-2px, -.03rem); right: max(-1px, -.01rem);
+  width: max(.08rem, 7px); height: max(.08rem, 7px); border-radius: 50%; background: var(--red-premium);
+  box-shadow: 0 0 0 1px rgba(6, 10, 9, .9), 0 0 .14rem rgba(255, 84, 84, .72); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  .gm__modetools__plate, .gm__modetools:hover .gm__modetools__plate, .gm__modetools:active .gm__modetools__plate {
+    transform: translateY(-.06rem); transition: none; }
+}
+/* 左下角「惊变」独立键（业主 2026-10-29）：尺寸 / 描边 / 背景沿用 .gm__gear（32px 地板 + devices.css 的随屏幕放大），
+   这里只补按下态与「已选数量」角标。 */
+.gm__jibian { position: relative; }
+.gm__jibian.is-on { color: var(--mint-400); border-color: var(--mint-700); background: var(--mint-900); }
+.gm__jibian__n { position: absolute; top: max(-4px, -.02rem); right: max(-4px, -.02rem); min-width: max(12px, .14rem);
+  padding: 0 max(calc(3px * var(--sp-ui, 1)), .02rem); font-size: max(10px, calc(.14 * var(--t))); line-height: max(12px, .16rem); text-align: center;
+  color: var(--text-on-mint); background: var(--mint-500); border-radius: 99px; }
+/* 左下角「词条」独立键（超限模拟，业主 2026-10-31）：**照抄上一颗惊变键** —— 尺寸 / 描边 / 背景仍是 .gm__gear
+   （32px 地板在 devices.css），这里只补按下态与已选条数角标，每个量都与 .gm__jibian / .gm__jibian__n 同一套。
+   只有超限局的私有视图带 m.private.relicsOverlimit，别的模式这颗键根本不渲染（screens/game.js）。 */
+.gm__relics { position: relative; }
+.gm__relics.is-on { color: var(--mint-400); border-color: var(--mint-700); background: var(--mint-900); }
+/* 双色角标（业主 2026-11-01「计入，一左一右，一蓝一红」）：正面饰品数在左（蓝）、负面词条数在右（红）。
+   容器是按钮内部的绝对定位子节点 ⇒ 不参与 .gm__corner 那一排的排版，键本身仍是 .gm__gear 的 32px 地板
+   （触控目标不变），也不会挤压左下角其它键；右锚点与旧角标同一个 max(-4px, -.02rem)，两枚并排时整排向左生长
+   （两处都是两位数时最多探出键左沿不到半个键距 —— 超限房左邻是「对话」键，它没有角标，不叠字）。
+   两枚小片的 min-width / 字号 / 行高 / 内边距**逐条沿用**旧角标（与 .gm__jibian__n 同一套量），所以单枚时不比
+   以前大、也不比以前小；分色只加在底色 / 描边 / 字色上。 */
+.gm__relics__badges { position: absolute; top: max(-4px, -.02rem); right: max(-4px, -.02rem); display: flex; flex-direction: row;
+  align-items: center; gap: max(calc(2px * var(--sp-ui, 1)), .02rem); }
+.gm__relics__n { min-width: max(12px, .14rem);
+  padding: 0 max(calc(3px * var(--sp-ui, 1)), .02rem); font-size: max(10px, calc(.14 * var(--t))); line-height: max(12px, .16rem); text-align: center;
+  color: var(--text-on-mint); background: var(--mint-500); border-radius: 99px; }
+/* 蓝 = 正面饰品（--ice #9fd4ff 底 + 近黑蓝字 + 亮蓝内描边）；红 = 负面词条（--red-premium #ff5454 底 + 近黑红字 +
+   亮红内描边）。两侧都是「浅底深字」，明度对齐旧角标的薄荷底 ⇒ 并排时重量一致，只靠色相分辨（字/底对比 ≈ 11:1 / 5.9:1）。
+   描边用 inset box-shadow 而不是 border：border 会把小片撑高 2px，旧角标的 12/16px 行高就不再是同一枚尺寸了。 */
+.gm__relics__n--pos { color: #0a1c2b; background: var(--ice); box-shadow: inset 0 0 0 1px #cfe8ff; }
+.gm__relics__n--neg { color: #2a0603; background: var(--red-premium); box-shadow: inset 0 0 0 1px #ff9c9c; }
+/* 惊变面板（左下角那颗独立键）：外壳 / 页签全部复用 jibian.css 的 .zjpanel —— 业主 2026-10-29 第三次改版后
+   screens/game.js 直接挂 ui/jibian.js 的 **JibianPanel 单层三页签**（已选惊变 / 敌方惊变 / 惊变羁绊），
+   不再经 hud.js 的两层 ModeToolsPanel，也没有「惊变一览」那一页。
+   矮屏限高：jibian.css 的 .zjpanel__box 只有 max-height: 84%，而网格行是内容撑开的（不定高）⇒ 百分比其实不生效，
+   792×360 上羁绊页会把外壳撑出视口。这里只对这一个面板给一个视口单位上限，页体自己滚（.zjpanel__body 本来就是
+   overflow: auto），外壳仍留在视口内；别的 .zjpanel（惊变一览 / 揭晓）不归这条管。 */
+.gm .zjpanel[data-testid="jibian-panel"] .zjpanel__box { max-height: calc(100dvh - .6rem); overflow: hidden; }
+/* a match with gameplay plugins (DESIGN §32.6): the HUD corner's MOD mark */
+.gtop__mod { pointer-events: auto; }
+.gtop__rules { max-width: 3.4rem; font-size: calc(.11 * var(--t)); line-height: 1.4; color: var(--text-md); overflow-wrap: anywhere; }
+/* the latency pill and, beside it, the 观战席 capsule (ui/hud.js SpectatorPill: an eye + how many are watching; opens the roster) */
+.gtop__net { display: flex; align-items: center; gap: .08rem; }
+/* the ping pill as tall as its value at a big 文字大小 (§35.51: cut 1 px at 特大 on the phones), as in the room and the hub */
+.gtop__net .ping { height: auto; min-height: .32rem; padding-top: 1px; padding-bottom: 1px; }
+.specpill { --btn-bg: rgba(0, 0, 0, .5); --btn-bg-hover: rgba(0, 0, 0, .66); --btn-bd: var(--line); height: .32rem; min-width: 0; padding: 0 .12rem; gap: .05rem; border-radius: 99px; }
+.specpill .btn__icon { width: .18rem; height: .18rem; color: var(--mint-500); }
+.specpill__num { font-size: .18rem; font-weight: 700; color: var(--mint-400); }
+.specpill.is-me { --btn-bd: var(--mint-600); }
+/* the roster inside its modal */
+.spec__roster { display: flex; flex-direction: column; gap: .06rem; margin: 0 0 .1rem; padding: 0; list-style: none; }
+.spec__row { display: flex; align-items: center; gap: .1rem; min-height: .44rem; padding: .04rem .1rem; background: rgba(255, 255, 255, .03); border: 1px solid transparent; }
+.spec__row.is-me { border-color: var(--mint-700); background: rgba(45, 212, 191, .08); }
+.spec__row.is-offline .spec__name { color: var(--text-dim); }
+.spec__ico { width: .18rem; height: .18rem; flex: none; color: var(--mint-500); }
+.spec__row.is-offline .spec__ico { color: var(--text-dim); }
+.spec__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(.19 * var(--t)); color: var(--text-hi); }
+.spec__hint { margin: .04rem 0 0; font-size: calc(.15 * var(--t)); line-height: 1.45; }
+.gtop__exit { box-shadow: 0 .06rem .2rem rgba(0, 0, 0, .5); }
+/* 顶部中栏 (PR #643 / #827, the event's top bar, video 8:01): [🔍] in a bracket frame · + · one long thin band — 回合 N
+   centred in its left half, the LP tower in its right half, the official deco type above (ui/hud.js DecoType) — with
+   the phase capsule as a bevelled plate in a grey outer frame across the middle · + · [🔍▶▶] in its own bracket frame.
+   Outlines of bevelled shapes are two clipped layers (the line colour, then the fill 1–2 px inside). [ASSUMED] these
+   CSS frames, halves, round chip and plate stand in for the official hudPanel bg_check_btn / frame_mid_normal (a boss
+   round's frame_mid_boss, by its name) / bg_round, which are not painted yet; the colours, read off the footage; the
+   second + mark and the round number's flip, #827's additions (#643 had one + and no flip). */
+.gtop__center { position: relative; display: flex; align-items: center; margin-top: .02rem; }
+.gtop__frame { position: relative; display: flex; align-items: center; justify-content: center; height: .64rem; padding: 0 .17rem; }
+.gtop__frame::before, .gtop__frame::after { content: ''; position: absolute; top: 0; bottom: 0; width: .12rem; border: 2px solid rgba(200, 206, 208, .42); pointer-events: none; }
+.gtop__frame::before { left: 0; border-right: 0; }
+.gtop__frame::after { right: 0; border-left: 0; }
+.gtop__plus { flex: none; width: .2rem; height: .2rem; margin: 0 .05rem; opacity: .45;
+  background: linear-gradient(#c8cecf, #c8cecf) center / 100% 1px no-repeat, linear-gradient(#c8cecf, #c8cecf) center / 1px 100% no-repeat; }
+.gtop__band { position: relative; display: grid; grid-template-columns: minmax(2.3rem, auto) auto minmax(2.3rem, auto); align-items: center;
+  filter: drop-shadow(0 .04rem .1rem rgba(0, 0, 0, .45)); }
+/* the deco type: hudPanel/frame_deco_txt1 / txt3 (RHODES ISLAND TERMINAL SERVICE, 103×6) over the two halves,
+   frame_deco_txt2 (STRONGHOLD PROTOCOL, 53×5) over the plate — [ASSUMED] the placement (txt2 fits the gap in the top
+   edge of frame_mid_normal) —, at the 🔍 buttons' scale (.01586rem a sprite pixel); text of the same size without them */
+.gtop__deco { position: absolute; top: -.16rem; display: block; line-height: 0; pointer-events: none; }
+.gtop__deco--l { left: .24rem; }
+.gtop__deco--r { right: .24rem; }
+.gtop__deco--c { left: 50%; transform: translateX(-50%); }
+.gtop__decoimg { display: block; height: auto; }
+.gtop__decoimg--txt1, .gtop__decoimg--txt3 { width: 1.634rem; }
+.gtop__decoimg--txt2 { width: .841rem; }
+.gtop__decotxt { display: block; font-family: var(--font-num); font-size: .085rem; font-weight: 700; line-height: 1; letter-spacing: .14em;
+  color: rgba(225, 232, 232, .28); white-space: nowrap; }
+.gtop__half { position: relative; display: flex; align-items: center; justify-content: center; height: .42rem; padding: 0 .3rem; }
+.gtop__half::before, .gtop__half::after { content: ''; position: absolute; pointer-events: none; }
+.gtop__half::before { inset: 0; background: rgba(176, 184, 186, .45); }
+.gtop__half::after { inset: 1px; background: linear-gradient(180deg, rgba(14, 18, 18, .86), rgba(9, 12, 12, .8)); box-shadow: inset 0 0 0 calc(.06rem + 1px) rgba(255, 255, 255, .06); }
+.gtop__half--l::before, .gtop__half--l::after { clip-path: polygon(.1rem 0, 100% 0, 100% 100%, .1rem 100%, 0 calc(100% - .1rem), 0 .1rem); }
+.gtop__half--r::before, .gtop__half--r::after { clip-path: polygon(0 0, calc(100% - .1rem) 0, 100% .1rem, 100% calc(100% - .1rem), calc(100% - .1rem) 100%, 0 100%); }
+.gtop__half > * { position: relative; z-index: 1; }
+.gtop__half--l { margin-right: -.06rem; transform-origin: 100% 50%; }
+.gtop__half--r { margin-left: -.06rem; transform-origin: 0 50%; }
+.gtop__half .roundbox { gap: .12rem; }
+/* the round chip and the LP keep plain rem: HUD chrome in boxes the design fixed (test/ui/text-scale.test.js NOT_SCALED) */
+.gtop__half .roundbox__label { font-size: .2rem; color: #d8dcdc; letter-spacing: .1em; }
+.gtop__half .roundbox__num { display: inline-grid; place-items: center; min-width: .48rem; height: .34rem; padding: 0 .07rem; font-size: .28rem; line-height: 1;
+  background: #cfd3d3; color: #121516; border-radius: .03rem; clip-path: none; animation: gtop-flip 260ms var(--ease-out) both; }
+.gtop__half .lp--lg { font-size: .32rem; gap: .03rem; }
+/* a normal round's LP in white (the footage, video 8:01; [ASSUMED] the tint) — never over the pending-leak red
+   (.lp.is-pending, GitHub #479), the low-LP red (.lp--danger) or the boss rounds' team colour (.lp--team) */
+.gtop__half .lp--lg:not(.lp--danger):not(.lp--team):not(.is-pending) .lp__val { color: #eef2f2; }
+.gtop__half .lp--lg .lp__icon { width: .34rem; height: .34rem; }
+/* the capsule plate: a grey outer frame, then the capsule's own bevelled 2 px outline in its phase colour */
+.gtop__cap { position: relative; z-index: 2; display: flex; padding: .08rem .13rem; }
+.gtop__cap::before, .gtop__cap::after { content: ''; position: absolute; pointer-events: none;
+  clip-path: polygon(.2rem 0, calc(100% - .2rem) 0, 100% .2rem, 100% calc(100% - .2rem), calc(100% - .2rem) 100%, .2rem 100%, 0 calc(100% - .2rem), 0 .2rem); }
+.gtop__cap::before { inset: 0; background: rgba(176, 184, 186, .5); }
+.gtop__cap::after { inset: 1px; background: rgba(9, 12, 12, .9); }
+.gtop__cap .capsule { position: relative; z-index: 1; isolation: isolate; justify-content: center; height: .54rem; min-width: 2.12rem; padding: 0 .28rem 0 .2rem;
+  border: 0; border-radius: 0; box-shadow: none; background: var(--cap);
+  clip-path: polygon(.15rem 0, calc(100% - .15rem) 0, 100% .15rem, 100% calc(100% - .15rem), calc(100% - .15rem) 100%, .15rem 100%, 0 calc(100% - .15rem), 0 .15rem); }
+.gtop__cap .capsule::before { content: ''; position: absolute; inset: 2px; z-index: -1;
+  background: linear-gradient(180deg, #143029, #0a1412); /* fallback: no color-mix() */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cap) 14%, #0b1513), #0a1412);
+  clip-path: polygon(.14rem 0, calc(100% - .14rem) 0, 100% .14rem, 100% calc(100% - .14rem), calc(100% - .14rem) 100%, .14rem 100%, 0 calc(100% - .14rem), 0 .14rem); }
+.gtop__cap .capsule__icon { width: .4rem; height: .4rem; }
+.gtop__cap .capsule--prep .capsule__label { font-size: .28rem; letter-spacing: .1em; color: var(--mint-400); }
+.gtop__cap .capsule--boss { min-width: 4.2rem; }
+.gtop__cap .capsule--unite { --cap: #ff6d2e; }
+.gtop__cap .capsule--combat .capsule__kills { color: #eef1f1; }
+.gtop__cap .capsule--combat .capsule__kills b { color: #ff6a48; }
+/* 顶栏动效 (2026-10-13, video 7:55–8:00 / 8:32–8:52; ui/hud.js capsuleFxKind): the centre drops in with the match screen;
+   the round number and the kills flip; at a phase change the capsule's content rises in from below, after the little
+   scene of that phase (kettles while the round starts; robot meets enemy → 开始作战 / 联防开始). */
+.gtop__center { animation: gtop-drop 420ms var(--ease-out) both; }
+.gtop__half .roundbox__num, .gtop__cap .capsule__kills b { display: inline-block; animation: capfx-flip 260ms var(--ease-out) both; }
+/* the round number keeps its centred box (inline-block above dropped .roundbox__num's grid: the digit sat top-left) */
+.gtop__half .roundbox__num { display: inline-grid; place-items: center; line-height: 1; }
+.gtop__cap.is-fx-wait .capsule > * { visibility: hidden; }
+.gtop__cap.is-fx-enter .capsule__icon { animation: capfx-rise 260ms var(--ease-out) both; }
+.gtop__cap.is-fx-enter .capsule > :not(.capsule__icon) { animation: capfx-slide 280ms 120ms var(--ease-out) both; }
+.gtop__cap.is-fx-rest .capsule__icon { animation: capfx-rise 260ms 200ms var(--ease-out) both; }
+.gtop__cap.is-fx-rest .capsule > :not(.capsule__icon) { animation: capfx-slide 300ms 440ms var(--ease-out) both; }
+.gtop__cap.is-fx-clash .capsule > * { animation: capfx-rise 260ms 2100ms var(--ease-out) both; }
+.gtop__cap.is-fx-unite .capsule > * { animation: capfx-rise 260ms 2750ms var(--ease-out) both; }
+.gtop__cap.is-fx-clash .capsule { animation: capfx-glow 700ms 1100ms ease-out both; }
+.gtop__cap.is-fx-unite .capsule { animation: capfx-glow 700ms 1420ms ease-out both; }
+.capsule-fx { position: absolute; inset: .1rem .15rem; z-index: 3; display: flex; align-items: center; justify-content: center; gap: .1rem;
+  overflow: hidden; pointer-events: none; color: var(--mint-400);
+  clip-path: polygon(.13rem 0, calc(100% - .13rem) 0, 100% .13rem, 100% calc(100% - .13rem), calc(100% - .13rem) 100%, .13rem 100%, 0 calc(100% - .13rem), 0 .13rem); }
+.capsule-fx .pix { flex: none; height: auto; }
+.capsule-fx .pix__b { opacity: .6; }
+.capsule-fx__k { width: .36rem; animation: capfx-drop 260ms calc(var(--i) * 140ms) var(--ease-out) both, capfx-bob 900ms calc(420ms + var(--i) * 150ms) ease-in-out infinite; }
+.capsule-fx--rest .capsule-fx__k { animation: capfx-up 220ms calc(var(--i) * 40ms) ease-in forwards; }
+.capsule-fx--clash { color: #ffbf3a; animation: capfx-out 200ms 1950ms ease-in forwards; }
+.capsule-fx--unite { color: #ff8a3a; animation: capfx-out 200ms 2600ms ease-in forwards; }
+.capsule-fx__meet, .capsule-fx__clash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.capsule-fx__meet { gap: .12rem; }
+.capsule-fx__allies, .capsule-fx__foes { display: flex; align-items: flex-end; gap: .04rem; }
+.capsule-fx__ally { width: .36rem; animation: capfx-drop 240ms var(--ease-out) both; }
+.capsule-fx__ally--2 { opacity: .8; animation: capfx-join 260ms 900ms var(--ease-out) both; }
+.capsule-fx__foe { width: .42rem; animation: capfx-hop 900ms 120ms linear both; }
+.capsule-fx__foe--2 { animation-delay: 260ms; }
+.capsule-fx--clash .capsule-fx__meet { animation: capfx-ghost 260ms 1080ms forwards; }
+.capsule-fx--unite .capsule-fx__meet { animation: capfx-ghost 260ms 1400ms forwards; }
+.capsule-fx__clash { gap: .08rem; }
+.capsule-fx__swords { width: .34rem; filter: drop-shadow(0 0 .05rem currentColor); }
+.capsule-fx__word { font-size: .27rem; font-weight: 900; letter-spacing: .08em; color: #ffd76a; text-shadow: 0 0 .1rem rgba(255, 170, 40, .8); white-space: nowrap; }
+.capsule-fx--unite .capsule-fx__word { color: #ffb06a; text-shadow: 0 0 .1rem rgba(255, 110, 40, .85); }
+.capsule-fx--clash .capsule-fx__swords { animation: capfx-pop 280ms 1100ms var(--ease-out) both; }
+.capsule-fx--clash .capsule-fx__word { animation: capfx-word 320ms 1240ms var(--ease-out) both; }
+.capsule-fx--unite .capsule-fx__swords { animation: capfx-pop 280ms 1420ms var(--ease-out) both; }
+.capsule-fx--unite .capsule-fx__word { animation: capfx-word 320ms 1560ms var(--ease-out) both; }
+@keyframes gtop-drop { from { transform: translateY(-.5rem); opacity: 0; } }
+/* 回合数字翻进来（.roundbox__num 的 key 每换一个回合就重放一次）：和 capfx-flip 同一支动作 —— 目前在样式层被
+   下面 `.gtop__half .roundbox__num, .gtop__cap .capsule__kills b` 那条 capfx-flip 盖着，这里补上它引用的名字 */
+@keyframes gtop-flip { from { transform: translateY(-55%); opacity: 0; } }
+@keyframes capfx-flip { from { transform: translateY(-55%); opacity: 0; } }
+@keyframes capfx-rise { from { transform: translateY(110%); opacity: 0; } }
+@keyframes capfx-slide { from { transform: translateX(.4rem); opacity: 0; } }
+@keyframes capfx-drop { from { transform: translateY(-130%); opacity: 0; } }
+@keyframes capfx-up { to { transform: translateY(-140%); opacity: 0; } }
+@keyframes capfx-bob { 50% { transform: translateY(-14%); } }
+@keyframes capfx-out { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes capfx-join { from { transform: translateX(-.3rem); opacity: 0; } }
+@keyframes capfx-hop {
+  0% { transform: translateX(1.5rem); opacity: 0; } 10% { opacity: 1; }
+  25% { transform: translateX(1.1rem) translateY(-18%); } 50% { transform: translateX(.72rem); }
+  75% { transform: translateX(.34rem) translateY(-18%); } 100% { transform: translateX(0); }
+}
+@keyframes capfx-ghost { to { opacity: .22; filter: blur(.6px); } }
+@keyframes capfx-glow { 30% { filter: brightness(1.55); } }
+@keyframes capfx-pop { 0% { transform: scale(1.9) rotate(-12deg); opacity: 0; filter: brightness(2.4); } 60% { opacity: 1; } }
+@keyframes capfx-word {
+  0% { transform: translateX(.12rem); opacity: 0; text-shadow: -.04rem 0 rgba(255, 60, 60, .8), .04rem 0 rgba(60, 220, 255, .8); }
+  60% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gtop__center, .gtop__half .roundbox__num, .gtop__cap .capsule__kills b, .gtop__cap .capsule, .gtop__cap .capsule > * { animation: none; }
+  .capsule-fx { display: none; }
+  .gtop__cap.is-fx-wait .capsule > * { visibility: visible; }
+}
+/* 窄屏（§35.18）：文字替身比它的官方精灵宽，压到 767px 以下的条上会自己撞自己 —— 两半收窄内边距，替身让位（精灵照留） */
+@media (max-width: 767px) {
+  .gtop__band { grid-template-columns: minmax(1.2rem, auto) auto minmax(1.2rem, auto); }
+  .gtop__half { padding: 0 .14rem; }
+  .gtop__decotxt { display: none; }
+}
+/* the two official 🔍 buttons (ui/hud.js CheckBtn): btn_check_player (mint, left) and btn_check_enemy (amber, right);
+   sprites are 35×29 (plain) / 61×29 (with chevrons) → .555rem / .967rem × .46rem */
+.gtop__iconbtn {
+  display: flex; align-items: center; justify-content: center; gap: .04rem; min-width: .46rem; height: .46rem; padding: 0 .1rem;
+  background: rgba(78, 216, 175, .06); border: 2px solid var(--mint-600); border-radius: .06rem; color: #fff;
+  font-family: var(--font-num); font-weight: 700;
+  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), filter var(--t-fast), opacity var(--t-fast);
+}
+.gtop__iconbtn .icon { width: .24rem; height: .24rem; }
+.gtop__iconbtn:hover, .gtop__iconbtn.is-on { background: var(--mint-a20); color: var(--mint-400); border-color: var(--mint-500); }
+.gtop__iconbtn.is-on:not(.has-sprite) { opacity: .6; }
+.gtop__iconbtn .enemybtn__chev { color: #fff; }
+.gtop__right { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; justify-self: end; }
+.gtop__right .countdown { --cd-h: .7rem; filter: drop-shadow(0 0 .12rem rgba(0, 0, 0, .8)); }
+.gtop__clock { display: flex; align-items: flex-start; gap: .14rem; }
+
+/* ---- 进场 (PR #827, the maintainer's decision of 2026-10-21; screens/game.js hudIn) ------------------------------- */
+/* 局内 HUD 的进场：协议启动！在屏上时整个 HUD 隐着（.is-wait —— 不再靠 pboot 的 z-index 把它挡在后面），它一开始淡出
+   就切成 .is-enter，1.2 s 后类名清掉；reducedMotion 时两个类从头到尾都不出现，HUD 直接就在（screens/game.js）。
+   顺序照视频 7:51–8:01：顶栏左块 → 中栏长条（两半与中栏挡板各自错帧）→ 官方 deco 字 → 右块 → 队伍栏 / 效果列 →
+   商店栏（接在它自己的 shop-up 后面，见 game-shop.css）。[ASSUMED] 顺序与时长是 #827 的作者照视频读出来的。
+   .is-wait 只藏不拆布局：进场时每块的盒子已经在位，因此全程不重排。 */
+.gm__hud.is-wait > * { visibility: hidden; }
+.gm__hud.is-enter .gtop__left { animation: gtop-left-rise 520ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__band { animation: gtop-band-rise 560ms 90ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__half--l { animation: gtop-half-l-rise 520ms 160ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__half--r { animation: gtop-half-r-rise 520ms 220ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__cap { animation: gtop-cap-plate 560ms 140ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__deco { animation: gtop-deco-fade 420ms 260ms var(--ease-out) both; }
+.gm__hud.is-enter .gtop__right { animation: gtop-right-rise 520ms 300ms var(--ease-out) both; }
+.gm__hud.is-enter .team { animation: gtop-team-in 620ms 180ms var(--ease-out) both; }
+.gm__hud.is-enter .gm__effects { animation: gtop-fx-in 620ms 340ms var(--ease-out) both; }
+/* 商店栏留着自己的 shop-up 在列表里，它跟着整块升起；.is-enter 撤掉时不会让 shop-up 再起一遍 */
+.gm__hud.is-enter .shopbar { animation: shop-up var(--t-slow) var(--ease-out), gtop-rise 620ms 240ms var(--ease-out) both; }
+/* 各块从下方升起并淡入；deco 只淡入 —— 它靠 translateX(-50%) 居中，动 transform 会把它甩偏 */
+@keyframes gtop-rise { from { transform: translateY(.5rem); opacity: 0; } }
+@keyframes gtop-left-rise { from { transform: translateY(.6rem); opacity: 0; } }
+@keyframes gtop-band-rise { from { transform: translateY(.52rem); opacity: 0; } }
+@keyframes gtop-half-l-rise { from { transform: translateY(.34rem); opacity: 0; } }
+@keyframes gtop-half-r-rise { from { transform: translateY(.34rem); opacity: 0; } }
+@keyframes gtop-cap-plate { from { transform: translateY(.3rem); opacity: 0; } }
+@keyframes gtop-right-rise { from { transform: translateY(.5rem); opacity: 0; } }
+@keyframes gtop-deco-fade { from { opacity: 0; } }
+@keyframes gtop-team-in { from { transform: translateX(-.6rem); opacity: 0; } }
+@keyframes gtop-fx-in { from { transform: translateX(.6rem); opacity: 0; } }
+/* 减动态：reducedMotion 下这两个类根本不会出现（screens/game.js），这里只是兜底 —— 别让半截进场停在中间 */
+@media (prefers-reduced-motion: reduce) {
+  .gm__hud.is-enter .gtop__left, .gm__hud.is-enter .gtop__right, .gm__hud.is-enter .gtop__band, .gm__hud.is-enter .gtop__half, .gm__hud.is-enter .gtop__cap, .gm__hud.is-enter .gtop__deco, .gm__hud.is-enter .team, .gm__hud.is-enter .gm__effects { animation: none; }
+  .gm__hud.is-enter .shopbar { animation: shop-up var(--t-slow) var(--ease-out); }
+}
+
+/* solo pause / resume (ui/hud.js PauseButton, official battle pause: two bars on a dark square) */
+.pausebtn {
+  display: grid; place-items: center; width: .6rem; height: .6rem; flex: none;
+  background: rgba(10, 14, 12, .88); border: 2px solid rgba(242, 242, 242, .75); color: #fff;
+  box-shadow: 0 .04rem .16rem rgba(0, 0, 0, .55);
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+}
+.pausebtn__glyph { width: .3rem; height: .3rem; fill: currentColor; }
+.pausebtn:hover:not(:disabled) { background: rgba(255, 255, 255, .14); border-color: #fff; }
+.pausebtn.is-on { background: var(--mint-500); border-color: var(--mint-400); color: var(--text-on-mint); box-shadow: 0 0 .22rem rgba(23, 249, 183, .45); }
+.pausebtn.is-busy { opacity: .6; }
+
+/* boss-round overtime warning (ui/hud.js OvertimeWarning; red DOT look: official icon_warn / blood_icon + bg_lose_hp) */
+.otwarn {
+  position: relative; display: flex; align-items: center; gap: .08rem; height: .38rem; padding: 0 .14rem 0 .1rem;
+  background: linear-gradient(90deg, rgba(120, 10, 14, .92), rgba(40, 6, 8, .88)); border: 1px solid rgba(255, 84, 84, .7);
+  color: #ffdede; font-size: .16rem; white-space: nowrap; box-shadow: 0 0 .18rem rgba(255, 36, 36, .35);
+  animation: ot-in var(--t-slow) var(--ease-out);
+}
+.otwarn__icon { width: .24rem; height: .24rem; object-fit: contain; flex: none; color: var(--red-premium); }
+.otwarn__tag { font-family: var(--font-num); font-size: .13rem; font-weight: 700; letter-spacing: .1em; padding: 0 .05rem; background: #e2262a; color: #fff; line-height: 1.35; }
+.otwarn__txt b { color: #fff; font-size: .2rem; }
+.otwarn__lost { font-size: .13rem; color: rgba(255, 222, 222, .75); }
+.otwarn__lost b { color: #fff; }
+.otwarn--pending { border-style: dashed; }
+.otwarn--pending .otwarn__icon { animation: blink 1s steps(2, end) infinite; }
+.otwarn--drain { animation: ot-in var(--t-slow) var(--ease-out), ot-pulse 1s ease-in-out infinite; }
+.otwarn__blood { display: grid; place-items: center; width: .5rem; height: .28rem; flex: none; background: radial-gradient(closest-side, rgba(255, 40, 40, .9), rgba(255, 40, 40, 0)); }
+.otwarn--drain .otwarn__icon { color: #fff; }
+.otwarn__tick {
+  position: absolute; left: .18rem; top: -.04rem; font-size: .2rem; font-weight: 700; color: var(--red-premium);
+  text-shadow: 0 0 .06rem rgba(0, 0, 0, .9); pointer-events: none; animation: ot-tick 1s var(--ease-out) forwards;
+}
+@keyframes ot-in { from { opacity: 0; transform: translateY(-.06rem); } }
+@keyframes ot-pulse { 0%, 100% { box-shadow: 0 0 .12rem rgba(255, 36, 36, .3); } 50% { box-shadow: 0 0 .32rem rgba(255, 36, 36, .75); border-color: #ff6a6a; } }
+@keyframes ot-tick { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-.3rem); } }
+@media (prefers-reduced-motion: reduce) { .otwarn, .otwarn--drain, .otwarn__tick, .otwarn--pending .otwarn__icon { animation: none; } }
+
+.roundbox { display: flex; align-items: center; gap: .08rem; }
+.roundbox__label { font-size: .16rem; color: var(--text-lo); letter-spacing: .08em; }
+.roundbox__num {
+  min-width: .54rem; height: .44rem; display: grid; place-items: center; padding: 0 .08rem;
+  background: #eef3f1; color: #0b0f0d; font-size: .32rem; font-weight: 700; line-height: 1;
+  clip-path: polygon(.06rem 0, 100% 0, 100% calc(100% - .06rem), calc(100% - .06rem) 100%, 0 100%, 0 .06rem);
+}
+
+/* phase capsule */
+.capsule {
+  --cap: var(--mint-500);
+  display: flex; align-items: center; gap: .1rem; height: .5rem; min-width: 2.2rem; padding: 0 .22rem 0 .12rem;
+  border: 2px solid var(--cap); border-radius: .25rem;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .25)); background: linear-gradient(90deg, color-mix(in srgb, var(--cap) 16%, transparent), rgba(0, 0, 0, .25));
+  box-shadow: inset 0 0 .14rem transparent, 0 0 .16rem transparent; box-shadow: inset 0 0 .14rem color-mix(in srgb, var(--cap) 30%, transparent), 0 0 .16rem color-mix(in srgb, var(--cap) 25%, transparent);
+  white-space: nowrap;
+}
+.capsule__icon { width: .36rem; height: .36rem; object-fit: contain; color: var(--cap); flex: none; }
+.capsule__label { font-size: .21rem; font-weight: 700; letter-spacing: .12em; color: var(--text-hi); }
+.capsule__kills { font-size: .26rem; color: var(--text-lo); letter-spacing: .04em; }
+.capsule__kills b { color: #fff; font-size: .3rem; }
+.capsule__tag { font-size: .14rem; padding: .01rem .08rem; background: var(--orange); color: #1a0800; font-weight: 700; letter-spacing: .1em; }
+/* 联防: a leaker's enemies still standing (MissTag, user playtest #6 item 7) — the official bg_miss_enemy pill (runner ×
+   on its left 3/5, the number on the rest) or an orange look-alike */
+.misstag {
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: .03rem; height: .26rem; min-width: .84rem;
+  padding: 0 .1rem 0 .08rem; border-radius: .13rem; background: #3b1a08; border: 1px solid var(--orange-hi);
+  color: #fff; font-weight: 700; line-height: 1; flex: none;
+}
+.misstag.has-art { border: 0; border-radius: 0; background: transparent no-repeat left center / 100% 100%; width: .84rem; padding-right: .12rem; }
+.misstag__icon { display: inline-flex; align-items: center; gap: .01rem; margin-right: auto; color: var(--orange-hi); font-size: .16rem; }
+.misstag__icon .icon { width: .16rem; height: .16rem; }
+.misstag__n { font-size: .2rem; }
+.misstag.is-clear .misstag__n { color: var(--mint-400); }
+.team__line .misstag { height: .21rem; min-width: .68rem; padding-right: .08rem; }
+.team__line .misstag.has-art { width: .68rem; }
+.team__line .misstag__n { font-size: .16rem; }
+.team__line .misstag__icon { font-size: .13rem; }
+.capsule--combat { --cap: var(--orange-hi); }
+.capsule--boss { --cap: var(--orange-hi); min-width: 4.2rem; }
+/* phase capsule scenes (ui/hud.js CapsuleScene, capsuleFxKind): the official hudPanel/trans_* sprites at ×1.3 of their
+   pixels over the capsule, which hides or holds its own content meanwhile. Timings from the event's top bar (video
+   7:55–7:58 回合开始 → 休整期, 8:32–8:34 作战, 8:38–8:41 联防); [ASSUMED] positions, sizes and timings estimated from it. */
+/* the capsule plate: a grey outer frame around the phase capsule */
+.gtop__cap { position: relative; z-index: 2; display: flex; padding: .08rem .13rem; }
+.gtop__cap::before, .gtop__cap::after { content: ''; position: absolute; pointer-events: none;
+  clip-path: polygon(.2rem 0, calc(100% - .2rem) 0, 100% .2rem, 100% calc(100% - .2rem), calc(100% - .2rem) 100%, .2rem 100%, 0 calc(100% - .2rem), 0 .2rem); }
+.gtop__cap::before { inset: 0; background: rgba(176, 184, 186, .5); }
+.gtop__cap::after { inset: 1px; background: rgba(9, 12, 12, .9); }
+.gtop__cap > .capsule { position: relative; z-index: 1; }
+.gtop__cap[class*="is-fx-"] .capsule { overflow: hidden; }
+.capfx {
+  position: absolute; inset: 2px; z-index: 2; display: flex; align-items: center; justify-content: center; gap: .1rem;
+  border-radius: .23rem; overflow: hidden; pointer-events: none;
+}
+/* inside the plate's padding: the scene stays on the capsule pill it was sized for, off the plate's frame (PR #827) */
+.gtop__cap > .capfx { inset: calc(.08rem + 2px) calc(.13rem + 2px); }
+.capfx .sprite { display: block; image-rendering: pixelated; }
+.gtop__cap.is-fx-wait .capsule > * { visibility: hidden; }
+.gtop__cap.is-fx-enter .capsule > * { animation: capfx-rise 240ms var(--ease-out) both; }
+.gtop__cap.is-fx-rest .capsule__icon { animation: capfx-rest-icon 560ms 150ms var(--ease-out) both; }
+.gtop__cap.is-fx-rest .capsule > :not(.capsule__icon) { animation: capfx-slide 260ms 450ms var(--ease-out) both; }
+.gtop__cap.is-fx-clash .capsule > * { animation: capfx-rise 160ms 1870ms var(--ease-out) both; }
+.gtop__cap.is-fx-unite .capsule > * { animation: capfx-rise 160ms 2800ms var(--ease-out) both; }
+/* 回合开始: three kettles (trans_cup 31×29) drop in one after another and bob out of step; at 休整期 they fly up */
+.capfx__k { width: .4rem; animation: capfx-drop 220ms calc(var(--i) * 70ms) var(--ease-out) both; }
+.capfx__k .sprite { width: 100%; height: auto; animation: capfx-bob 420ms calc(300ms + var(--i) * 140ms) steps(1, end) infinite; }
+.capfx--rest .capfx__k { animation: capfx-up 200ms calc(var(--i) * 50ms) ease-in forwards; }
+.capfx--rest .capfx__k .sprite { animation: none; }
+/* 作战 / 联防: the robot (trans_batte1 / coop1 31×33, its sword trans_batte2 / coop2 20×34 behind its left side) drops in,
+   the enemy (trans_worm1 46×31 / worm2 57×25) hops in from the right edge and stops beside it */
+.capfx__meet, .capfx__clash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.capfx__meet { gap: .06rem; padding-top: .02rem; }
+.capfx__us { display: grid; justify-items: end; align-items: end; }
+.capfx__us > * { grid-area: 1 / 1; }
+.capfx__bot { position: relative; width: .4rem; height: .43rem; animation: capfx-drop 200ms var(--ease-out) both; }
+.capfx__body { position: relative; width: .4rem; height: .43rem; }
+.capfx__sword { position: absolute; left: -.14rem; top: -.08rem; width: .26rem; height: .44rem; }
+.capfx__foe { animation: capfx-hop 930ms linear both; }
+.capfx__foe .sprite { width: .6rem; height: .4rem; }
+.capfx--unite .capfx__bot { animation: capfx-drop 200ms 150ms var(--ease-out) both, capfx-hide 1ms 1500ms forwards; }
+.capfx--unite .capfx__foe { animation-duration: 800ms; }
+.capfx--unite .capfx__foe .sprite { width: .74rem; height: .33rem; }
+/* 联防: the robot turns into the two 联防 faces (trans_coop4 smiling, trans_coop3 worried; 31×33 / 30×33) */
+.capfx__faces { display: flex; gap: 0; opacity: 0; animation: capfx-show 1ms 1500ms forwards; }
+.capfx__face { width: .39rem; height: .43rem; }
+/* where they meet: the scene dims, the two crossed swords flash up and move left, 开始作战 / 联防开始 slides out of them */
+.capfx--clash .capfx__meet { animation: capfx-dim 200ms 930ms forwards; }
+.capfx--unite .capfx__meet { animation: capfx-dim 200ms 1600ms forwards; }
+.capfx__clash { gap: .08rem; }
+.capfx__swords { --sx: .6rem; position: relative; width: .45rem; height: .49rem; margin-top: -.03rem; opacity: 0; filter: drop-shadow(0 0 .05rem rgba(255, 190, 60, .7)); }
+/* trans_batte2 / coop2 (×1.45 here, as large as the footage's) lean ≈ 28°: turned to 45° and mirrored they cross
+   like the footage's ✕ */
+.capfx__x { position: absolute; left: .08rem; top: 0; width: .29rem; height: .49rem; transform: rotate(-17deg); }
+.capfx__x--flip { transform: scaleX(-1) rotate(-17deg); }
+.capfx__word {
+  font-family: var(--font-display); font-size: .27rem; font-weight: 900; letter-spacing: .06em; white-space: nowrap;
+  color: #ffd54a; text-shadow: 0 0 .1rem rgba(255, 170, 40, .75); opacity: 0;
+}
+.capfx--unite .capfx__word { color: #ffbf6a; text-shadow: 0 0 .1rem rgba(255, 110, 40, .8); }
+.capfx--clash .capfx__swords { animation: capfx-swords 450ms 930ms var(--ease-out) forwards; }
+.capfx--clash .capfx__word { animation: capfx-word 300ms 1050ms var(--ease-out) forwards; }
+.capfx--unite .capfx__swords { animation: capfx-swords 700ms 1600ms var(--ease-out) forwards; }
+.capfx--unite .capfx__word { animation: capfx-word 300ms 2050ms var(--ease-out) forwards; }
+/* then the words slide up out of the capsule and its own content rises in */
+.capfx--clash .capfx__clash { animation: capfx-out 120ms 1800ms ease-in forwards; }
+.capfx--unite .capfx__clash { animation: capfx-out 120ms 2700ms ease-in forwards; }
+@keyframes capfx-rise { from { transform: translateY(110%); opacity: 0; } }
+@keyframes capfx-slide { from { transform: translateX(-.4rem); opacity: 0; } }
+@keyframes capfx-rest-icon {
+  0% { transform: translate(.6rem, 110%); opacity: 0; }
+  45% { transform: translate(.6rem, 0); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes capfx-drop { from { transform: translateY(-130%); opacity: 0; } }
+@keyframes capfx-up { to { transform: translateY(-140%); opacity: 0; } }
+@keyframes capfx-bob { 50% { transform: translateY(-.04rem); } }
+@keyframes capfx-hop {
+  0% { transform: translate(1.1rem, 0); } 12.5% { transform: translate(.96rem, -.06rem); } 25% { transform: translate(.82rem, 0); }
+  37.5% { transform: translate(.69rem, -.06rem); } 50% { transform: translate(.55rem, 0); } 62.5% { transform: translate(.41rem, -.06rem); }
+  75% { transform: translate(.28rem, 0); } 87.5% { transform: translate(.14rem, -.06rem); } 100% { transform: none; }
+}
+@keyframes capfx-hide { to { opacity: 0; } }
+@keyframes capfx-show { to { opacity: 1; } }
+@keyframes capfx-dim { 40% { opacity: .4; } 100% { opacity: 0; } }
+@keyframes capfx-swords {
+  0% { opacity: 0; transform: translateX(var(--sx)) scale(1.5); }
+  15% { opacity: 1; transform: translateX(var(--sx)); }
+  60% { opacity: 1; transform: translateX(var(--sx)); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes capfx-word { from { opacity: 0; transform: translateX(-.5rem); filter: blur(2px) brightness(1.8); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes capfx-out { to { transform: translateY(-100%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .capfx { display: none; }
+  .gtop__cap .capsule > * { animation: none; visibility: visible; }
+}
+.bossbar { position: relative; flex: 1; min-width: 2.2rem; height: .2rem; background: rgba(0, 0, 0, .6); border: 1px solid rgba(255, 122, 51, .5); overflow: hidden; }
+.bossbar__fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #b8340d, var(--orange-hi)); box-shadow: 0 0 .1rem rgba(255, 110, 40, .8); transition: width 300ms var(--ease-out); }
+.bossbar__txt { position: absolute; inset: 0; display: grid; place-items: center; font-size: .14rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; }
+
+/* LP tower */
+.lp { display: inline-flex; align-items: center; gap: .05rem; color: var(--mint-400); white-space: nowrap; }
+.lp__icon { width: 1.1em; height: 1.1em; object-fit: contain; flex: none; }
+.lp b { font-weight: 700; line-height: 1; }
+.lp--sm { font-size: .19rem; }
+.lp--md { font-size: .24rem; }
+.lp--lg { font-size: .34rem; }
+.lp--lg .lp__icon { width: .42rem; height: .42rem; }
+.lp--danger { color: var(--red-premium); }
+.lp--danger .lp__icon { filter: hue-rotate(-140deg) saturate(2.4) brightness(.95); }
+.lp--team { color: var(--mint-glow); }
+/* the running battle's pending loss (LpTower `pending`, user playtest #3 item 2): the number turns red, a −N plate
+   pops again on every new leak (keyed), 联防中 while teammates may still save part of it */
+.lp.is-pending .lp__val { color: var(--red-premium); text-shadow: 0 0 .08rem rgba(255, 60, 60, .45); }
+.lp__pend {
+  align-self: center; margin-left: .02em; padding: .06em .24em; font-size: .56em; font-weight: 700; line-height: 1.1;
+  color: #fff; background: #d8262a; box-shadow: 0 0 .1rem rgba(255, 50, 50, .55);
+  clip-path: polygon(.12em 0, 100% 0, 100% calc(100% - .12em), calc(100% - .12em) 100%, 0 100%, 0 .12em);
+  animation: lp-pend 520ms var(--ease-out);
+}
+.lp__note {
+  align-self: center; padding: .08em .3em; font-size: .4em; font-weight: 700; letter-spacing: .08em; line-height: 1.2;
+  color: #1a0800; background: var(--orange);
+}
+.lp--sm .lp__note { font-size: .6em; }
+@keyframes lp-pend { 0% { opacity: 0; transform: scale(1.9); } 45% { opacity: 1; transform: scale(.92); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .lp__pend { animation: none; } }
+.sp-reduced-motion .lp__pend { animation: none; }
+
+/* enemy preview button: amber [🔍▶▶] → the pen (research 09 §2); grey [🔍] in the pen view and outside 休整期 */
+.enemybtn {
+  display: flex; align-items: center; justify-content: center; gap: .06rem; min-width: .46rem; height: .46rem; padding: 0 .14rem;
+  background: rgba(20, 16, 10, .85); border: 2px solid var(--amber); border-radius: .06rem; color: #fff;
+  font-family: var(--font-num); font-size: .16rem; letter-spacing: -.1em; font-weight: 700;
+  transition: background var(--t-fast), box-shadow var(--t-fast), filter var(--t-fast), opacity var(--t-fast);
+}
+.enemybtn .icon { width: .24rem; height: .24rem; }
+.enemybtn__chev { font-size: .18rem; letter-spacing: -.12em; margin-left: .02rem; }
+.enemybtn:hover:not(.is-grey) { background: rgba(246, 163, 41, .2); box-shadow: 0 0 .16rem rgba(246, 163, 41, .35); }
+.enemybtn.is-grey { border-color: rgba(246, 163, 41, .32); color: rgba(255, 255, 255, .35); background: rgba(20, 20, 20, .8); }
+.enemybtn[aria-disabled="true"] { cursor: not-allowed; }
+/* official sprites: the picture is the whole button */
+.gtop__iconbtn.has-sprite, .enemybtn.has-sprite {
+  width: .555rem; min-width: 0; height: .46rem; padding: 0; border: 0; border-radius: 0; box-shadow: none;
+  background: var(--chk-sprite) center / 100% 100% no-repeat;
+}
+.gtop__iconbtn.has-sprite.is-wide, .enemybtn.has-sprite.is-wide { width: .967rem; }
+.gtop__iconbtn.has-sprite:hover, .enemybtn.has-sprite:hover:not(.is-grey) { background: var(--chk-sprite) center / 100% 100% no-repeat; filter: brightness(1.2); box-shadow: none; }
+.gtop__iconbtn.has-sprite.is-on { background: var(--chk-sprite) center / 100% 100% no-repeat; }
+
+/* ready toggle */
+.readywrap { display: flex; flex-direction: column; align-items: flex-end; gap: .05rem; }
+.readywrap__count { font-size: .14rem; color: var(--text-lo); }
+.readywrap__count b { color: var(--mint-400); font-size: .17rem; }
+/* why 准备就绪 is refused (the temp overflow row holds pieces, user playtest #3 item 3): shown, not only on hover */
+.readywrap__why {
+  display: inline-flex; align-items: center; gap: .05rem; padding: .02rem .1rem .02rem .06rem; font-size: .14rem; font-weight: 700;
+  color: #ffdcd6; background: rgba(40, 6, 6, .88); border: 1px solid rgba(255, 90, 71, .7); border-right: 3px solid #ff5a47; white-space: nowrap;
+}
+.readywrap__why .icon { width: .16rem; height: .16rem; color: #ff6a55; flex: none; }
+.readywrap__why b { color: #ff8a78; font-size: .16rem; }
+.readybtn {
+  display: flex; align-items: center; gap: .12rem; height: .56rem; padding: 0 .16rem 0 .12rem; min-width: 2.3rem;
+  background: rgba(10, 14, 12, .9); border: 2px solid var(--mint-500); color: var(--text-hi);
+  font-size: .22rem; font-weight: 700; letter-spacing: .14em;
+  box-shadow: 0 0 .18rem rgba(23, 249, 183, .15);
+  transition: background var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+}
+.readybtn:hover:not(:disabled) { background: rgba(78, 216, 175, .14); box-shadow: 0 0 .26rem rgba(23, 249, 183, .3); }
+.readybtn__box { width: .3rem; height: .3rem; border: 2px solid var(--mint-500); display: grid; place-items: center; flex: none; }
+.readybtn__box .icon { width: .26rem; height: .26rem; }
+.readybtn__label { flex: 1; text-align: left; }
+.readybtn__key { font-family: var(--font-num); font-size: .11rem; font-weight: 500; letter-spacing: .06em; color: var(--text-dim); border: 1px solid var(--line-2); padding: 0 .04rem; }
+.readybtn.is-on { background: var(--mint-500); color: var(--text-on-mint); }
+.readybtn.is-on .readybtn__box { border-color: var(--text-on-mint); background: var(--text-on-mint); color: var(--mint-400); }
+.readybtn.is-on .readybtn__key { color: var(--mint-900); border-color: var(--mint-700); }
+.readybtn.is-on:hover:not(:disabled) { background: var(--mint-400); color: var(--text-on-mint); box-shadow: 0 0 .3rem rgba(23, 249, 183, .45); }
+.readybtn:disabled { border-color: var(--line-2); color: var(--text-dim); box-shadow: none; cursor: not-allowed; }
+.readybtn:disabled .readybtn__box { border-color: var(--line-2); }
+.readybtn.is-busy { opacity: .7; }
+
+/* ---- bond strip（0.3.1 的居中一行 + 业主 2026-10-29 后续的收起 / 淡出 / 鼠标拖动） --------------------------- */
+/* 盟约栏：顶栏下方居中；右侧一颗裸箭头向上收起（收起后只剩它）；盟约多时条体自己横向滚动，两端淡出提示还有内容，
+   鼠标可以按住左右拖（两侧的 ‹ › 调整键已删除）。
+   ★ 0.3.1 原注释（owner：「这上面的盟约条会不会太长了」）：不再铺满整屏 —— 最多占 62vw（上限 46rem），
+   圆盘不再被压小。 */
+.gm__bonds { position: absolute; left: 50%; transform: translateX(-50%); top: 1.36rem;
+  max-width: min(62vw, 46rem);
+  pointer-events: none; display: flex; align-items: flex-start; justify-content: center; gap: max(.1rem, calc(8px * var(--sp-ui, 1))); }
+/* 业主 2026-10-29「盟约条太宽了」：窄屏不再放宽到 100% − 1.2rem（手机上会铺满 94%），任何宽度都不超过 62vw；
+   16:10 / 4:3 仍要让开右侧队伍栏与左侧效果列，两者取更窄的那个。 */
+@media (max-width: 900px) {
+  .gm__bonds { max-width: min(62vw, calc(100% - 1.2rem)); }
+}
+@media (max-aspect-ratio: 16/10) {
+  .gm__bonds { max-width: min(62vw, calc(100% - 6.2rem)); }
+}
+/* Only the bond discs (and the +N chip) take the pointer: the strip's box spans the width under the top bar, where the
+   top board row's units stand (row 12 at 16:9 / 21:9 / 720p / phones, the boss field's row 5 in a boss prep) — it used
+   to swallow the taps and drags on them (review of user playtest #2 item 8: every own unit reachable). */
+.gm__bonds > *, .gm__bonds .bstrip { pointer-events: none; }
+.gm__bonds .bslot, .gm__bonds .bstrip__more { pointer-events: auto; }
+.gm__bond-list { min-width: 0; max-width: 100%; flex: 0 1 auto; display: flex; justify-content: center; }
+/* 横向滚动壳（0.3.1 的外层；业主 2026-10-29 删掉两侧 ‹ › 键）：条体自己就是原生滚动盒（触屏 / 滚轮直接滚），
+   鼠标另外支持「按住左右拖」；条体过长时用 data-edge 让两端淡出。 */
+.bstrip-scroll { display: flex; align-items: center; min-width: 0; max-width: 100%; gap: .04rem; cursor: grab; user-select: none; -webkit-user-select: none; }
+.bstrip-scroll.is-dragging { cursor: grabbing; }
+/* 让内边距护住光环/层数，又不把圆盘压进棋盘。
+   横向也是内边距护住：圆环是 overflow:visible 的 SVG，描边会画出圆盘 7px 左右，落在滚动盒里就成了
+   「明明放得下却能滚 7px」的多余溢出让 data-edge 误判成右侧还有内容（右侧淡出凭空出现、条体还能被拖 7px）；
+   留出 .2rem（8px）把这段描边收进内边距，scrollWidth 就正好等于 clientWidth（2026-10-29 手机端实测）。 */
+.gm__bonds .bstrip-scroll .bstrip { min-width: 0; overflow-x: auto; overflow-y: hidden; padding: .08rem .2rem; margin: -.08rem 0;
+  pointer-events: auto; touch-action: pan-x; scrollbar-width: thin;
+  /* 两端淡出：滚动到中间时左右都淡，贴到某一端时那一端淡入（--fade-*a 由 1 变 0、宽度由 0 变 18px）。 */
+  --fade-l: 0px; --fade-r: 0px; --fade-la: 1; --fade-ra: 1;
+  -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, var(--fade-la)) 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), rgba(0, 0, 0, var(--fade-ra)) 100%);
+  mask-image: linear-gradient(to right, rgba(0, 0, 0, var(--fade-la)) 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), rgba(0, 0, 0, var(--fade-ra)) 100%);
+}
+.bstrip-scroll[data-edge="left"] .bstrip { --fade-l: max(.24rem, 18px); --fade-la: 0; }
+.bstrip-scroll[data-edge="right"] .bstrip { --fade-r: max(.24rem, 18px); --fade-ra: 0; }
+.bstrip-scroll[data-edge="both"] .bstrip { --fade-l: max(.24rem, 18px); --fade-r: max(.24rem, 18px); --fade-la: 0; --fade-ra: 0; }
+.bstrip-scroll .bslot { flex: none; }
+/* 收起键：条体右侧一颗裸的上下箭头，绝对定位脱离居中流（条体本身严格居中）；收起后条体宽度为 0，键回到正中。 */
+.gm__bonds .bonds-toggle { position: absolute; left: calc(100% + .06rem); top: 0; pointer-events: auto; display: grid; place-items: center;
+  width: max(.4rem, 32px); height: max(.4rem, 32px); padding: 0; background: none; border: 0; color: var(--text-md); opacity: .7; cursor: pointer;
+  transition: opacity var(--t-fast), color var(--t-fast); }
+.gm__bonds.is-collapsed .bonds-toggle { left: 50%; transform: translateX(-50%); }
+.gm__bonds .bonds-toggle:hover, .gm__bonds .bonds-toggle:focus-visible { opacity: 1; color: var(--mint-400); }
+.gm__bonds .bonds-toggle .icon { width: max(.24rem, 18px); height: max(.24rem, 18px); }
+.gm__bond-list[hidden] { display: none; }
+.gm.is-pen .gm__bonds .bstrip-scroll *, .gm.has-sp .gm__bonds .bstrip-scroll * { pointer-events: none; }
+.bstrip { display: flex; align-items: flex-start; gap: .1rem; flex-wrap: nowrap; }
+.bstrip.is-frozen .bslot { opacity: .5; filter: saturate(.4); }
+.bstrip--empty { display: inline-flex; align-items: center; gap: .12rem; padding: .08rem .16rem; font-size: .15rem; color: var(--text-dim); background: rgba(8, 11, 10, .6); border: 1px dashed var(--line-2); }
+/* a watched teammate's bonds (DESIGN §20.15): an amber "👁 name" pill in front of the discs, amber rings. Horizontal at
+   every width with a pixel floor (a vertical .12rem name was ~6-8 px per glyph on desktop / tablet, ~5 px on phones
+   where 1rem is clamped at 40 px); centred on the discs, clear of the team panel below */
+.bstrip__owner { align-self: center; flex: none; display: inline-flex; flex-direction: row; align-items: center; gap: max(.04rem, calc(3px * var(--sp-ui, 1)));
+  padding: max(.03rem, calc(2px * var(--sp-ui, 1))) max(.06rem, calc(4px * var(--sp-ui, 1))); border: 1px solid rgba(246, 163, 41, .5); background: rgba(40, 26, 6, .7); }
+.bstrip__owner .micro { color: var(--amber); font-size: max(.15rem, 10px); letter-spacing: .04em; max-width: max(1.3rem, calc(72px * var(--sp-ui, 1)));
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bstrip__eye { color: var(--amber); font-size: max(.17rem, 11px); flex: none; }
+.bstrip--empty .bstrip__owner .micro { max-width: max(1.6rem, calc(80px * var(--sp-ui, 1))); }
+.bstrip--empty.is-other { border-color: rgba(246, 163, 41, .5); }
+@media (max-width: 767px) {
+  .bstrip__owner .micro { font-size: max(.12rem, 9px); }
+  .bstrip__eye { font-size: max(.15rem, 10px); }
+}
+.bstrip.is-other .bond__core { box-shadow: 0 0 0 1px rgba(246, 163, 41, .45); }
+.bstrip__more { align-self: center; font-size: .16rem; color: var(--text-lo); padding: .04rem .08rem; border: 1px solid var(--line-2); background: rgba(8, 11, 10, .7); }
+.bslot { position: relative; display: flex; flex-direction: column; align-items: center; width: .74rem; }
+.bslot .bond { --disc: .52rem; }
+.bslot .bond__name { font-size: .14rem; font-weight: 500; text-shadow: 0 1px 3px #000, 0 0 6px #000; }
+.bslot__count {
+  position: absolute; top: -.04rem; right: .02rem; font-size: .13rem; font-weight: 700; color: var(--text-hi);
+  background: rgba(8, 11, 10, .92); border: 1px solid var(--line-2); padding: 0 .04rem; line-height: 1.35;
+}
+.bslot__count small { color: var(--text-dim); font-size: .11rem; }
+.bslot__count.is-max { border-color: var(--mint-700); color: var(--mint-400); }
+.bslot.is-active .bslot__count { border-color: var(--mint-700); }
+.bslot.is-open .bond__core { box-shadow: 0 0 0 2px var(--mint-400), 0 0 .2rem rgba(23, 249, 183, .6); }
+/* a bond the mode never activates, with members (the server's `off` entry): the briefing's grey ✕ disc, the chips'
+   struck name, 本局禁用 under it instead of the count */
+.bslot.is-off .bond__name { color: var(--text-dim); text-decoration: line-through; text-decoration-color: rgba(255, 84, 84, .6); }
+.bslot.is-off .bslot__off {
+  position: static; margin-top: .02rem; font-size: .11rem; font-weight: 500; color: var(--text-dim); white-space: nowrap;
+  background: rgba(8, 11, 10, .85); border: 1px dashed rgba(255, 255, 255, .25);
+}
+
+/* ---- team panel ------------------------------------------------------------------------------------------- */
+.team { position: absolute; left: .22rem; top: 2.36rem; display: flex; flex-direction: column; gap: .14rem; pointer-events: none; }
+.team__row { position: relative; display: flex; align-items: center; gap: .1rem; pointer-events: auto; }
+.team__btn {
+  position: relative; padding: 0; background: none; border: 0;
+  transition: transform var(--t-fast);
+}
+.team__btn:hover { transform: translateX(.03rem); }
+.team__seat {
+  position: absolute; left: -.02rem; top: -.04rem; font-size: .11rem; padding: 0 .04rem; line-height: 1.3;
+  background: rgba(8, 11, 10, .9); color: var(--text-lo); border: 1px solid var(--line-2);
+}
+.team__ai { position: absolute; right: -.04rem; bottom: -.04rem; font-family: var(--font-num); font-size: .11rem; font-weight: 700; padding: 0 .04rem; background: #a9c3d8; color: #0b1520; }
+.team__you { position: absolute; right: -.08rem; top: -.08rem; width: .22rem; height: .22rem; display: grid; place-items: center; background: var(--mint-500); color: var(--text-on-mint); clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); }
+.team__you .icon { width: .14rem; height: .14rem; }
+.team__info { display: flex; flex-direction: column; gap: .02rem; min-width: 0; padding: .04rem .12rem .04rem .06rem; background: linear-gradient(90deg, rgba(8, 11, 10, .82), rgba(8, 11, 10, 0)); }
+.team__name { font-size: .15rem; font-weight: 500; color: var(--text-md); max-width: 1.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.team__line { display: flex; align-items: center; gap: .1rem; }
+.team__status { width: .26rem; height: .26rem; display: grid; place-items: center; border: 1px solid currentColor; background: rgba(0, 0, 0, .5); }
+/* the shared 机变 draft's pick order on the portrait (ui/choiceOverlay.js spMarks): ✓ picked, ••• deciding */
+.team__spmark { position: absolute; right: -.07rem; bottom: -.05rem; z-index: 2; display: grid; place-items: center; width: .24rem; height: .24rem; border-radius: 50%;
+  background: var(--mint-500); color: #05261e; box-shadow: 0 0 0 2px rgba(6, 9, 8, .9), 0 0 .08rem rgba(23, 249, 183, .5); }
+.team__spmark .icon { width: .17rem; height: .17rem; }
+.team__spmark.is-turn { display: flex; gap: 2px; width: auto; padding: 0 .05rem; border-radius: .12rem; background: rgba(8, 11, 10, .92); box-shadow: 0 0 0 1px rgba(255, 255, 255, .35); }
+.team__spmark.is-turn i { width: 3px; height: 3px; border-radius: 50%; background: #f2f5f4; animation: spmark-dot 1s ease-in-out infinite; }
+.team__spmark.is-turn i:nth-child(2) { animation-delay: .16s; }
+.team__spmark.is-turn i:nth-child(3) { animation-delay: .32s; }
+@keyframes spmark-dot { 0%, 100% { opacity: .35; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .team__spmark.is-turn i { animation: none; } }
+.team__status .icon { width: .18rem; height: .18rem; }
+.team__status .lsprite { width: .2rem; height: .2rem; object-fit: contain; }
+.team__status.has-sprite { border-color: transparent; background: none; animation: none; }
+.team__status.has-sprite .lsprite { width: .26rem; height: .26rem; }
+.team__status.is-lo { color: var(--text-lo); }
+.team__status.is-mint { color: var(--mint-400); }
+.team__status.is-gold { color: var(--gold); animation: blink 1.2s steps(2) infinite; }
+.team__status.is-orange { color: var(--orange-hi); }
+.team__status.is-red, .team__status.is-offline { color: var(--red-premium); }
+.team__eye { color: var(--amber); display: grid; }
+.team__eye .icon { width: .2rem; height: .2rem; }
+.team__row.is-self .pavatar { box-shadow: 0 0 0 2px var(--mint-500), 0 0 .18rem rgba(23, 249, 183, .35); }
+.team__row.is-watched .pavatar { box-shadow: 0 0 0 2px var(--amber), 0 0 .18rem rgba(246, 163, 41, .45); }
+.team__row.is-dead .team__name { color: var(--text-dim); text-decoration: line-through; }
+/* 最终攻势 / 隐秘核心: the viewer's pair framed in the official green from the round's start (item 51) — the official
+   ui/battle bg_team_border (a white frame with its glow) tinted through a mask; a plain green ring without the local art.
+   It replaces the own row's mint ring; a watched row keeps its amber one inside the frame. */
+.team__frame {
+  position: absolute; inset: -.07rem; pointer-events: none; z-index: 1;
+  background: var(--mint-500); -webkit-mask: var(--frame) center / 100% 100% no-repeat; mask: var(--frame) center / 100% 100% no-repeat;
+}
+.team__frame--plain { inset: -.04rem; background: none; -webkit-mask: none; mask: none; border: 2px solid var(--mint-500); box-shadow: 0 0 .14rem rgba(78, 216, 175, .65); }
+.team__row.is-self.is-team .pavatar { box-shadow: none; }
+.team__bubble { position: absolute; left: calc(100% + .06rem); top: 50%; transform: translateY(-50%); width: max-content; max-width: 3.2rem; }
+/* 前往查看 / 返回战场 (research 09 §3.1: tapping a teammate's avatar expands a mint button under it) */
+.team__row.is-open .pavatar { box-shadow: 0 0 0 2px var(--mint-400), 0 0 .2rem rgba(23, 249, 183, .45); }
+.team__row.is-open .team__info { background: linear-gradient(90deg, rgba(13, 44, 36, .92), rgba(8, 11, 10, 0)); }
+.team__ob, .team__back { align-self: flex-start; margin-top: .04rem; min-width: 1.1rem; animation: pop-in var(--t-fast) var(--ease-out); }
+.team__ob .btn__label, .team__back .btn__label { letter-spacing: .12em; }
+.team__back { border-color: rgba(255, 255, 255, .7); color: #fff; }
+
+/* player avatar (band icon / glyph) */
+.pavatar {
+  --pa: .8rem;
+  position: relative; display: block; width: var(--pa); height: var(--pa); flex: none;
+  background: linear-gradient(135deg, hsl(var(--seat-hue) 40% 22%), hsl(var(--seat-hue) 30% 10%));
+  border: 1px solid var(--line-2);
+}
+.pavatar--sm { --pa: .42rem; }
+.pavatar__img { position: absolute; inset: 0; overflow: hidden; display: grid; place-items: center; }
+.pavatar__img img { width: 100%; height: 100%; object-fit: cover; }
+.pavatar__glyph { font-weight: 900; font-size: calc(var(--pa) * .5); color: hsl(var(--seat-hue) 70% 72%); }
+.pavatar__bot { width: 56%; height: 56%; color: #a9c3d8; }
+.pavatar.is-dead .pavatar__img, .pavatar.is-left .pavatar__img, .pavatar.is-offline .pavatar__img { filter: grayscale(1) brightness(.4); }
+.pavatar__x, .pavatar__door { position: absolute; inset: 0; display: grid; place-items: center; color: var(--red-premium); }
+.pavatar__x .icon, .pavatar__door .icon { width: 60%; height: 60%; filter: drop-shadow(0 0 4px #000); }
+
+/* ---- effects ---------------------------------------------------------------------------------------------- */
+.gm__effects { position: absolute; right: .3rem; top: 2.4rem; }
+/* 准备就绪 refused (the temp row holds pieces): its reason shows under the button and pushes the ready count down —
+   the effects column follows, or the count runs into it on phones */
+.gm.has-readywhy .gm__effects { top: calc(2.4rem + max(.3rem, calc(16px * var(--sp-ui, 1)))); }
+.effects { display: flex; flex-direction: column; align-items: flex-end; gap: .08rem; }
+.effect {
+  position: relative; width: .5rem; height: .5rem; display: grid; place-items: center;
+  background: rgba(8, 11, 10, .85); border: 1px solid var(--line-2);
+}
+.effect img { width: 86%; height: 86%; object-fit: contain; }
+.effect .icon { width: .28rem; height: .28rem; color: var(--mint-500); }
+.effect--band { border-color: var(--mint-800); }
+.effect--team { border-color: rgba(78, 216, 175, .6); }
+.effect__n { position: absolute; right: -.05rem; bottom: -.05rem; min-width: .2rem; font-size: .12rem; line-height: 1.4; text-align: center; background: var(--gold); color: #1d1400; padding: 0 .03rem; }
+.efftip { display: flex; flex-direction: column; gap: .04rem; max-width: 3.6rem; }
+.efftip b { font-size: .17rem; color: var(--mint-400); }
+.efftip__kind { font-size: .12rem; color: var(--text-dim); }
+.efftip p { font-size: .15rem; line-height: 1.55; color: var(--text-md); }
+
+/* ---- corner: emote + settings --------------------------------------------------------------------------------- */
+/* 左下角落（业主 2026-10-29 第三版）：一行、靠底对齐，**不**写 flex-wrap —— 窄屏的两行由 css/devices.css 的
+   flex-wrap: wrap-reverse 管（那里同时给出下排三颗主键的固定宽度）。四颗主键 表情 → 设置 → 对话唤出 → 全屏
+   都是等大的正方形（表情键在 css/emotes.css，图标居中；全屏键在手机端由 devices.css 隐藏）。
+   `z-index: 130` 是本仓保留项：局内聊天面板（css/room-chat.css .gm .chat-panel, z-index 2）要落在这一层之下。 */
+/* 角落键的边长：局内聊天框的宽度按「三颗键 + 两道缝」算，所以这个值要和 .gm__gear 与表情键同步
+   （手机矮屏由 devices.css 改成 34px 档）。 */
+.gm { --gm-corner-key: .56rem; }
+.gm__corner { position: absolute; left: .24rem; bottom: .24rem; display: flex; align-items: flex-end; gap: .1rem; z-index: 130; }
+.gm__gear {
+  width: .56rem; height: .56rem; display: grid; place-items: center; background: rgba(8, 11, 10, .85);
+  border: 1px solid var(--line-2); color: var(--text-lo); transition: color var(--t-fast), border-color var(--t-fast);
+}
+.gm__gear .icon { width: .28rem; height: .28rem; }
+.gm__gear:hover { color: var(--mint-400); border-color: var(--mint-700); }
+
+.gm__metrics[aria-expanded="true"] { color: var(--mint-400); border-color: var(--mint-700); background: var(--mint-900); }
+
+/* Local combat meter, docked above the corner's actual height (including mobile wrapped rows). */
+.combat-metrics {
+  --bk-c: var(--mint-500);
+  position: absolute; left: 0; bottom: calc(100% + max(.1rem, calc(8px * var(--sp-ui, 1)))); z-index: 12;
+  width: min(max(5.2rem, 32px, calc(340px * var(--sp-ui, 1))), calc(100vw - var(--sa-l, 0px) - var(--sa-r, 0px) - .48rem));
+  max-height: min(max(6.6rem, calc(280px * var(--sp-ui, 1))), calc(100vh - var(--combat-corner-height, 110px) - max(.9rem, calc(48px * var(--sp-ui, 1))) - .34rem - var(--sa-t, 0px) - var(--sa-b, 0px)));
+  max-height: min(max(6.6rem, calc(280px * var(--sp-ui, 1))), calc(100dvh - var(--combat-corner-height, 110px) - max(.9rem, calc(48px * var(--sp-ui, 1))) - .34rem - var(--sa-t, 0px) - var(--sa-b, 0px)));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(180deg, rgba(28, 35, 32, .98), rgba(17, 21, 19, .98));
+  border: 1px solid var(--line-2); border-top: 2px solid var(--mint-700);
+  box-shadow: 0 .12rem .4rem rgba(0, 0, 0, .6); color: var(--text-md);
+  font-size: max(calc(.14 * var(--t)), 12px); line-height: 1.35; text-align: left;
+}
+.combat-metrics__head { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; padding: max(.1rem, calc(8px * var(--sp-ui, 1))) max(.14rem, calc(10px * var(--sp-ui, 1))) 0; }
+.combat-metrics__micro { font-family: var(--font-display); font-size: max(calc(.1 * var(--t)), 10px); letter-spacing: .12em; color: var(--mint-500); }
+.combat-metrics__head h2 { margin: 0; font-size: max(calc(.2 * var(--t)), 16px); color: var(--text-hi); }
+.combat-metrics__body { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.combat-metrics__close { display: grid; place-items: center; flex: none; width: max(.36rem, 32px); height: max(.36rem, 32px); color: var(--text-md); border: 1px solid var(--line-2); background: var(--bg-1); }
+.combat-metrics__close .icon { width: max(.18rem, 16px); height: max(.18rem, 16px); }
+.combat-metrics__tools { display: flex; flex: none; gap: 8px; padding: 8px max(.14rem, calc(10px * var(--sp-ui, 1))); }
+.combat-metrics__head > .combat-metrics__tools { flex-basis: 100%; padding-left: 0; padding-right: 0; }
+.combat-metrics__scopes { display: flex; flex: 1; min-width: 0; }
+.combat-metrics__scopes button { flex: 1; min-width: 0; padding: 4px 6px; min-height: 32px; color: var(--text-lo); background: var(--bg-1); border: 1px solid var(--line-2); white-space: nowrap; font-size: inherit; }
+.combat-metrics__scopes button[aria-pressed="true"] { background: var(--mint-900); color: var(--mint-400); border-color: var(--mint-700); }
+.combat-metrics__totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: none; gap: 8px; padding: 0 max(.14rem, calc(10px * var(--sp-ui, 1))) 8px; }
+.combat-metrics__totals span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; color: var(--text-lo); }
+.combat-metrics__totals b { font-family: var(--font-num); color: var(--text-hi); font-size: max(calc(.18 * var(--t)), 14px); overflow-wrap: anywhere; }
+.combat-metrics__totals span:last-child b { color: var(--mint-400); }
+.combat-metrics__legend { display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 0 max(.14rem, calc(10px * var(--sp-ui, 1))) 8px; font-size: max(calc(.12 * var(--t)), 11px); }
+.combat-metrics__type { display: inline-flex; align-items: center; gap: 4px; }
+.combat-metrics__type::before { content: ''; width: 10px; height: 4px; background: var(--damage-color); }
+.combat-metrics__type--phys, .combat-metrics__segment--phys { --damage-color: #f6a329; }
+.combat-metrics__type--arts, .combat-metrics__segment--arts { --damage-color: #9fd4ff; }
+.combat-metrics__type--true, .combat-metrics__segment--true { --damage-color: #ff7272; }
+.combat-metrics__type--elemental, .combat-metrics__segment--elemental { --damage-color: #cf9fff; }
+.combat-metrics__sort { margin-left: auto; color: var(--text-lo); }
+.combat-metrics__list { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0 max(.14rem, calc(10px * var(--sp-ui, 1))); list-style: none; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+.combat-metrics__row { display: grid; grid-template-columns: max(.2rem, 18px) max(.42rem, 30px) minmax(0, 1fr); gap: max(.08rem, calc(6px * var(--sp-ui, 1))); align-items: center; padding: max(.09rem, calc(7px * var(--sp-ui, 1))) 0; border-top: 1px solid var(--line); }
+.combat-metrics__rank { align-self: start; color: var(--text-lo); font-family: var(--font-num); padding-top: 2px; }
+.combat-metrics__row > .uthumb { width: max(.42rem, 30px); height: max(.42rem, 30px); }
+.combat-metrics__unit { min-width: 0; }
+.combat-metrics__name { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.combat-metrics__name b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-hi); }
+.combat-metrics__bar { display: flex; width: 100%; height: max(.05rem, 5px); margin: 5px 0; background: var(--bg-4); overflow: hidden; }
+.combat-metrics__segment { flex: none; height: 100%; background: var(--damage-color); }
+.combat-metrics__values { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.combat-metrics__values span { min-width: 0; display: flex; flex-direction: column; }
+.combat-metrics__values small { color: var(--text-lo); font-size: max(calc(.1 * var(--t)), 10px); }
+.combat-metrics__values b { color: var(--text-hi); overflow-wrap: anywhere; font-size: max(calc(.14 * var(--t)), 12px); font-weight: 500; }
+.combat-metrics__values .combat-metrics__heal b { color: var(--mint-400); }
+.combat-metrics__empty { padding: 20px 8px; color: var(--text-md); text-align: center; }
+.combat-metrics__empty small { display: inline-block; margin-top: 6px; color: var(--text-lo); }
+.combat-metrics__note { flex: none; margin: 0; padding: 8px max(.14rem, calc(10px * var(--sp-ui, 1))); border-top: 1px solid var(--line); color: var(--text-lo); font-size: max(calc(.1 * var(--t)), 10px); }
+.combat-metrics button:hover { color: var(--mint-400); border-color: var(--mint-700); }
+.combat-metrics button:focus-visible { outline: 2px solid var(--mint-400); outline-offset: -2px; }
+@media (pointer: coarse), (any-pointer: coarse) {
+  .combat-metrics__close, .combat-metrics__scopes button { min-height: 44px; }
+  .combat-metrics__close { min-width: 44px; }
+}
+@media (max-height: 460px) {
+  .combat-metrics__body { display: block; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+  .combat-metrics__list { overflow: visible; }
+  .combat-metrics__micro { display: none; }
+  .combat-metrics__head { padding-top: 4px; }
+  .combat-metrics__tools { padding-top: 4px; padding-bottom: 4px; }
+  .combat-metrics__totals, .combat-metrics__legend { padding-bottom: 4px; }
+  .combat-metrics__note { padding-top: 4px; padding-bottom: 4px; }
+  .combat-metrics__note br { display: none; }
+}
+/* Phones in landscape (short touch screens: 1rem is clamped at 40 px by theme.css): the ported desktop card — 12–16 px
+   text, 340 px wide, 30 px thumbs — took 40 % of an 844 × 390 screen, about twice the HUD's own 6–7 px text, and hid
+   the battle behind it. Scale the card by the HUD's proportion instead of the desktop one: 9–12 px text, 24 px thumbs,
+   36 px touch rows, 300 px wide (文字大小 still lifts every size through --t). Desktop/tablet keep the original sizes. */
+@media (max-height: 600px) and (pointer: coarse), (max-height: 600px) and (any-pointer: coarse) {
+  .combat-metrics {
+    width: min(max(5rem, 32px, calc(300px * var(--sp-ui, 1))), calc(100vw - var(--sa-l, 0px) - var(--sa-r, 0px) - .48rem));
+    font-size: max(calc(.2 * var(--t)), 9px);
+    line-height: 1.3;
+  }
+  .combat-metrics__head { padding: max(.06rem, calc(6px * var(--sp-ui, 1))) max(.12rem, calc(8px * var(--sp-ui, 1))) 0; gap: 0 6px; }
+  .combat-metrics__micro { font-size: max(calc(.12 * var(--t)), 8px); }
+  .combat-metrics__head h2 { font-size: max(calc(.3 * var(--t)), 12px); }
+  .combat-metrics__close { width: max(.3rem, 32px, calc(36px * var(--sp-ui, 1))); height: max(.3rem, 32px, calc(36px * var(--sp-ui, 1))); min-width: 36px; min-height: 36px; }
+  .combat-metrics__close .icon { width: max(.16rem, 15px); height: max(.16rem, 15px); }
+  .combat-metrics__tools { padding: max(.06rem, calc(6px * var(--sp-ui, 1))) max(.12rem, calc(8px * var(--sp-ui, 1))); gap: 6px; }
+  .combat-metrics__scopes button { min-height: 36px; padding: 2px 5px; }
+  .combat-metrics__totals { gap: 6px; padding: 0 max(.12rem, calc(8px * var(--sp-ui, 1))) max(.06rem, calc(6px * var(--sp-ui, 1))); }
+  .combat-metrics__totals b { font-size: max(calc(.26 * var(--t)), 11px); }
+  .combat-metrics__legend { gap: 4px 10px; padding: 0 max(.12rem, calc(8px * var(--sp-ui, 1))) max(.06rem, calc(6px * var(--sp-ui, 1))); font-size: max(calc(.16 * var(--t)), 8px); }
+  .combat-metrics__type::before { width: 8px; height: 3px; }
+  .combat-metrics__list { padding: 0 max(.12rem, calc(8px * var(--sp-ui, 1))); }
+  .combat-metrics__row { grid-template-columns: max(.24rem, 14px) max(.5rem, 24px) minmax(0, 1fr); gap: 5px; padding: max(.05rem, calc(4px * var(--sp-ui, 1))) 0; }
+  .combat-metrics__row > .uthumb { width: max(.5rem, 24px); height: max(.5rem, 24px); }
+  .combat-metrics__rank { padding-top: 1px; }
+  .combat-metrics__bar { height: max(.04rem, 4px); margin: 3px 0; }
+  .combat-metrics__values { gap: 4px; }
+  .combat-metrics__values small { font-size: max(calc(.14 * var(--t)), 8px); }
+  .combat-metrics__values b { font-size: max(calc(.18 * var(--t)), 9px); }
+  .combat-metrics__note { padding: max(.06rem, calc(6px * var(--sp-ui, 1))) max(.12rem, calc(8px * var(--sp-ui, 1))); font-size: max(calc(.14 * var(--t)), 8px); }
+}
+
+/* 交流按钮（.ewheel 与它的开关按钮）的唯一定义在 public/css/emotes.css —— 那份在 screen sheets 之后加载，
+   并且带 min-width / border-radius / filter 过渡与 has-sprite 贴图态。这里原来还留着 v1 的第二份（业主 2026-10-28
+   指出「两处定义」），已删除，以免两边维护、也避免谁后加载谁赢的隐式行为。表情盘的 panel / grid / item / art
+   仍在本文件（下面那一段）。 */
+.ewheel__panel {
+  position: absolute; left: 0; bottom: calc(100% + .12rem); width: 4.1rem; padding: .14rem .16rem .16rem;
+  background: linear-gradient(180deg, rgba(20, 26, 24, .97), rgba(10, 14, 12, .97)); border: 1px solid var(--line-2);
+  box-shadow: 0 .1rem .3rem rgba(0, 0, 0, .6);
+  animation: pop-in var(--t-med) var(--ease-out);
+}
+/* 表情盘格子：**一律正方形**（业主 2026-10-28）。原来只给了列宽（repeat(4,1fr)），格子高 = 图 .6rem + 文字 + padding
+   ≈ .8rem ≠ 宽 ≈ .95rem，看着就是扁的；inset 纯文字态又换成 3 列 + 更大 padding，第二次变形。
+   现在：列宽用 minmax(0,1fr) 防内容撑开，格子 aspect-ratio:1 锁死方形（贴图态与纯文字态同一形状），
+   格内 1fr(图) + auto(文字) 两行，文字行固定高度；触屏格子最小 44px（devices.css 的命中区规则不被覆盖）。 */
+.ewheel__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .08rem; margin-top: .12rem; }
+.ewheel__item {
+  position: relative; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: 0; gap: 0;
+  aspect-ratio: 1; min-width: 0; min-height: 0;
+  background: rgba(255, 255, 255, .025); border: 1px solid var(--line); font-size: max(.12rem, 10px); color: var(--text-lo);
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast), color var(--t-fast);
+}
+.ewheel__item:hover:not(:disabled) { background: var(--mint-a10); border-color: var(--mint-700); color: var(--mint-400); transform: translateY(-.02rem); }
+.ewheel__item:disabled { opacity: .45; cursor: default; }
+.ewheel__art { width: 62%; aspect-ratio: 1; display: grid; place-items: center; align-self: center; }
+.ewheel__art:empty { display: none; }
+.ewheel__art .eart { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 .06rem rgba(23, 249, 183, .25)); }
+.ewheel__txt { display: grid; place-items: center; height: max(.14rem, 10px); white-space: nowrap; }
+.ewheel__panel.is-text .ewheel__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 纯文字态：格子仍是正方形，只是字号大一档（padding 归零，靠 place-items 居中） */
+.ewheel__panel.is-text .ewheel__item { aspect-ratio: 1; padding: 0; font-size: max(.15rem, 11px); color: var(--text-md); }
+/* 触屏：命中区不小于 44px（devices.css 里那套 .ewheel__nav 的规则不受影响） */
+@media (pointer: coarse) {
+  .ewheel__item { min-width: max(1em, 32px, calc(44px * var(--sp-ui, 1))); min-height: max(1em, 32px, calc(44px * var(--sp-ui, 1))); }
+}
+@keyframes pop-in { from { opacity: 0; transform: translateY(.08rem) scale(.97); } }
+
+/* speech bubble next to a team row: official emote art (+ phrase), or the phrase alone */
+.ebubble {
+  display: flex; align-items: center; gap: .06rem; padding: .05rem .14rem .05rem .2rem; white-space: nowrap;
+  background: rgba(22, 28, 26, .96); color: var(--text-hi); font-size: .15rem; font-weight: 700;
+  border: 1px solid rgba(78, 216, 175, .45);
+  clip-path: polygon(.1rem 0, 100% 0, 100% 100%, .1rem 100%, .1rem 62%, 0 50%, .1rem 38%);
+  animation: bubble-in 150ms var(--ease-out), bubble-out 300ms var(--ease-in-out) 2.7s forwards;
+  filter: drop-shadow(0 .04rem .1rem rgba(0, 0, 0, .55));
+  z-index: 2;
+}
+.ebubble--art { padding: .02rem .14rem .02rem .16rem; }
+.ebubble .eart { width: .62rem; height: .62rem; object-fit: contain; }
+.ebubble__txt { color: var(--mint-400); }
+.ebubble--text { background: rgba(236, 244, 241, .96); border: 0; }
+.ebubble--text .ebubble__txt { color: #0b1310; }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(-50%) scale(.6); } }
+@keyframes bubble-out { to { opacity: 0; } }
+
+/* ---- ticker -------------------------------------------------------------------------------------------- */
+/* a slim strip hugging the bottom of the top bar; the bond strip starts right below it (.gm__bonds top) */
+.ticker { position: absolute; top: 1.0rem; left: 50%; transform: translateX(-50%); width: 7.6rem; height: .3rem; overflow: hidden; pointer-events: none; z-index: 4; }
+.ticker__line {
+  position: absolute; right: 0; top: 0; height: 100%; display: flex; align-items: center; gap: .1rem; white-space: nowrap;
+  padding: 0 .24rem; font-size: .16rem; color: var(--text-hi);
+  background: linear-gradient(90deg, transparent, rgba(10, 14, 12, .97) 10%, rgba(10, 14, 12, .97) 90%, transparent);
+  border-top: 1px solid rgba(255, 198, 0, .35); border-bottom: 1px solid rgba(255, 198, 0, .35);
+  animation: ticker-in 420ms var(--ease-out), ticker-out 380ms var(--ease-in-out) 4.8s forwards;
+  left: 0; justify-content: center;
+}
+.ticker__icon { width: .22rem; height: .22rem; color: var(--gold); flex: none; }
+@keyframes ticker-in { from { transform: translateX(80%); opacity: 0; } }
+@keyframes ticker-out { to { transform: translateX(-40%); opacity: 0; } }
+
+/* ---- watching / dead / combat hud ------------------------------------------------------------------------------ */
+/* scouting a teammate's board in prep: the shop bar is hidden, the pill takes its place */
+.gm__watching {
+  position: absolute; left: 50%; bottom: .4rem; transform: translateX(-50%);
+  display: flex; align-items: center; gap: .14rem; padding: .06rem .08rem .06rem .18rem;
+  background: rgba(24, 16, 4, .92); border: 1px solid rgba(246, 163, 41, .6); color: var(--text-hi); font-size: .17rem;
+}
+.gm__watching > .icon { width: .24rem; height: .24rem; color: var(--amber); }
+.gm__watching b { color: var(--amber); }
+.gm__dead {
+  position: absolute; left: 50%; bottom: 3.1rem; transform: translateX(-50%); display: flex; align-items: center; gap: .1rem;
+  padding: .1rem .26rem; background: rgba(40, 8, 6, .9); border: 1px solid rgba(255, 84, 84, .5); color: var(--red-premium); font-size: .18rem; font-weight: 700;
+}
+.gm__dead .icon { width: .22rem; height: .22rem; }
+/* a spectator seat (community report #26): the same place, the watching pill's amber — nobody was eliminated */
+.gm__dead--spectator { background: rgba(24, 16, 4, .92); border-color: rgba(246, 163, 41, .6); color: var(--amber); }
+
+/* 湮灭模拟 · 蚀流 level chip (m.public.erosion, the annihilation play set; screens/game.js) — ported from the play set's
+   game.css (18px/72px → .18rem/.72rem against this repo's rem scale), shown only for 湮灭 rooms, 蚀流 6 reads 无尽 ∞ */
+.gm__erosion { position: fixed; left: .18rem; top: .72rem; z-index: 30; display: flex; align-items: center; gap: .05rem;
+  padding: .03rem .08rem .02rem; border: 1px solid rgba(216, 180, 106, .35); border-radius: 2px; background: rgba(20, 16, 12, .72);
+  color: #d8b46a; font-family: 'Rajdhani', 'Noto Sans SC', sans-serif; font-weight: 600;
+  /* 像素地板：--t 只有 40px（矮屏）时 calc(.1 * --t) 是 4px，整块角标读不出来（实测 1280×720 是 6.67px） */
+  font-size: max(11px, calc(.1 * var(--t))); line-height: 1;
+  letter-spacing: .12em; pointer-events: none; }
+.gm__erosion b { color: #f6e8c8; font-size: max(14px, calc(.13 * var(--t))); letter-spacing: 0; }
+/* 蚀流 6 无尽湮灭: no round total — the chip reads 无尽 ∞ in the mode's blood tone */
+.gm__erosion.is-endless { border-color: rgba(181, 44, 56, .75); background: rgba(38, 8, 12, .82); color: #f0b7b7; }
+.gm__erosion.is-endless b { color: #ffdede; font-size: max(16px, calc(.15 * var(--t))); }
+
+.chud { position: absolute; inset: 0; pointer-events: none; }
+.chud > * { pointer-events: auto; }
+.dpbox {
+  position: absolute; right: .3rem; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .02rem; padding: .1rem .12rem;
+  background: rgba(8, 11, 10, .85); border: 1px solid var(--line-2); border-right: 3px solid var(--mint-500);
+}
+.dpbox__icon { width: .26rem; height: .26rem; color: var(--mint-500); }
+.dpbox b { font-size: .34rem; line-height: 1; color: #fff; }
+.chud__bottom { position: absolute; left: 50%; bottom: .3rem; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .12rem; pointer-events: none; }
+.chud__bottom > * { pointer-events: auto; }
+.chud__msg {
+  display: flex; align-items: center; gap: .1rem; padding: .1rem .3rem; font-size: .19rem; color: var(--text-hi);
+  background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); border-radius: .3rem; white-space: nowrap;
+  animation: pop-in var(--t-slow) var(--ease-out);
+}
+/* a still hourglass: a rotating one next to the text read as a loading spinner (user playtest #3 item 9) */
+.chud__msg .icon { width: .22rem; height: .22rem; color: var(--gold); }
+.chud__msg--dead { border-color: rgba(255, 84, 84, .5); color: var(--red-premium); }
+.chud__msg--dead .icon { color: var(--red-premium); }
+.vswitch { display: flex; align-items: center; gap: .1rem; height: .5rem; padding: 0 .06rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); }
+.vswitch__arrow { width: .4rem; height: .4rem; display: grid; place-items: center; background: none; border: 0; color: var(--mint-500); }
+.vswitch__arrow .icon { width: .3rem; height: .3rem; }
+.vswitch__arrow:hover:not(:disabled) { color: var(--mint-400); background: var(--mint-a10); }
+.vswitch__arrow:disabled { color: var(--text-dim); cursor: default; }
+.vswitch__label { min-width: 1.6rem; text-align: center; font-size: .2rem; font-weight: 700; letter-spacing: .12em; }
+.vswitch.is-single .vswitch__arrow { visibility: hidden; }
+/* client-side combat (ui/combatHud.js, research 09 §3.1): waiting pill + teammates' progress, observing pill, ‹ › halves */
+.chud__wait { border-color: rgba(255, 198, 0, .45); }
+.chud__progress { display: flex; flex-wrap: wrap; justify-content: center; gap: .1rem .18rem; max-width: 9rem; font-size: .15rem; color: var(--text-md); }
+.chud__prog {
+  display: inline-flex; align-items: center; gap: .08rem; padding: .03rem .12rem; background: rgba(8, 11, 10, .82);
+  border: 1px solid rgba(78, 216, 175, .25); border-left: 3px solid var(--gold);
+}
+.chud__prog b { font-weight: 500; max-width: 1.4rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chud__prog .num { color: var(--gold); font-size: .16rem; }
+.chud__prog.is-done { border-left-color: var(--mint-500); }
+.chud__prog__ok { color: var(--mint-400); font-weight: 900; }
+.chud__observe { gap: .14rem; padding: 0 .08rem 0 .16rem; border-color: rgba(246, 163, 41, .55); }
+.chud__observe .vswitch__label, .chud__layers .vswitch__label { display: inline-flex; align-items: center; justify-content: center; gap: .08rem; }
+.chud__observe .vswitch__label .icon { width: .24rem; height: .24rem; color: var(--amber); }
+.chud__layers .vswitch__label .icon { width: .22rem; height: .22rem; color: var(--amber); }
+.chud__back { flex: none; }
+.chud__layers { border-color: var(--mint-700); }
+/* a 联防 / 最终攻势 field watched with 前往查看: the ‹ › pill carries 返回战场 (DESIGN §20.15) */
+.chud__layers.is-observing { gap: .1rem; padding-right: .08rem; border-color: rgba(246, 163, 41, .55); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- settings modal ------------------------------------------------------------------------------------------------ */
+/* the 设置 trigger of the lobby and the room (ui/settings.js SettingsButton, GitHub #238): the 玩法说明 button's twin; its gear sits
+   inside the label, so the label lays glyph and text out like the button itself */
+.settings-btn .btn__label { display: inline-flex; align-items: center; gap: .1rem; }
+.settings-btn .btn__icon { color: var(--mint-500); }
+/* square (the lobby's gear alone): the label box drops out so the gear sizes and centres against the button, like an `icon` */
+.settings-btn.btn--square .btn__label { display: contents; }
+.settings-btn.btn--square .btn__icon { width: 62%; height: 62%; } /* the gear glyph is drawn smaller in its box than the book */
+.set-list { display: flex; flex-direction: column; gap: .16rem; padding-top: .06rem; }
+.set-row { display: grid; grid-template-columns: minmax(0, 3.3rem) minmax(0, 1fr) auto; align-items: center; gap: .18rem; min-height: .44rem; }
+/* The label column may shrink (the label wraps) instead of pushing its control out of the modal: at 设置 →「文字大小」
+   大 / 特大 a phone's label (a Chinese name plus its Latin micro label) is wider than 3.3rem at 1rem = 40 px. */
+.set-row__label { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem; font-size: calc(.18 * var(--t)); color: var(--text-hi); }
+.set-row__label .icon { width: .2rem; height: .2rem; color: var(--mint-500); }
+.set-row__label .micro { margin-left: .04rem; }
+/* a floor, not a fixed width: the %. value grows with the text step (20 px on a phone, 3 digits at 特大) */
+.set-row__val { min-width: .5rem; text-align: right; font-size: calc(.2 * var(--t)); color: var(--mint-400); }
+.set-range {
+  -webkit-appearance: none; appearance: none; width: 100%; height: .08rem; background: linear-gradient(90deg, var(--mint-500) var(--pct), #0a0d0c var(--pct));
+  border: 1px solid var(--line-2); outline: none; cursor: pointer;
+}
+.set-range::-webkit-slider-thumb { -webkit-appearance: none; width: .2rem; height: .26rem; background: var(--mint-400); clip-path: polygon(50% 0, 100% 30%, 100% 100%, 0 100%, 0 30%); cursor: grab; }
+.set-range::-moz-range-thumb { width: .2rem; height: .26rem; background: var(--mint-400); border: 0; }
+.set-toggle { grid-column: 2 / 4; justify-self: start; display: flex; align-items: center; gap: .1rem; height: .38rem; padding: 0 .14rem 0 .06rem; background: #0a0d0c; border: 1px solid var(--line-2); color: var(--text-lo); font-size: calc(.15 * var(--t)); }
+.set-toggle i { width: .46rem; height: .24rem; background: var(--bg-3); position: relative; transition: background var(--t-fast); }
+.set-toggle i::after { content: ''; position: absolute; left: .03rem; top: .03rem; width: .18rem; height: .18rem; background: var(--text-lo); transition: transform var(--t-fast), background var(--t-fast); }
+.set-toggle.is-on { color: var(--mint-400); border-color: var(--mint-700); }
+.set-toggle.is-on i { background: var(--mint-800); }
+.set-toggle.is-on i::after { transform: translateX(.22rem); background: var(--mint-400); }
+.set-seg { grid-column: 2 / 4; justify-self: start; display: flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--line-2); }
+/* 语音语言: the four endonyms plus the 本土语言 switch. A flex wrap left 한국어 on a row of its own (four .8rem
+   minima squeezed by the switch). The group wraps its four buttons four across or two by two, never 3 + 1: each
+   button's basis is clamp(25 %, (2.4rem − 100 %) × 999, 50 %) of the group — hugely negative (→ 25 %, four across)
+   while the group is wider than 2.4rem, hugely positive (→ 50 %, two by two) below it. The group's 1 px gaps over
+   its line-coloured background draw the dividers in both layouts. No container query (the CSS stays within the
+   supported browsers, test/client-static.test.js).
+   [ASSUMED] 2.4rem of the group (about 0.6rem a button): the usual control column (desktop, and a phone around
+   844 px where 1rem is 40 px) is wider, so the four names stay on one row beside 本土语言. */
+.set-voice { grid-column: 2 / 4; justify-self: stretch; display: flex; flex-wrap: nowrap; align-items: stretch; gap: .08rem; max-width: 100%; min-width: 0; }
+.set-voice .set-seg { grid-column: auto; flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 1px; min-width: 0; background: var(--line-2); }
+.set-voice .set-seg button { min-width: 0; padding: 0 .04rem; overflow-wrap: anywhere; border-right: 0; flex: 1 1 clamp(calc(25% - 1px), (2.4rem - 100%) * 999, calc(50% - 1px)); }
+.set-native { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: .38rem; padding: 0 .12rem; background: #0a0d0c; border: 1px solid var(--line-2); color: var(--text-lo); font-size: calc(.16 * var(--t)); cursor: pointer; }
+.set-native.is-on { background: var(--mint-500); color: var(--text-on-mint); font-weight: 700; }
+.set-seg button { flex: 1 1 auto; min-width: .8rem; min-height: .38rem; height: auto; white-space: normal; background: #0a0d0c; border: 0; border-right: 1px solid var(--line-2); color: var(--text-lo); font-size: calc(.16 * var(--t)); }
+/* 文字大小 (ui/settings.js): four steps, so its buttons are narrower than the two- and three-step groups' — at .8rem each
+   the group would be wider than the row's 1fr column on a phone (1rem = 40 px) */
+.set-seg.set-textsize button { min-width: .62rem; }
+/* 画面质量 5 档（低/中/高/超清/极致，业主 2026-10-29）：手机上一行放不下 5 颗 .8rem 的键，收窄到与文字档同宽 */
+.set-seg.set-quality button { min-width: .62rem; }
+.set-seg button:last-child { border-right: 0; }
+.set-seg button.is-on { background: var(--mint-500); color: var(--text-on-mint); font-weight: 700; }
+.set-hint { margin-top: .06rem; font-size: calc(.14 * var(--t)); color: var(--text-dim); line-height: 1.8; }
+.set-hint__help { display: inline-flex; align-items: center; gap: .03rem; padding: 0; border: 0; background: none; color: var(--text-lo); font: inherit; cursor: help; text-decoration: underline dotted; text-underline-offset: .03rem; }
+.set-hint__help .icon { width: .14rem; height: .14rem; }
+.set-hint__help:hover, .set-hint__help:focus-visible { color: var(--mint-400); }
+.set-hint kbd, .lvcard__key, .toolbtn kbd { font-family: var(--font-num); font-size: .11rem; border: 1px solid var(--line-2); padding: 0 .04rem; color: var(--text-lo); background: rgba(0, 0, 0, .3); }
+/* 快捷键 (ui/settings.js HotkeySection): each shortcut with its key — click the key, press the new one; two columns,
+   one under 768 px (phones in landscape) */
+.set-keys { display: flex; flex-direction: column; gap: .08rem; padding-top: .1rem; border-top: 1px solid var(--line); }
+/* 外观插件 (DESIGN §32 P1a, ui/settings.js CosmeticSection): laid out like 快捷键 — a head, a hint, one switch per plugin */
+.set-plugins { display: flex; flex-direction: column; gap: .08rem; padding-top: .1rem; border-top: 1px solid var(--line); }
+.set-theme-win { margin: 0; font-family: var(--font-num); color: var(--text-lo); overflow-wrap: anywhere; }
+.set-keys__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .12rem; min-height: .44rem; }
+.set-keys__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .06rem .14rem; margin: 0; padding: 0; list-style: none; }
+.set-keys__row { display: flex; align-items: center; justify-content: space-between; gap: .1rem; min-height: .42rem; padding: .03rem .03rem .03rem .12rem; background: rgba(0, 0, 0, .22); border: 1px solid var(--line); }
+.set-keys__name { min-width: 0; font-size: calc(.15 * var(--t)); line-height: 1.35; color: var(--text-md); overflow-wrap: anywhere; }
+.set-key { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: .06rem; min-width: .9rem; height: .36rem; padding: 0 .1rem; background: #0a0d0c; border: 1px solid var(--line-2); color: var(--mint-400); font-family: var(--font-num); font-size: calc(.15 * var(--t)); cursor: pointer; }
+.set-key kbd { font: inherit; }
+.set-key:hover, .set-key:focus-visible { border-color: var(--mint-700); }
+.set-key.is-waiting { border-color: var(--amber); color: var(--amber); font-family: inherit; font-size: calc(.13 * var(--t)); animation: set-key-wait 1s ease-in-out infinite alternate; }
+.set-key.is-fixed { cursor: default; color: var(--text-lo); border-style: dashed; }
+.set-key.is-fixed small { font-family: inherit; font-size: calc(.12 * var(--t)); color: var(--text-dim); }
+.set-keys__note { min-height: 1.5em; font-size: calc(.14 * var(--t)); line-height: 1.5; color: var(--mint-400); }
+.set-keys__note.is-warn { color: var(--amber); }
+.set-keys__more > summary { padding: .06rem 0; font-size: calc(.15 * var(--t)); color: var(--mint-400); cursor: pointer; }
+.set-keys__more[open] > summary { margin-bottom: .08rem; }
+@keyframes set-key-wait { to { box-shadow: 0 0 .12rem rgba(246, 163, 41, .45); } }
+/* 素材存储 (ui/settings.js StorageSection): laid out like 问题反馈 below it — a head with its button, a hint, the answer */
+.set-storage { display: flex; flex-direction: column; gap: .08rem; padding-top: .1rem; border-top: 1px solid var(--line); }
+.set-storage__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .08rem; }
+/* 问题反馈 (ui/settings.js DiagSection): laid out like 快捷键 — a head with its button, a hint, the result line; the
+   recorded-error count in the figure face of the slider values (amber once there is one); the report box only when the
+   clipboard refused it, styled like 干员调配's 导出 box (screens/loadout.css .lo-io__text) */
+.set-diag { display: flex; flex-direction: column; gap: .08rem; padding-top: .1rem; border-top: 1px solid var(--line); }
+.set-diag__meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .04rem .2rem; }
+.set-diag__stat { display: inline-flex; align-items: baseline; gap: .1rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
+.set-diag__count { font-family: var(--font-num); font-size: calc(.2 * var(--t)); line-height: 1; color: var(--mint-400); }
+.set-diag__count.is-warn { color: var(--amber); }
+.set-diag__url { min-width: 0; font-size: calc(.13 * var(--t)); color: var(--text-dim); overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
+.set-diag__battle-hint { margin-top: -.06rem; }
+.set-diag__text {
+  box-sizing: border-box; width: 100%; height: max(2rem, 32px, calc(140px * var(--sp-ui, 1))); min-height: 120px; resize: vertical;
+  padding: max(.1rem, calc(8px * var(--sp-ui, 1))) max(.12rem, calc(10px * var(--sp-ui, 1)));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: max(.13rem, 11px); line-height: 1.5;
+  color: var(--text-hi); background: rgba(4, 10, 8, .55); border: 1px solid var(--line-2); border-radius: 2px; outline: none;
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow-y: auto;
+}
+.set-diag__text:focus { border-color: var(--mint-700); }
+/* touch: 16 px, below which iOS zooms into the focused box (as 干员调配's 导出 box and ui/clipboard.js) */
+.sp-coarse .set-diag__text { font-size: 16px; }
+@media (max-width: 767px) { .set-keys__list { grid-template-columns: minmax(0, 1fr); } }
+@media (max-height: 600px) and (pointer: coarse), (max-height: 600px) and (any-pointer: coarse) {
+  .set-key { height: max(.38rem, 30px); }
+  .set-keys__more > summary { padding: max(.06rem, calc(8px * var(--sp-ui, 1))) 0; }
+}
+
+/* ---- exit / away ------------------------------------------------------------------------------------------------------ */
+.exitm { display: flex; flex-direction: column; gap: .1rem; font-size: calc(.17 * var(--t)); line-height: 1.7; }
+.awayov { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(4, 7, 6, .78); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: screen-in var(--t-slow) var(--ease-out); }
+.awayov__box { display: flex; flex-direction: column; align-items: center; gap: .12rem; padding: .44rem .7rem; background: rgba(12, 16, 14, .96); border: 1px solid var(--line-2); }
+.awayov__icon { width: .8rem; height: .8rem; color: var(--ice); filter: drop-shadow(0 0 .2rem rgba(159, 212, 255, .5)); }
+.awayov__box h2 { font-size: calc(.34 * var(--t)); letter-spacing: .12em; }
+
+/* ---- simplified (DOM) field view ---------------------------------------------------------------------------------------- */
+.ff { position: absolute; inset: 0; overflow: hidden; user-select: none; }
+.ff::before { content: ''; position: absolute; inset: 0; background: radial-gradient(70% 60% at 45% 48%, rgba(40, 60, 52, .35), transparent 70%); }
+.ff-board { position: absolute; }
+.ff-tile, .ff-slot, .ff-piece, .ff-unit { position: absolute; left: 0; top: 0; }
+.ff-tile { box-sizing: border-box; border: 1px solid rgba(0, 0, 0, .35); }
+.ff-tile--floor { background: linear-gradient(180deg, #3d4843, #333d38); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
+.ff-tile--high { background: linear-gradient(180deg, #5d6a64, #4a5651); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .12), inset 0 -4px 0 rgba(0, 0, 0, .25); }
+.ff-tile--lane { background: linear-gradient(180deg, #2b322f, #252c29); }
+.ff-tile--void { background: transparent; border-color: transparent; }
+.ff-tile--gate { background: radial-gradient(circle, rgba(255, 60, 40, .6), rgba(120, 20, 10, .5)); border: 2px solid #ff4a2e; animation: gate-pulse 1.4s ease-in-out infinite; }
+.ff-tile--goal { background: radial-gradient(circle, rgba(60, 160, 255, .55), rgba(10, 50, 120, .5)); border: 2px solid #4ab0ff; }
+.ff-tile--mire { background: linear-gradient(180deg, #4a4030, #3c3326); }
+.ff-tile--smog { background: linear-gradient(180deg, #4a4a52, #3a3a42); }
+.ff-tile--deep { background: linear-gradient(180deg, #1e3a52, #173045); }
+.ff-tile--infect { background: linear-gradient(180deg, #4a2a3a, #3a2030); }
+.ff-tile.is-legal { box-shadow: inset 0 0 0 2px rgba(89, 244, 202, .8), inset 0 0 calc(var(--tile) * .4) rgba(23, 249, 183, .3); }
+.ff-tile.is-illegal { box-shadow: inset 0 0 0 2px rgba(255, 84, 84, .5); }
+.ff-tile.is-range { box-shadow: inset 0 0 0 2px rgba(246, 163, 41, .7); }
+.ff-tile.is-hover-legal { background: rgba(78, 216, 175, .45); }
+.ff-tile.is-hover-illegal { background: rgba(255, 60, 60, .4); }
+@keyframes gate-pulse { 50% { box-shadow: 0 0 calc(var(--tile) * .4) rgba(255, 60, 40, .8); } }
+.ff-hand-label { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: .1rem; font-size: .13rem; color: var(--text-dim); letter-spacing: .2em; }
+.ff-hand-label i { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+.ff-slot { box-sizing: border-box; border: 2px dashed rgba(170, 140, 90, .45); background: rgba(120, 90, 50, .16); display: grid; place-items: end start; }
+.ff-slot span { font-size: .11rem; color: rgba(210, 180, 130, .5); padding: 0 .03rem; }
+.ff-slot--temp { border-color: rgba(255, 122, 51, .6); background: rgba(232, 90, 26, .12); }
+.ff-slot.is-hover-legal { background: rgba(78, 216, 175, .35); border-color: var(--mint-400); }
+.ff-slot.is-hover-illegal { background: rgba(255, 60, 60, .3); }
+.ff-piece { transition: transform 160ms var(--ease-out); z-index: 2; }
+.ff-piece.is-draggable { cursor: grab; }
+.ff-piece.is-lifted { opacity: .25; }
+.ff-piece__art {
+  position: absolute; inset: 7%; overflow: hidden; display: grid; place-items: center; background: #1a201d;
+  border: 2px solid rgba(255, 255, 255, .22); clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%);
+}
+.ff-piece__art img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.ff-piece__art span { font-weight: 900; font-size: calc(var(--tile) * .4); color: var(--text-md); }
+.ff-piece--item .ff-piece__art { background: radial-gradient(circle, #2a3430, #141917); }
+.ff-piece--item .ff-piece__art img { object-fit: contain; width: 80%; height: 80%; }
+.ff-piece.is-golden .ff-piece__art { border-color: var(--gold); box-shadow: 0 0 calc(var(--tile) * .18) rgba(255, 198, 0, .6); }
+.ff-piece.is-temp .ff-piece__art { border-color: var(--orange-hi); }
+.ff-piece__tier { position: absolute; left: 0; top: 0; transform: scale(.9); transform-origin: top left; }
+.ff-piece__items { position: absolute; right: 8%; bottom: 8%; display: flex; gap: 2px; }
+.ff-piece__items i { width: calc(var(--tile) * .12); height: calc(var(--tile) * .12); background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 3px #000; }
+.ff-piece__count { position: absolute; right: 6%; bottom: 4%; font-family: var(--font-num); font-size: calc(var(--tile) * .2); color: #fff; text-shadow: 0 1px 2px #000; }
+/* facing wedge (research 09 §1.2): an orange › on the piece's edge along its direction */
+.ff-piece__dir {
+  position: absolute; left: 50%; top: 50%; width: calc(var(--tile) * .2); height: calc(var(--tile) * .26); pointer-events: none;
+  background: #ff9c33; clip-path: polygon(0 0, 45% 0, 100% 50%, 45% 100%, 0 100%, 55% 50%); filter: drop-shadow(0 0 2px #000);
+  transform: translate(-50%, -50%) rotate(var(--dir-rot, 0deg)) translateX(calc(var(--tile) * .46));
+}
+.ff-dir--up { --dir-rot: -90deg; } .ff-dir--right { --dir-rot: 0deg; } .ff-dir--down { --dir-rot: 90deg; } .ff-dir--left { --dir-rot: 180deg; }
+.ff-ghost { position: absolute; z-index: 20; pointer-events: none; opacity: .92; transform: scale(1.08); filter: drop-shadow(0 .1rem .16rem rgba(0, 0, 0, .7)); }
+.ff-ghost img { width: 100%; height: 100%; object-fit: cover; border: 2px solid var(--mint-400); clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%); }
+.ff-ghost.is-golden img { border-color: var(--gold); }
+.ff-unit { z-index: 3; transition: transform 110ms linear, opacity 400ms; }
+.ff-unit__art { width: 100%; height: 100%; overflow: hidden; border-radius: 50%; border: 2px solid var(--mint-500); background: #111; display: grid; place-items: center; }
+.ff-unit__art img { width: 100%; height: 100%; object-fit: cover; }
+.ff-unit__art span { font-weight: 900; font-size: calc(var(--tile) * .34); }
+.ff-unit.is-enemy .ff-unit__art { border-color: #ff5a4a; border-radius: 12%; transform: rotate(45deg) scale(.82); }
+.ff-unit.is-enemy .ff-unit__art img { transform: rotate(-45deg) scale(1.3); }
+.ff-unit.is-golden .ff-unit__art { border-color: var(--gold); box-shadow: 0 0 8px rgba(255, 198, 0, .6); }
+.ff-unit.is-boss .ff-unit__art { border-width: 3px; box-shadow: 0 0 14px rgba(255, 60, 40, .7); }
+.ff-unit.is-skill .ff-unit__art { box-shadow: 0 0 10px rgba(255, 198, 0, .9); }
+.ff-unit.is-stunned { filter: grayscale(.6) brightness(.8); }
+.ff-unit.is-dead { opacity: 0; }
+.ff-unit.is-fly { margin-top: -6%; }
+.ff-unit__bars { position: absolute; left: 8%; right: 8%; bottom: -12%; display: flex; flex-direction: column; gap: 1px; }
+.ff-unit__bars i { display: block; height: 4px; background: #3fdc6a; box-shadow: 0 0 0 1px #000; }
+.ff-unit.is-enemy .ff-unit__bars i.hp { background: #ff4a3a; }
+.ff-unit__bars i.sp { height: 3px; background: #ffd23a; }
+.ff-float { position: absolute; z-index: 5; transform: translate(-50%, 0); font-family: var(--font-num); font-weight: 700; font-size: .2rem; pointer-events: none; text-shadow: 0 1px 2px #000, 0 0 4px #000; animation: float-up 900ms var(--ease-out) forwards; }
+.ff-float--phys { color: #ffd7a8; }
+.ff-float--arts { color: #d59cff; }
+.ff-float--true { color: #fff; }
+.ff-float--heal { color: #6dff9c; }
+.ff-float--crit { color: #ff2a2a; }
+.ff-float--miss { color: #ff9000; }
+@keyframes float-up { to { transform: translate(-50%, -.4rem); opacity: 0; } }
+.ff-badge { position: absolute; left: 50%; bottom: .08rem; transform: translateX(-50%); font-family: var(--font-display); font-size: .1rem; letter-spacing: .3em; color: var(--text-dim); opacity: .5; pointer-events: none; }
+.gm--combat .ff-badge { display: none; }
+
+/* ---- small screens (1280×720 → root ≈ 66px) ------------------------------------------------------------------------ */
+
+/* fallback view: enemy preview pen (setCamera('pen')) */
+.ff-board--pen .ff-pen__enemy { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
+.ff-board--pen .ff-pen__enemy:hover { filter: brightness(1.2); }
+.ff-board--pen .ff-pen__enemy .ff-unit__art { border-color: rgba(255, 90, 60, .7); }
+.ff-pen__empty { position: absolute; left: 0; right: 0; top: 45%; text-align: center; color: var(--text-lo); font-size: .16rem; }
+
+/* enemy preview pen view (research 09 §2): the bond strip and the effects column step aside for the pen */
+.gm__bonds, .gm__effects { transition: opacity var(--t-med) var(--ease-out); }
+.gm.is-pen .gm__bonds, .gm.is-pen .gm__effects { opacity: 0; pointer-events: none; }
+.gm.is-pen .gm__bonds > *, .gm.is-pen .gm__effects > *, .gm.is-pen .gm__bonds .bslot, .gm.is-pen .gm__bonds .bstrip__more { pointer-events: none; }
+
+/* solo pause overlay (screens/game.js PausedOverlay; m.public.paused): the field dims under an official matte plate */
+.pauseov {
+  position: absolute; inset: 0; z-index: 65; display: grid; place-items: center; pointer-events: auto;
+  background: rgba(4, 7, 6, .62); -webkit-backdrop-filter: grayscale(.6) blur(2px); backdrop-filter: grayscale(.6) blur(2px);
+  animation: screen-in var(--t-med) var(--ease-out);
+}
+.pauseov__box { display: flex; flex-direction: column; align-items: center; gap: .16rem; }
+.pauseov__plate {
+  display: flex; flex-direction: column; align-items: center; gap: .02rem; min-width: 3.6rem; padding: .16rem .6rem .2rem;
+  background: rgba(20, 22, 22, .9); background: var(--pause-plate, linear-gradient(90deg, transparent, rgba(12, 14, 14, .95) 18%, rgba(12, 14, 14, .95) 82%, transparent)) center / 100% 100% no-repeat;
+}
+.pauseov__micro { font-family: var(--font-num); font-size: calc(.16 * var(--t)); letter-spacing: .5em; color: var(--mint-400); }
+.pauseov__plate h2 { font-size: calc(.5 * var(--t)); font-weight: 900; letter-spacing: .3em; color: #fff; text-shadow: 0 0 .2rem rgba(0, 0, 0, .8); }
+.pauseov__note { font-size: calc(.17 * var(--t)); color: var(--text-md); text-shadow: 0 1px 2px #000; }
+.pauseov__btns { display: flex; gap: .2rem; }
+
+/* 协议已失效 (ui/downedPlate.js): the project's Modal restyled as the event's panel (video 10:56–10:58) — the official map
+   behind, the knocked-out face, the title, and the two buttons under the panel; design px ÷ 100 [ASSUMED: measured from
+   that footage]. The face turns from calm to knocked out after .5 s with a shake; with reduced motion it simply shows. */
+/* the footage dims the field but keeps it sharp: no blur behind this one */
+.modal.downm-veil { background: rgba(3, 5, 4, .6); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.modal__box.downm { --bk-c: transparent; width: min(13.8rem, 96vw); max-height: none; background: none; border: 0; box-shadow: none; overflow: visible; }
+.downm .modal__stripe { display: none; }
+.downm .modal__body { padding: 0; overflow: visible; }
+.downm__panel { position: relative; height: 3.45rem; overflow: hidden; background: rgba(5, 11, 13, .9); box-shadow: 0 0 .5rem .25rem rgba(5, 11, 13, .7); }
+/* the official map is an opaque square: its edges fade into the panel */
+.downm__map { position: absolute; left: 1.6rem; top: -2.6rem; width: 8.67rem; max-width: none; opacity: .55;
+  -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent); mask-image: radial-gradient(closest-side, #000 55%, transparent); }
+.downm__x { position: absolute; width: .24rem; height: .24rem; opacity: .6;
+  background: linear-gradient(var(--red), var(--red)) center / 100% 2px no-repeat, linear-gradient(var(--red), var(--red)) center / 2px 100% no-repeat; }
+.downm__x--tl { left: 3.2rem; top: .5rem; }
+.downm__x--tr { right: 3.2rem; top: .5rem; }
+.downm__x--bl { left: 3.2rem; bottom: .5rem; }
+.downm__x--br { right: 3.2rem; bottom: .5rem; }
+.downm__face { position: absolute; left: 4.79rem; top: 1.05rem; width: 1.12rem; height: 1.04rem; color: #c9cccc; }
+.downm__face.is-out { animation: downm-shake 360ms steps(6, end); }
+.downm__pix { display: block; width: 100%; height: 100%; }
+.downm__title { position: absolute; left: 6.3rem; top: 1.2rem; margin: 0; color: #f0353b; font-size: calc(.6 * var(--t)); font-weight: 900; letter-spacing: .04em;
+  line-height: 1.1; white-space: nowrap; animation: downm-in 260ms 120ms var(--ease-out) both; }
+.downm__sub { position: absolute; left: 6.3rem; top: 2.05rem; color: #6d7779; font-family: var(--font-display); font-size: calc(.2 * var(--t)); letter-spacing: .08em; }
+.downm__btns { display: flex; justify-content: center; gap: 2rem; margin-top: .8rem; }
+.downm__btn { min-width: 3.06rem; min-height: .75rem; font-size: calc(.24 * var(--t)); }
+/* the footage's button glyphs are about as tall as the text block */
+.downm__btn .btn__icon { width: 1.5em; height: 1.5em; }
+.downm__btn--watch { background: #e9ecec; color: #15191a; border-color: #e9ecec; }
+@keyframes downm-shake { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-.06rem); } 40%, 80% { transform: translateX(.06rem); } }
+@keyframes downm-in { from { opacity: 0; transform: translateX(.3rem); } }
+@media (prefers-reduced-motion: reduce) {
+  .downm__face.is-out, .downm__title { animation: none; }
+}
+
+
+/* 超限 R16+ 的战斗倍速标记（业主 2026-10-19）：只提示战斗推进是 2 倍，倒计时仍是 1 倍速 */
+.gtop__speed{display:inline-flex;align-items:center;height:20px;padding:0 6px;margin-right:6px;
+  font:700 11px/1 var(--font-num);letter-spacing:.04em;color:var(--pos);
+  border:1px solid rgba(57,255,176,.45);border-radius:4px;
+  background:rgba(57,255,176,.12);cursor:help; /* fallback: no color-mix() */
+  border:1px solid color-mix(in srgb,var(--pos) 45%,transparent);
+  background:color-mix(in srgb,var(--pos) 12%,transparent)}
+
+
+
+/* 超限词条按钮 + 面板（业主 2026-10-20）：原来是时钟旁一排小标签，改成右侧一枚按钮 */
+.gtrait{position:relative;display:inline-flex}
+/* Boss 词缀 pill（业主 2026-10-26）：只在超限 Boss 轮出现 */
+.gaffix{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;margin-right:8px;
+  border:1px solid rgba(231,49,24,.5);background:rgba(60,12,8,.55);color:#ffb3a8;
+  font:700 10px/1 var(--font-num);letter-spacing:.08em;white-space:nowrap}
+.gaffix i{font-style:normal;font-size:8px;letter-spacing:.14em;color:#ff8b7a;border:1px solid rgba(231,49,24,.45);padding:1px 4px}
+.gaffix b{color:#fff;font-weight:800;font-size:11px}
+@media (max-width:560px){.gaffix{height:22px;padding:0 6px;margin-right:4px}.gaffix b{font-size:10px}}
+.gtrait__btn{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;cursor:pointer;
+  font:600 11px/1 var(--font-cjk);letter-spacing:.04em;color:var(--pos);
+  /* fallback: no color-mix() */
+  background:rgba(16,49,36,.73);background:color-mix(in srgb,var(--pos) 10%,rgba(10,16,14,.7));
+  border:1px solid rgba(57,255,176,.38);
+  border:1px solid color-mix(in srgb,var(--pos) 38%,transparent);border-radius:5px;
+  transition:background .16s ease,border-color .16s ease}
+.gtrait__btn:hover,.gtrait__btn.is-open{background:rgba(22,79,57,.76);background:color-mix(in srgb,var(--pos) 20%,rgba(10,16,14,.7));
+  border-color:rgba(57,255,176,.6);border-color:color-mix(in srgb,var(--pos) 60%,transparent)}
+.gtrait__ico{font-size:9px;opacity:.8}
+.gtrait__btn b{font:700 11px/1 var(--font-num);color:var(--pos-hi)}
+.gtrait__pop{position:absolute;top:calc(100% + 10px);right:0;width:min(430px,94vw);z-index:60;
+  /* 业主 2026-10-20：手机上（横屏 761×360 之类）面板会顶出屏幕底部，
+     所以它自己限高并在内部滚动 —— 头/计数/说明固定在顶部，只有词条列表滚。 */
+  display:flex;flex-direction:column;
+  max-height:calc(100dvh - 96px);max-height:calc(100vh - 96px);
+  background:rgba(10,16,14,.94);border:1px solid rgba(255,255,255,.12);border-radius:8px;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 18px 44px rgba(0,0,0,.55);padding:10px 0 6px;cursor:default;overflow:hidden}
+.gtrait__head{display:flex;align-items:flex-start;gap:8px;padding:12px 14px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+.gtrait__title{display:flex;flex-direction:column;gap:4px}
+.gtrait__micro{font:700 8.5px/1 var(--font-num);letter-spacing:.22em;color:var(--pos);opacity:.8}
+.gtrait__title b{font:700 14px/1.2 var(--font-cjk);letter-spacing:.04em;color:var(--text-hi)}
+/* 正 / 负 / 合计 三个计数块 */
+.gtrait__tally{display:flex;gap:1px;margin:10px 14px 0;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden}
+.gtrait__tal{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;
+  background:rgba(12,18,16,.9)}
+.gtrait__tal b{font:700 16px/1 var(--font-num)}
+.gtrait__tal i{font:600 9px/1 var(--font-cjk);font-style:normal;letter-spacing:.1em;color:var(--text-lo)}
+.gtrait__tal.is-pos b{color:var(--pos-hi)}
+.gtrait__tal.is-neg b{color:var(--neg-hi)}
+.gtrait__tal.is-total b{color:var(--text-hi)}
+.gtrait__note{margin:10px 14px 0;font-size:10.5px;line-height:1.5;color:var(--text-lo)}
+.gtrait__foot{padding:10px 14px 12px;border-top:1px solid rgba(255,255,255,.07);margin-top:8px}
+.gtrait__seal{font:700 9px/1 var(--font-num);letter-spacing:.2em;padding:5px 10px;border-radius:3px;
+  color:var(--pos-hi);border:1px solid rgba(57,255,176,.35);border:1px solid color-mix(in srgb,var(--pos) 35%,transparent);
+  background:rgba(57,255,176,.12);background:color-mix(in srgb,var(--pos) 12%,transparent)}
+.gtrait__x{width:20px;height:20px;margin-left:6px;cursor:pointer;color:var(--text-lo);
+  background:none;border:0;font-size:15px;line-height:1}
+.gtrait__x:hover{color:var(--text-hi)}
+/* 面板内的固定区（头/计数/说明/脚）不参与压缩，只有词条列表伸缩 */
+.gtrait__head,.gtrait__tally,.gtrait__note,.gtrait__foot{flex:0 0 auto}
+.gtrait__list{margin:0;padding:4px 0;list-style:none;flex:1 1 auto;min-height:0;
+  max-height:min(46vh,340px);overflow-y:auto;overscroll-behavior:contain;
+  touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.gtrait__row{display:grid;grid-template-columns:36px auto 1fr;gap:9px;align-items:baseline;
+  padding:7px 14px;font-size:11.5px;line-height:1.55}
+.gtrait__row:hover{background:rgba(255,255,255,.04)}
+.gtrait__r{font:600 9.5px/1 var(--font-num);color:var(--text-lo)}
+.gtrait__n{font-weight:700;color:var(--pos-hi);white-space:nowrap}
+.gtrait__t{color:var(--text-md)}
+.gtrait__row.is-neg .gtrait__n{color:var(--neg-hi)}
+
+/* 超限倍速开关（业主 2026-10-20） */
+/* 超限 HUD 的两个控件自己带颜色变量 —— --pos/--neg/--text-* 只在 .traitov 作用域里定义，
+    HUD 在它外面，直接引用会取到空值。 */
+.gspeed,.gtrait{--pos:#39ffb0;--pos-hi:#8dffd4;--neg:#e73118;--neg-hi:#ff6b52;
+  --text-hi:#eef6f2;--text-md:#c6d4cd;--text-lo:#8ea39a}
+
+/* 超限出怪倍速开关（业主 2026-10-20 定稿）：左边 SPEED 小字，右边 1×/2× 两格滑轨。
+   滑块与格子严格同宽同高，位移正好一格；双倍速时滑块滑满右格并转荧光绿。
+   倒计时与它无关，始终是关卡自己的秒数。 */
+.gspeed{display:inline-flex;align-items:center;gap:8px;height:28px;margin-right:8px;
+  padding:0 10px 0 11px;cursor:pointer;border-radius:14px;
+  background:rgba(8,13,12,.86);border:1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.gspeed:hover{border-color:rgba(255,255,255,.34);background:rgba(12,20,18,.92)}
+.gspeed:focus-visible{outline:2px solid var(--pos);outline-offset:2px}
+.gspeed__cap{font:700 8.5px/1 var(--font-num);letter-spacing:.18em;color:var(--text-md);transition:color .18s ease}
+
+/* 滑轨：--opt 是每格宽度，滑块与它同宽，位移也是一格 */
+.gspeed__rail{--opt:26px;position:relative;display:inline-flex;height:20px;padding:2px;
+  border-radius:11px;background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09)}
+.gspeed__opt{position:relative;z-index:1;display:grid;place-items:center;width:var(--opt);height:16px;
+  font:700 10px/1 var(--font-num);letter-spacing:.02em;color:var(--text-md);
+  transition:color .2s ease}
+.gspeed__opt.is-on{color:#04100c}
+.gspeed__thumb{position:absolute;left:2px;top:2px;width:var(--opt);height:16px;border-radius:8px;
+  background:#c6d4cd;pointer-events:none;
+  transition:transform .24s cubic-bezier(.3,.9,.25,1),background .24s ease,box-shadow .24s ease}
+.gspeed.is-fast{border-color:rgba(57,255,176,.6);border-color:color-mix(in srgb,var(--pos) 60%,transparent);
+  background:rgba(17,55,41,.92);background:color-mix(in srgb,var(--pos) 16%,rgba(8,13,12,.9));
+  box-shadow:0 0 0 1px rgba(57,255,176,.26),0 0 18px rgba(57,255,176,.26);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--pos) 26%,transparent),
+             0 0 18px color-mix(in srgb,var(--pos) 26%,transparent)}
+.gspeed.is-fast .gspeed__cap{color:var(--pos-hi)}
+.gspeed.is-fast .gspeed__thumb{transform:translateX(var(--opt));background:var(--pos);
+  box-shadow:0 0 12px rgba(57,255,176,.65);box-shadow:0 0 12px color-mix(in srgb,var(--pos) 65%,transparent)}
+
+/* ── 超限词条面板 · 手机端（业主 2026-10-20）────────────────────────────────
+   横屏手机（761×360 这类）上原面板 400×285 会顶出屏幕底部 29px，
+   计数块挤成一条、词条行只有 29px 高。这里把它压成手机上真正能读的形态：
+   面板贴右上、行高加大、正负合计保持一行、列表自己滚。 */
+@media (max-height: 460px) {
+  /* 面板 originally absolute 挂在按钮下面；短屏上那个起点已经吃掉 100px，
+     所以这里改成 fixed 贴右下，高度才真正由视口决定。 */
+  .gtrait__pop{position:fixed;top:auto;right:8px;bottom:8px;
+    width:min(360px,88vw);max-height:calc(100vh - 16px);padding:6px 0 4px}
+  .gtrait__head{padding:8px 12px 6px}
+  .gtrait__micro{font-size:7.5px;letter-spacing:.16em}
+  .gtrait__title b{font-size:12px}
+  .gtrait__x{width:22px;height:22px;font-size:15px}
+  .gtrait__tally{margin:6px 12px 0}
+  .gtrait__tal{padding:5px 3px;gap:2px}
+  .gtrait__tal b{font-size:13px}
+  .gtrait__tal i{font-size:8px;letter-spacing:.06em}
+  .gtrait__note{margin:6px 12px 0;font-size:9.5px;line-height:1.4}
+  .gtrait__list{margin:4px 0 0}
+  .gtrait__row{padding:6px 12px;font-size:10.5px;line-height:1.4;gap:7px;grid-template-columns:30px auto 1fr}
+  .gtrait__r{font-size:9px}
+  .gtrait__foot{padding:6px 12px 8px;margin-top:4px}
+  .gtrait__seal{font-size:8px;padding:4px 8px}
+  .gtrait__btn{height:24px;padding:0 8px;font-size:10px}
+  .gtrait__ico{font-size:9px}
+}
+/* 竖屏手机：面板占满宽度、从下方浮出 */
+@media (max-width: 560px) and (orientation: portrait) {
+  .gtrait__pop{position:fixed;left:8px;right:8px;top:auto;bottom:8px;width:auto;
+    max-height:70vh;border-radius:10px}
+  .gtrait__row{grid-template-columns:32px auto 1fr;font-size:11px}
+}
+
+/* 盟约条的形态在文件上方那一段（bond strip，0.3.1 的常显 / 居中 / 原生横向滚动；两侧 ‹ › 键已删）：
+   pen / 机变浮层的让步在那一节里（`.bstrip-scroll *`），这里只剩本仓新增的 Tooltip 锚点和窄屏的高度钉死。 */
+.gm__bond-list > .tt-anchor { display: block; max-width: 100%; }
+/* 窄屏：条体仍在顶栏下方同一条基线上（0.3.1 的 1.36rem，与上面 .gm__bonds 一致） */
+@media (max-width: 560px) {
+  .gm__bonds { top: 1.36rem; }
+}
+
+.ai-vote { display:flex; flex-wrap:wrap; gap:.12rem; align-items:center; margin:.15rem 0; padding:.1rem; border:1px solid #426055; }
+.ai-participation-entry { flex:none; }

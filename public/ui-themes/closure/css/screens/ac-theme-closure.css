@@ -1,0 +1,468 @@
+/* AC terminal theme HUD wiring v5 (closure5): 「全能的」可露希尔
+ * Typography/layout stay on remake official-pages metrics.
+ * Theme only recolors + swaps background images; no content-box translate/rotate/pad.
+ * Shop frames: collide frame_lv* (transparent portrait window) — never opaque chess_frame_normal.
+ */
+html[data-ac-terminal-theme="ac_s_closur"]{
+  --ac-terminal-theme:ac_s_closur;
+  --nf-c:#59F3FE;
+  --nf-glow:#59F3FE99;
+  --ac-cyan:#59F3FE;
+  --ac-cyan-soft:#9be7ff;
+  --ac-cyan-dim:#3aa8b8;
+  --ac-panel:#0a1218;
+  --ac-magenta:#E45AC8;
+  --ac-magenta-soft:#f0a0e0;
+  --ac-magenta-dim:#9a3a88;
+  --ac-purple:#8B5CF6;
+}
+
+/* ---------- numfont (countdown / top-right) — color + masks only ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .numfont,
+html[data-ac-terminal-theme="ac_s_closur"] .countdown .numfont,
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown .numfont{
+  --nf-c:#59F3FE;--nf-glow:#59F3FE99;
+}
+/* keep remake .numfont__d cell (32/48 × 68/48) — do not retarget width/height or digits drift */
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--0::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_0.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_0.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--1::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_1.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_1.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--2::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_2.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_2.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--3::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_3.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_3.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--4::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_4.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_4.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--5::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_5.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_5.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--6::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_6.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_6.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--7::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_7.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_7.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--8::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--9::after{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_9.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_9.png")!important;-webkit-mask-size:100% 100%!important;mask-size:100% 100%!important;background:var(--nf-c)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d::before{-webkit-mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png")!important;mask-image:url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png")!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__x{color:var(--ac-cyan)!important;}
+
+/* ---------- shop cards: collide frame_lv* (window punched) via remake ::before ---------- */
+/* Do NOT point at chess_frame_normal (161×209 opaque fill) — that covered portraits + skewed glyphs. */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard::before{
+  background-image:url("/ui-art/img/official/hub/ac/battle/frame_lv1.png")!important;
+  background-size:100% 100%!important;background-repeat:no-repeat!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-armed::before,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard[aria-pressed="true"]::before{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/frame_outline_triple_closure.png")!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-frozen::before{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/frame_outline_frozen_closure.png")!important;
+}
+/* ice matte only — never fight with a CRT corner ::after */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-frozen::after{
+  background-image:url("/ui-art/img/official/hub/ac/battle/ice_matte.png")!important;
+  background-size:100% 100%!important;opacity:.85!important;
+}
+/* sold / empty — Closure bg_empty only (never Ursus) */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold.scard--empty,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--empty{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/bg_empty.png")!important;
+  background-size:calc(157 * var(--p)) calc(173 * var(--p))!important;
+  background-position:calc(.5 * var(--p)) calc(1 * var(--p))!important;
+  background-repeat:no-repeat!important;
+  background-color:transparent!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold::before,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--empty::before{display:none!important;}
+/* keep remake scard__bg; only soft tint — do not opaque-cover art */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bg{
+  background:rgba(18,28,36,.55)!important;
+}
+/* color only — no padding/indent/geometry */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__name{color:#e8f7ff!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bond{color:var(--ac-cyan-soft)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-disabled .scard__bg{background:rgba(40,55,65,.75)!important;}
+
+/* ---------- lvcard / upgrade ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/upgrade_max.png")!important;
+  background-size:100% 100%!important;background-repeat:no-repeat!important;
+  color:#e8f7ff!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard.is-disabled{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/upgrade_disable.png")!important;
+  color:#8aa0aa!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard__num{
+  color:#59F3FE!important;text-shadow:0 0 8px #59F3FE66!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard__label{color:#c9eef8!important;}
+
+/* ---------- freeze / refresh tool buttons ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn::before{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/frozen_bg_normal.png")!important;
+  background-size:100% 100%!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn--amber::before{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/refresh_bg_normal.png")!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn--ice.is-on::before{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/frozen_bg_unlock.png")!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .toolbtn--amber .toolbtn__img{
+  content:url("/ui-art/img/official/hub/ac/theme/almighty_closure/refresh_icon.png")!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .toolbtn:disabled{
+  filter:grayscale(.5) brightness(.75)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .toolbtn--amber::before{
+  filter:drop-shadow(0 0 4px rgba(245,197,66,.35));
+}
+
+/* ---------- funds panel + folded shop tab ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .funds::before{
+  background-image:url("/ui-art/img/official/hub/ac/battle/bg_close.png")!important;
+  background-size:100% 100%!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .funds__hex,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab .shopbar-tab__funds{
+  background-image:url("/ui-art/img/official/hub/ac/battle/bg_money.png")!important;
+  background-size:100% 100%!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .funds__num,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab .shopbar-tab__funds b{
+  color:#59F3FE!important;text-shadow:0 0 6px #59F3FE55, 0 0 10px rgba(228,90,200,.25)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .funds__label,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab .shopbar-tab__label{color:#d5f4ff!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .funds__collapse{
+  color:#59F3FE!important;border-bottom-color:rgba(89,243,254,.45)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud > .shopbar-tab::before{
+  background-image:url("/ui-art/img/official/hub/ac/battle/bg_close.png")!important;
+  background-size:100% 100%!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud > .shopbar-tab::after{
+  background-image:url("/ui-art/img/official/hub/ac/battle/bg_open_shadow.png")!important;
+  background-size:100% 100%!important;opacity:.55!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab .shopbar-tab__lv b{color:#59F3FE!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab__figure{display:block!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab__figure,
+html[data-ac-terminal-theme="ac_s_closur"] canvas.shopbar-tab__figure{
+  filter:drop-shadow(0 0 10px rgba(89,243,254,.35));
+}
+
+/* ---------- bonds / 盟约 ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond:not(.is-active) .bond__core{
+  background-image:url("/ui-art/img/official/hub/ac/battle/bond_icon_bg.png")!important;
+  background-size:118% 118%!important;background-position:center!important;background-repeat:no-repeat!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board .bond__disc::after{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/bg_inactive.png")!important;
+  background-size:120% 120%!important;opacity:.92!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board.is-active .bond__disc::after{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/bg_active.png")!important;
+  opacity:1!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board .bond__board{
+  filter:brightness(1.25) contrast(1.12) saturate(1.15);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond__name{color:#9be7ff!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bslot.is-active .bslot__count,
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board.is-active .bond__count{
+  color:#59f3fe!important;text-shadow:0 0 4px #59f3fe66!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bslot.is-open::before{
+  filter:hue-rotate(160deg) saturate(1.2) brightness(1.1);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board .bond__disc{
+  box-shadow:0 0 0 1px rgba(89,243,254,.35), 0 0 8px rgba(228,90,200,.18);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bond.has-board.is-active .bond__disc{
+  box-shadow:0 0 0 1.5px rgba(228,90,200,.55), 0 0 10px rgba(89,243,254,.35);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds .bstrip{position:relative;z-index:1;}
+
+/* ---------- ready / check — magenta pill, no geometry change ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn{
+  color:#f3e8ff!important;
+  background:transparent url("/ui-art/img/official/hub/ac/theme/almighty_closure/btn_ready.png") center / 100% 100% no-repeat!important;
+  box-shadow:0 0 10px rgba(228,90,200,.35)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn.is-on{
+  color:#fff!important;
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/btn_ready_light.png")!important;
+  box-shadow:0 0 14px rgba(228,90,200,.55)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn .readybtn__label{color:inherit!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn.is-on .readybtn__box{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/icon_ready.png")!important;
+  background-size:100% 100%!important;border:0!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn:hover:not(:disabled){
+  filter:brightness(1.08);box-shadow:0 0 16px rgba(228,90,200,.5)!important;
+}
+
+html[data-ac-terminal-theme="ac_s_closur"] .enemybtn,
+html[data-ac-terminal-theme="ac_s_closur"] .buffbtn,
+html[data-ac-terminal-theme="ac_s_closur"] .selfbtn{
+  filter:saturate(1.15) brightness(1.05);
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .hex{
+  filter:drop-shadow(0 0 3px rgba(89,243,254,.25));
+}
+
+/* ---------- CRT bezel: decorative only — NO padding/margin on .countdown ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown{
+  position:relative;
+  z-index:2;
+  /* intentionally no padding/margin — remake flex metrics stay put */
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown::before{
+  content:'';
+  position:absolute;
+  z-index:-1;
+  pointer-events:none;
+  left:50%;top:50%;
+  width:calc(var(--cd-h) * 2.05 + .28rem);
+  height:calc(var(--cd-h) * 1.55 + .18rem);
+  transform:translate(-50%,-52%);
+  background:url(/ui-art/img/official/hub/ac/theme/almighty_closure/img_tv_center.png?v=closure5) center / contain no-repeat;
+  opacity:.92;
+  filter:drop-shadow(0 0 6px rgba(89,243,254,.35));
+}
+/* no secondary spark ::after on countdown — avoids flex/visual drift */
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown::after{content:none!important;display:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown .numfont{
+  filter:drop-shadow(0 0 2px #0a1218) drop-shadow(0 0 5px rgba(89,243,254,.45));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown__gauge i.on{
+  background:#59F3FE!important;box-shadow:0 0 .05rem rgba(89,243,254,.55)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown__gauge i{
+  background:rgba(89,243,254,.14)!important;
+}
+
+/* legacy wrap class (JS no longer wraps; keep harmless if stale DOM) */
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-crt{
+  display:contents; /* do not change .gtop__right flex */
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-crt__bezel,
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-crt__spark{display:none!important;}
+
+/* ---------- Bat accent: small, raised, never covers bond names/counts ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds::before{
+  content:'';
+  position:absolute;
+  left:50%;top:-.22rem;
+  transform:translateX(-50%);
+  width:.72rem;height:.52rem;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat_light.png") center / contain no-repeat;
+  opacity:.7;pointer-events:none;z-index:0;
+  filter:saturate(1.2) drop-shadow(0 0 6px rgba(228,90,200,.4));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm__bonds::after{
+  content:'';
+  position:absolute;
+  left:50%;top:-.14rem;
+  transform:translateX(-50%);
+  width:.36rem;height:.32rem;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat.png") center / contain no-repeat;
+  pointer-events:none;z-index:3;
+  filter:drop-shadow(0 0 3px rgba(89,243,254,.55));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-bat{
+  position:absolute;left:50%;top:-.28rem;transform:translateX(-50%);
+  width:.9rem;height:.62rem;z-index:4;pointer-events:none;
+  display:grid;place-items:center;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-bat__glow{
+  position:absolute;inset:0;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat_light.png") center / contain no-repeat;
+  opacity:.75;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-bat__icon{
+  position:relative;z-index:1;width:.4rem;height:.36rem;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_bat.png") center / contain no-repeat;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-bat__wingL,
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-bat__wingR{display:none;}
+
+/* ---------- Phase banner: OFF by default; only with ?banner= / .is-show ---------- */
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner{
+  position:absolute;left:50%;top:2.55rem;transform:translateX(-50%);
+  z-index:40;pointer-events:none;
+  width:min(7.2rem,72vw);height:1.15rem;
+  display:none; /* default hidden */
+  align-items:center;justify-content:center;gap:.18rem;
+  padding:0 .35rem;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/boss_window_back_expand.png") center / 100% 100% no-repeat;
+  filter:drop-shadow(0 0 10px rgba(228,90,200,.45));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner.is-show{
+  display:flex;
+  animation:ac-closure-banner-in 480ms cubic-bezier(.16,.84,.3,1) both;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner.is-hide{display:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner__bat{
+  width:.55rem;height:.5rem;flex:none;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/start_bat.png") center / contain no-repeat;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner__tv{
+  width:.48rem;height:.42rem;flex:none;
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/frame_highlv_tv.png") center / contain no-repeat;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner__txt{
+  font-family:var(--font-cjk),system-ui,sans-serif;font-weight:700;font-size:.32rem;
+  letter-spacing:.12em;color:#f8e9ff;
+  text-shadow:0 0 6px rgba(228,90,200,.7), 0 1px 0 #2a1030;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .ac-closure-banner__chev{
+  color:#f5c542;font-weight:800;letter-spacing:.06em;font-size:.28rem;
+}
+@keyframes ac-closure-banner-in{
+  from{opacity:0;transform:translateX(-50%) translateY(-.2rem) scale(.96);}
+  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+}
+/* NO gm__hud::before duplicate banner */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud::before{content:none!important;display:none!important;}
+
+/* sold crest optional — only on empty shells */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold.scard--empty::after{
+  content:'';
+  position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+  width:calc(64 * var(--p));height:calc(48 * var(--p));
+  background:url("/ui-art/img/official/hub/ac/theme/almighty_closure/img_logo.png") center / contain no-repeat;
+  opacity:.22;pointer-events:none;z-index:1;
+}
+
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .roundbox,
+html[data-ac-terminal-theme="ac_s_closur"] .roundbox{
+  background-image:url("/ui-art/img/official/hub/ac/theme/almighty_closure/round_num_back.png");
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+}
+
+html[data-ac-terminal-theme="ac_s_closur"] .gtop__right .countdown,
+html[data-ac-terminal-theme="ac_s_closur"] .phasecap,
+html[data-ac-terminal-theme="ac_s_closur"] .ticker{
+  --mint-400:#59F3FE;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gm .ticker{color:#9be7ff;}
+
+html[data-ac-terminal-theme="ac_s_closur"] #ac-theme-switcher button[data-active="1"]{
+  border-color:#59F3FE;background:#0d2a33;
+  box-shadow:inset 0 0 0 1px rgba(89,243,254,.4), 0 0 8px rgba(228,90,200,.25);
+}
+
+/* hide floating toasts/tips during shot recordings when present */
+html[data-ac-terminal-theme="ac_s_closur"] body.is-shot .toast-host,
+html[data-ac-terminal-theme="ac_s_closur"] body.is-shot .toasts,
+html[data-ac-terminal-theme="ac_s_closur"] .gm.is-shot .toast{
+  opacity:0!important;pointer-events:none!important;
+}
+
+/* ---- skin_config layout hooks (size/pos → existing HUD DOM; no Unity Prefab tree) ---- */
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud .gtop,
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud .hud-player-info,
+html[data-ac-terminal-theme="ac_s_closur"] .gm__hud [data-skin="hud_player_info"] {
+  /* skin_config.hud_player_info size 510.0x68.0, pos y=44.0 — keep remake flex; expose vars */
+  --ac-hud-w: calc(510.0 * var(--p, 1px));
+  --ac-hud-h: calc(68.0 * var(--p, 1px));
+  --ac-hud-y: calc(44.0 * var(--p, 1px));
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .enemybtn.has-sprite,
+html[data-ac-terminal-theme="ac_s_closur"] .gtop [data-skin="img_check_enemy"] {
+  width: calc(88.0 * var(--p, 1px)) !important;
+  height: calc(56.0 * var(--p, 1px)) !important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .readybtn.has-sprite,
+html[data-ac-terminal-theme="ac_s_closur"] .gtop [data-skin="img_check_player"],
+html[data-ac-terminal-theme="ac_s_closur"] .gtop .playerbtn.has-sprite {
+  /* player/check button from skin_config */
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar-tab .shopbar-tab__figure,
+html[data-ac-terminal-theme="ac_s_closur"] canvas.shopbar-tab__figure {
+  /* char_spine_outer 113.0x96.0 */
+  width: calc(113.0 * var(--p, 1px));
+  height: calc(96.0 * var(--p, 1px));
+}
+
+/* ---- closure-shop-revision fold ---- */
+/* closure-shop-revision (scoped) */
+/* closure-shop-revision — 「全能的」可露希尔 商店样式覆盖（仅商店）
+ * 只换皮：不改卡片宽高、槽位数、文字位置、价格/等级角标位置与游戏行为。
+ * 层级（参照 t53s 官方实录）：卡面底图 chess_frame_* → 立绘(frame_mask 裁切) → 黑字 → 选中/冻结描边。
+ * 素材均为 ac_s_closur 原始解包；chess_frame_* 自带官方印字「01/02」「CLOSURE X SDPL SYSTEM」（原图文字，未改动）。
+ * 加载：在现有预览页最后追加 <link rel="stylesheet" href=".../closure-shop.css">，并把 img/ 放在同目录。
+ */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bg{
+  inset:0!important;
+  background:url(/closure-shop-revision/img/chess_frame_shop.png) 0 0/100% 100% no-repeat!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.scard--t5 .scard__bg{background-image:url(/closure-shop-revision/img/chess_frame_shop_t5.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.scard--t6 .scard__bg{background-image:url(/closure-shop-revision/img/chess_frame_shop_t6.png)!important;}
+/* 默认外框关掉（卡面已含蓝紫框），选中/冻结用官方描边 */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard::before{background-image:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-armed::before,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard[aria-pressed="true"]::before{background-image:url(/closure-shop-revision/img/frame_outline_triple_closure.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-frozen::before{background-image:url(/closure-shop-revision/img/frame_outline_frozen_closure.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard::after{content:none;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-frozen::after{content:'';}
+/* 文字：浅色卡面上的黑字；去掉原版深色渐变；位置不动 */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__body,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__body::before{background:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__name{color:#16181c!important;text-shadow:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bond{color:#2a2d33!important;text-shadow:none!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bond .bglyph img,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__prof{filter:brightness(0)!important;opacity:.8;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard.is-disabled .scard__bg{filter:grayscale(.6) brightness(.8);}
+/* 空槽 / 已售：官方 bg_empty */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--empty{background:url(/closure-shop-revision/img/bg_empty.png) 0 0/100% 100% no-repeat!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold .scard__bg,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--empty .scard__bg,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--sold::before,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard--empty::before{display:none!important;}
+/* 升级区：紫色底 + 官方 upgrade_bg_outline（紫色为 CSS 取色自 t53s，解包中无整块紫底图） */
+
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard__num,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard__label{color:#fff!important;}
+/* 刷新 / 冻结按钮 */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn--amber::before{background-image:url(/closure-shop-revision/img/refresh_bg_normal.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn--ice::before{background-image:url(/closure-shop-revision/img/frozen_bg_normal.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .shopbar__tools .toolbtn.toolbtn--ice.is-on::before{background-image:url(/closure-shop-revision/img/frozen_bg_unlock.png)!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .toolbtn--amber .toolbtn__img{content:url(/closure-shop-revision/img/refresh_icon.png)!important;}
+/* 实测 DOM 补充（只换颜色，不动位置） */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bonds > .scard__bond,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__idesc,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__class{color:#2a2d33!important;text-shadow:none!important;}
+
+/* ===== rev2：卡内三区（外部卡位/宽高/gap 不变） =====
+ * 顶部 0–30：原有 .tier / .scard__price 角标不动
+ * 立绘区：约 8–116（单位 --p），下沿裁切，不拉伸、不压字
+ * 文字区：116–168 浅白底，黑字；底边 168–175 蓝色描边（衍生素材 chess_frame_shop*.png 已擦除原图白条和 CLOSURE X SDPL SYSTEM 印字）
+ */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__art{
+  clip-path:inset(4% 0 calc(59 * var(--p)) 0)!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__body{
+  justify-content:flex-end;
+  padding-bottom:calc(8 * var(--p))!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__body::before{
+  content:''!important;height:calc(59 * var(--p))!important;bottom:calc(0 * var(--p))!important;
+  background:linear-gradient(180deg,#f3f4f6 0%,#e4e6ea 100%)!important;
+  border-top:calc(2 * var(--p)) solid #3a3fcf;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__name{color:#111318!important;font-weight:600!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bonds > .scard__bond{color:#20242c!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__bond .bglyph img,
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__prof{filter:brightness(0)!important;opacity:.85!important;}
+/* 装备卡（有 .scard__idesc）：文字区加高，描述可读；装备图限制在上半区 */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard:has(.scard__idesc) .scard__body::before{height:calc(78 * var(--p))!important;}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard__idesc{
+  color:#1d2128!important;font-size:calc(12.5 * var(--p))!important;line-height:1.35!important;text-shadow:none!important;
+}
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .scard:has(.scard__idesc) .scard__itemart{
+  max-height:calc(80 * var(--p))!important;object-fit:contain!important;
+}
+/* 升级区：解包里没有整张紫色升级底图，这里把原 .lvcard 整体色相从绿色转到紫色（不改结构） */
+html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard{
+  filter:hue-rotate(150deg) saturate(1.15)!important;
+}
+

@@ -1,0 +1,314 @@
+{
+  "version": 2,
+  "updatedAt": "2026-11-20T23:55:38.167Z",
+  "profiles": {
+    "desktop": {
+      "entries": [
+        {
+          "selector": "#app > div.app-root > div.screen.title-screen > div.title-corner.title-corner--tl",
+          "x": 59.5,
+          "y": 13.5,
+          "w": null,
+          "h": null,
+          "scale": 1.3,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > section.hub-recruit > div.hub-recruit__list > div.hub-recruit__empty",
+          "x": 1,
+          "y": 1,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right",
+          "x": 98.93,
+          "y": 0,
+          "w": 619.06,
+          "h": 454.95,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext__body > div.proto-body.ext-body > section.ext-pane > div.ext-foot > span.ext-foot__pack.num",
+          "x": 15,
+          "y": -13.5,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext-theme > footer.ext-theme__foot > div.ext-tiers",
+          "x": -18.37,
+          "y": 1,
+          "w": 257.29,
+          "h": 53.49,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext-theme > footer.ext-theme__foot > span.ext-theme__pack.num",
+          "x": 11,
+          "y": 2.5,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        }
+      ]
+    },
+    "mobile": {
+      "entries": [
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > button.hub-plate.hub-plate--sweep.lobby-sweep",
+          "x": 129,
+          "y": -101,
+          "w": null,
+          "h": null,
+          "scale": 0.8,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > button.btn.btn--secondary.btn--lg",
+          "x": 129,
+          "y": -129.5,
+          "w": null,
+          "h": null,
+          "scale": 0.8,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > section.hub-recruit",
+          "x": 56.16,
+          "y": -80,
+          "w": 592.84,
+          "h": 265.47,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage",
+          "x": -63,
+          "y": 93.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-side > button.hub-ach",
+          "x": 75,
+          "y": -92.5,
+          "w": 395.69,
+          "h": 150.98,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > section.hub-entries > div.hub-entry-wrap:nth-of-type(1)",
+          "x": 56.5,
+          "y": -77.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > section.hub-entries > div.hub-entry-wrap:nth-of-type(2)",
+          "x": 56.5,
+          "y": -77.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > section.hub-entries > div.hub-entry-wrap:nth-of-type(3)",
+          "x": 56.5,
+          "y": -77.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.proto__body > div.proto-body > section.proto-stage > div.proto__pic > svg.ps",
+          "x": 24.5,
+          "y": 56.5,
+          "w": null,
+          "h": null,
+          "scale": 1.3,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud > div.gm__corner > button.fsbtn.tapx.gm__gear",
+          "x": 285.5,
+          "y": 95,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud > div.bpop.brackets.bpop--left",
+          "x": -12.5,
+          "y": -95,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud > section.shopbar > div.shopbar__row > div.funds",
+          "x": 0,
+          "y": -22,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud > section.shopbar > div.shopbar__row > div.funds > button.funds__collapse",
+          "x": 1,
+          "y": 15,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud > div.shopbar-tab",
+          "x": -18.5,
+          "y": -10,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.gm.gm--prep > div.gm__hud",
+          "x": 1,
+          "y": 0,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ally__body > div.proto-body.ally-body > section.ally-side > button.ally-card.ally-card--create.ally-create",
+          "x": 0,
+          "y": -44.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ally__body > div.proto-body.ally-body > section.ally-side > button.ally-search",
+          "x": 59.53,
+          "y": -49.5,
+          "w": 594.62,
+          "h": 79.08,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ally__body > div.proto-body.ally-body > section.ally-stage > svg.mf-radar",
+          "x": 74,
+          "y": -38.5,
+          "w": null,
+          "h": null,
+          "scale": 1.1,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ally__body > div.proto-body.ally-body > section.ally-side > div.ally-card.ally-card--join.ally-join",
+          "x": 0,
+          "y": -32,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext-theme > div.ext-theme__body > button.ext-theme__guide.ext-theme__rules",
+          "x": 0,
+          "y": 0,
+          "w": 81.95,
+          "h": 79.92,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext-theme > footer.ext-theme__foot > div.ext-theme__corner > div.ext-theme__dock > button.ext-theme__slot",
+          "x": 0,
+          "y": -13.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > div.modal.proto-veil > div.modal__box.brackets.modal__box--mint > div.modal__body > div.ext-theme > footer.ext-theme__foot > div.ext-theme__corner > div.ext-theme__dock > button.ext-theme__loadout",
+          "x": 0,
+          "y": -13.5,
+          "w": null,
+          "h": null,
+          "scale": null,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > section.hub-recruit > div.hub-recruit__list > div.hub-recruit__empty > span",
+          "x": 0,
+          "y": 0,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        },
+        {
+          "selector": "#app > div.app-root > div.screen.lobby-screen.lobby-hub > main.hub-stage > aside.hub-right > section.hub-recruit > div.hub-recruit__list > div.hub-recruit__empty > button.hub-recruit__create",
+          "x": 0,
+          "y": 0,
+          "w": null,
+          "h": null,
+          "scale": 1.2,
+          "z": null,
+          "hidden": false
+        }
+      ]
+    }
+  }
+}

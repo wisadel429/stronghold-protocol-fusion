@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>界面主题 · STRONGHOLD PROTOCOL</title>
+  <link rel="icon" href="/icons/favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/css/ui-theme-picker.css" />
+</head>
+<body>
+  <main class="uip">
+    <header class="uip__head">
+      <p class="uip__micro">UI THEME // OUT OF MATCH</p>
+      <h1 class="uip__title">界面主题</h1>
+      <p class="uip__lead">这一页在局外（标题页 / 大厅之前），切的是<b>整套界面</b>。原来的界面原样保留，随时可以切回来。
+        选择会记在这台浏览器上（<code>sp.ui-theme.v1</code>），下次打开站点直接进入。</p>
+    </header>
+
+    <div class="uip__grid" id="uip-grid" role="list"></div>
+
+    <p class="uip__note" id="uip-note" role="status" aria-live="polite"></p>
+
+    <footer class="uip__foot">
+      <a class="uip__back" href="/">‹ 返回游戏</a>
+      <span class="uip__hint">切换会重新加载页面；对局进度在服务器上，不受影响。</span>
+    </footer>
+  </main>
+  <script src="/ui-theme-picker.js"></script>
+</body>
+</html>

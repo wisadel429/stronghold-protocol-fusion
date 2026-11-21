@@ -1,0 +1,394 @@
+// server/match/match/platform.js — Match methods: the platform interface of the server/match/Match.js header
+// (server/lobby.js ⇄ Match) — start, handle (validation, error isolation, flush; the intents themselves: intents.js
+// _handle), setLoadout (INFO_CHECK; rule-enabled PREP), onDisconnect / onReconnect and the full resync of one human, onLeave and 中途退出
+// = elimination (_quit), dispose.
+// Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
+
+import { C2S } from '../../../shared/protocol.js';
+import { PHASE, ERR } from '../../../shared/constants.js';
+import { syntheticResult } from '../fields.js';
+import { FLOW_TICKER_PRIORITY, OK, fail } from './common.js';
+import { msg } from '../../../shared/i18n.js';
+import { ruleOption } from '../../../shared/plugins/rules.js';
+
+const GAME_TYPES = new Set(Object.keys(C2S).filter((t) => Object.hasOwn(C2S, t) && (t.startsWith('g.') || t.startsWith('b.'))));
+
+export class MatchPlatform {
+  start() {
+    if (this.disposed || this.ended || this.phase !== PHASE.LOBBY) return;
+    this.guard(() => {
+      if (!this.gd.visibleChess.length || this.pool.entries.size === 0) {
+        this.log.error?.(`[match ${this.roomCode}] game data unusable (no chess pool) — ending the match`);
+        this.phase = PHASE.INFO_CHECK;
+        this.markPublic();
+        this.flush(true);
+        this.finish({ victory: false, reason: 'error' });
+        return;
+      }
+      this.enterInfoCheck();
+    });
+  }
+
+  /**
+   * @param {string} playerId
+   * @param {{ t: string }} msg validated intent
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  handle(playerId, msg) {
+    const ps = this.players.get(playerId) || this.spectators.get(playerId);
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    return this._handleSeatIntent(ps, msg);
+  }
+
+  /** Shared human / external-AI semantic validation and dispatch. C2S schema: net.js / the adapter. */
+  _handleSeatIntent(ps, msg) {
+    // a spectator seat only watches (the platform routes nothing else of it)
+    if (ps.spectator && (!msg || msg.t !== 'g.watch')) {
+      // g.test shares the host's rate bucket (applyTestCommand audits SPECTATOR after the stamp).
+      if (this.test && msg?.t === 'g.test') {
+        let res;
+        try { res = this.applyTestCommand(ps, msg); }
+        catch (e) { this.reportError('handle g.test', e); res = fail(ERR.INTERNAL); }
+        try { this.flush(); } catch (e) { this.reportError('flush', e); }
+        return res && res.error ? res : OK;
+      }
+      return fail(ERR.SPECTATOR);
+    }
+    if (this.disposed || this.ended) {
+      // A report that crossed the match end (the last b.progress of a field, a delegated rehearsal's answer) is stale:
+      // ignored, never an error (DESIGN §14 — an error frame without a rid would surface as a toast in the browser).
+      if (msg && msg.t === 'b.rehearsalResult') return OK;
+      return this.clientCombat && msg && (msg.t === 'b.progress' || msg.t === 'b.result') ? OK : fail(ERR.WRONG_PHASE);
+    }
+    if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string' || !GAME_TYPES.has(msg.t)) return fail(ERR.BAD_MSG);
+    let res;
+    try {
+      res = this._handle(ps, msg);
+    } catch (e) {
+      this.reportError(`handle ${msg.t}`, e);
+      res = fail(ERR.INTERNAL);
+    }
+    try { this.flush(); } catch (e) { this.reportError('flush', e); }
+    if (res && typeof res === 'object' && res.error) return res;
+    return OK;
+  }
+
+  /** Host-only asynchronous input, journalled by testTrace; never a C2S message. */
+  externalReply(id, reply, failed) {
+    this.guard(() => this.externalAI?.receive(id, reply, failed));
+  }
+
+  /**
+   * room.loadout during the match (DESIGN §16): only while INFO_CHECK runs (the briefing's 干员调配 entry); the lobby
+   * already checked it against the data (PlayerState.setLoadout re-checks it). `ops` (0.2.2): the per-operator 潜能 /
+   * 练度 that come with it (undefined = unchanged). A room whose prepLoadout rule is prep also accepts one merge
+   * during PREP while that seat has not pressed 准备 (DESIGN §34.15). INFO_CHECK stays a full replace.
+   * @param {string} playerId
+   * @param {Record<string, { skill: number, module: string|null }> | null} loadout
+   * @param {Record<string, { potential: number, cultivate: number }> | null} [ops]
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  setLoadout(playerId, loadout, ops = undefined, mode = undefined) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    // the rule switch comes from GameData.rulesOf — official default → mode.annRules → room annMods → plugin rules
+    const prep = this.phase === PHASE.PREP && this.gd.rulesOf('prepLoadout') === 'prep';
+    if (this.disposed || this.ended || (this.phase !== PHASE.INFO_CHECK && !prep)) return fail(ERR.WRONG_PHASE, 'loadout locked for this match');
+    if (prep && ps.ready) return fail(ERR.WRONG_PHASE, 'loadout locked for this match');
+    // 炸惊模拟 · 卡池调整 (`room.loadout { mode: 'zhajing' }`): a SEPARATE profile, so it never touches `ps.loadout` /
+    // `ps.ops`. Refused outside a ZHAJING match (an official or 湮灭 room can never be made to carry one), and it runs
+    // through the very same phase gate above — the briefing's 卡池调整 entry is the only in-match window.
+    if (mode === 'zhajing') {
+      if (!this.gd.zhajing) return fail(ERR.BAD_TARGET, 'not a ZHAJING match');
+      let ok = false;
+      this.guard(() => { ok = ps.setZjLoadout(loadout); });
+      if (!ok) return fail(ERR.BAD_TARGET, 'loadout does not match the play set roster');
+      this.markPrivate(ps);
+      return OK;
+    }
+    // 湮灭模拟 · 卡池调整 (`room.loadout { mode: 'annihilation' }`): the THIRD profile (`ps.annLoadout`). Same rules as the
+    // 炸惊 branch above — refused outside an ANNIHILATION match, behind the same INFO_CHECK / prep-unready gate — and it
+    // never touches `ps.loadout` / `ps.zjLoadout`.
+    if (mode === 'annihilation') {
+      if (!this.gd.annihilation) return fail(ERR.BAD_TARGET, 'not an ANNIHILATION match');
+      let ok = false;
+      this.guard(() => { ok = ps.setAnnLoadout(loadout); });
+      if (!ok) return fail(ERR.BAD_TARGET, 'loadout does not match this match roster');
+      this.markPrivate(ps);
+      return OK;
+    }
+    let res = OK;
+    this.guard(() => {
+      const before = prep ? ps.allChess().map((owner) => ({ owner, loadout: ps.loadoutFor(ps.gd.chess(owner.id)) })) : [];
+      if (!ps.setLoadout(loadout, ops, prep ? { merge: true } : undefined)) { res = fail(ERR.BAD_TARGET, 'loadout does not match the game data'); return; }
+      if (prep) {
+        for (const { owner, loadout: previous } of before) {
+          const next = ps.loadoutFor(ps.gd.chess(owner.id));
+          if (['skillIndex', 'moduleId', 'potential', 'cultivate'].some((key) => previous[key] !== next[key])) ps._reconcileTokensFor(owner);
+        }
+        ps.recompute();
+      } else this.markPrivate(ps);
+    });
+    return res;
+  }
+
+  /**
+   * 炸惊模拟「锻造器」(`g.forgeTake`): spend one forge on one card of the roll the server drew. Everything substantive lives
+   * in PlayerState.forgeTake (validation against the current roll, the accumulated table, the immediate 资金 payout, the
+   * next roll); this wrapper only resolves the player, guards the match state and marks the private view.
+   * Accepted in ANY prep-ish phase, like a skin: a forge is spent by its owner whenever they open the window, and a battle
+   * in progress does not take it away (the cards apply to the NEXT field through `flags.forge`).
+   * @param {import('../PlayerState.js').PlayerState} ps
+   * @param {string} optId shared/forgeData.js option id
+   * @param {string} rarity that roll's rarity
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  forgeTake(ps, optId, rarity) {
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    if (this.disposed || this.ended) return fail(ERR.ROOM_STARTED);
+    if (!this.gd.zhajing) return fail(ERR.BAD_TARGET, 'forge is a ZHAJING mechanic');
+    if (!ps.alive) return fail(ERR.ELIMINATED);
+    let res = OK;
+    this.guard(() => { res = ps.forgeTake(optId, rarity); });
+    return res;
+  }
+
+  /**
+   * room.skins during the match (docs/SKINS.md): accepted in ANY phase, unlike the loadout just above. The loadout is
+   * locked at INFO_CHECK because it changes what a unit does; a skin changes only what it looks like, and it is public —
+   * a teammate picking a different model mid-match is harmless, so `markPublic` carries it to everyone on the next
+   * broadcast. The lobby already filtered the shape (freezeSkins); PlayerState.setSkins re-checks it and refuses a
+   * bad map without clearing the choice already stored.
+   * @param {string} playerId
+   * @param {Record<string, string> | null} skins
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  setSkins(playerId, skins) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    let res = OK;
+    this.guard(() => {
+      // an empty selection is a valid one: it clears every skin. A bad map leaves the stored choice alone.
+      if (!ps.setSkins(skins)) { res = fail(ERR.BAD_MSG, 'bad skin selection'); return; }
+      // [ASSUMED] Live cosmetic changes refresh every existing prep view, using the same dirty path as a move.
+      // The public choice also reaches current battle renderers; no running sim or BattleSpec is changed.
+      this.markPrivate(ps);
+      this.markPublic();
+    });
+    return res;
+  }
+
+  /**
+   * room.skins (docs/SKINS.md): a player's chess→skinId choice. Unlike room.loadout there is **no phase window** — a
+   * skin is cosmetic and public, so it applies whenever it arrives and the others see the new model at once
+   * (markPublic). The lobby already checked the ids against the data; PlayerState.setSkins re-checks them and an empty
+   * selection clears the player's skins (a bot keeps its operator's own model).
+   * @param {string} playerId
+   * @param {Record<string, string> | null} skins
+   * @returns {{ ok: true } | { error: string, detail?: string }}
+   */
+  setSkins(playerId, skins) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left) return fail(ERR.NOT_IN_ROOM);
+    if (this.disposed || this.ended) return fail(ERR.WRONG_PHASE, 'the match is over');
+    let res = OK;
+    this.guard(() => {
+      ps.setSkins(skins);
+      this.markPublic();
+    });
+    return res;
+  }
+
+  onDisconnect(playerId) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || this.disposed) return;
+    this.guard(() => {
+      ps.connected = false;
+      // A disconnected human's silence is never consent to a new setup.
+      this.cancelSetupVote();
+      // a paused solo battle resumes (the server takes the field over; nobody is left to resume it)
+      this._resume();
+      if (this.clientCombat) this._authorityLost(ps, 'disconnect');
+      // a rehearsal this host was running falls back to the server (DESIGN §14; a no-op without tasks)
+      this._rehearsalHostChanged();
+      this.markPublic();
+    });
+  }
+
+  onReconnect(playerId) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left || this.disposed) return;
+    this.guard(() => {
+      const was = ps.connected;
+      ps.connected = true;
+      this._resync(ps);
+      if (!was) this.markPublic();
+    });
+  }
+
+  /**
+   * The full state of one human (a reconnect, a resync, a spectator seat): m.public, its m.private (players only), the
+   * field it is on / watches — a spectator, like an eliminated player, the field of the player it follows (item 56),
+   * else the first; in a prep phase that player's board — or the result once ended.
+   */
+  _resync(ps) {
+    const playerId = ps.playerId;
+    this.sendTo(playerId, this.publicView());
+    if (!this.ended) {
+      if (!ps.spectator) {
+        ps._lastPriv = null;
+        this._sendPrivate(ps, true);
+      }
+      if (this.clientCombat) this._resendBattle(ps);
+      else if (!this.fields.length && this._follows(ps)) this._followScout(ps, { keep: true });
+      else {
+        let fid = this.watchers.get(playerId);
+        if (!fid && ps.spectator && this.fields.length) { fid = (this._watchTargetField(ps, this.fields) || this.fields[0]).fieldId; this.watchers.set(playerId, fid); }
+        if (fid) this._sendField(playerId, fid);
+      }
+    } else if (this.lastResultMsg) {
+      this.sendTo(playerId, { ...this.lastResultMsg, playerId });
+    }
+  }
+
+  /**
+   * 离场者的策略草稿状态：它还有没有未选的档位。
+   *
+   * 这两个方法（连同下面的 _fillBandDraftTurn）在 fork 与上游**都只有调用、没有定义** —— `_quit` 在
+   * BAND_DRAFT 阶段调用它们会抛 TypeError，被 `guard` 吞掉，于是离场者的 `draft.picks` 永远是 undefined，
+   * 而 `ps.eliminate` 之后的收尾也被跳过（2026-10-17 由 test/match 的 onLeave 用例暴露）。
+   * @param {any} d this.draft
+   * @param {string} playerId
+   * @returns {{ done: boolean, open: number[] }} open = 尚未选的档位序号
+   */
+  _bandPicksOf(d, playerId) {
+    const slots = Array.isArray(d && d.slots) ? d.slots : null;
+    if (slots) {
+      const open = [];
+      for (let i = 0; i < slots.length; i++) {
+        const picks = slots[i] && slots[i].picks;
+        if (!picks || !picks[playerId]) open.push(i);
+      }
+      return { done: open.length === 0, open };
+    }
+    // 单档草稿（标准/超限）：d.picks 是 playerId → bandId
+    const picked = !!(d && d.picks && d.picks[playerId]);
+    return { done: picked, open: picked ? [] : [0] };
+  }
+
+  /**
+   * 把一个离场者的草稿档位全部补成默认策略（`defaultBand` 会避开队友已选的）。
+   * 随机模式（多档）逐档补，单档只补一次。
+   * @param {any} d this.draft
+   * @param {any} ps the departing PlayerState
+   */
+  _fillBandDraftTurn(d, ps) {
+    const { open } = this._bandPicksOf(d, ps.playerId);
+    for (const slot of open) {
+      const id = this.defaultBand(ps.playerId);
+      if (Array.isArray(d.slots) && d.slots[slot]) {
+        d.slots[slot].picks = d.slots[slot].picks || {};
+        d.slots[slot].picks[ps.playerId] = id;
+      } else {
+        d.picks[ps.playerId] = id;
+      }
+      ps.bandId = ps.bandId || id;
+      if (!ps.lp) ps.lp = this.gd.startLp(id);
+    }
+    this.markPrivate(ps);
+  }
+
+  onLeave(playerId) {
+    const ps = this.players.get(playerId);
+    if (!ps || ps.isBot || ps.left || this.disposed) return;
+    this.guard(() => {
+      ps.left = true;
+      this.cancelSetupVote();
+      // A seat that is gone for good takes its reroll cooldown with it (it cannot ask again in this match anyway).
+      this._rerollStartAt.delete(playerId);
+      ps.connected = false;
+      ps.autoplay = false;
+      this.watchers.delete(playerId);
+      if (this.ended) return;
+      this._resume();
+      if (this.clientCombat) this._authorityLost(ps, 'left');
+      // a rehearsal the departed seat was running falls back to the server (DESIGN §14; a no-op without tasks)
+      this._rehearsalHostChanged();
+      this.markPublic();
+      if (!this.order.some((p) => !p.isBot && !p.left)) {
+        this.finish({ victory: false, reason: 'abandoned' });
+        return;
+      }
+      this._quit(ps);
+    });
+  }
+
+  /**
+   * 中途退出 counts as elimination (research 00-INDEX §3, 01 §9, 06 §7 / §10.3): every copy the player holds goes back
+   * to the shared pool at once, and the seat has no place in later rounds, the Final Assault pairing or the boss pool
+   * (bloodPoint per player alive at the fight's start, DESIGN §25.13.4). Rounds passed = the rounds the player had
+   * survived when leaving.
+   */
+  _quit(ps) {
+    this.maybeEndInfo();
+    if (!ps.alive) return;
+    const phase = this.phase;
+    const d = this.draft;
+    if (phase === PHASE.BAND_DRAFT && d && !this._bandPicksOf(d, ps.playerId).done) {
+      // the departed seat passes its turn with the default band (never one a teammate holds — defaultBand);
+      // 随机模式: both its picks default (fillBandDraftTurn does the open ones)
+      const turn = this.draftTurn() === ps.playerId;
+      this._fillBandDraftTurn(d, ps);
+      if (turn) this.startDraftTurn();
+    }
+    const passedRound = phase === PHASE.SETTLE ? this.round + 1 : Math.max(1, this.round);
+    // its own normal battle has nobody left to fight for
+    for (const f of this.fields) {
+      if (f.live && f.kind === 'normal' && f.players.length === 1 && f.players[0] === ps.playerId) {
+        if (this.clientCombat && f.cc) {
+          if (!f.result) f.result = syntheticResult(f.players);
+          this._fieldDone(f);
+          continue;
+        }
+        try { f.battle.forceEnd('left'); } catch (e) { this.reportError('quit forceEnd', e); }
+      }
+    }
+    ps.lp = 0;
+    ps.eliminate(passedRound);
+    this.offersChanged();
+    this.tickerText(msg('{name}博士中途退出了模拟', { name: ps.name }), FLOW_TICKER_PRIORITY);
+    if (this.bossWaves && (phase === PHASE.ROUND_START || phase === PHASE.SP_DRAFT || phase === PHASE.PREP)) {
+      // before the boss fight: pair the players left again (the prep preview shows the new partner / template); a
+      // player moved to the other half re-checks its board there at once (recompute → deployMap, marks it private)
+      this._planBossWaves();
+      for (const p of this.alivePlayers()) p.recompute();
+    }
+    // whoever scouted the departed player's board follows the next player still in (item 56)
+    for (const v of this._viewers()) if (this.watchers.get(v.playerId) === `n:${ps.playerId}`) this._followScout(v);
+    this.markPublic();
+    if (this.teamLp != null) this._syncTeamLp();
+    if (!this.alivePlayers().length) {
+      // only eliminated spectators are left
+      this.finish({ victory: false, reason: 'eliminated' });
+      return;
+    }
+    // 超限「词条」三选一没有轮次：任何一个人离开都可能让「全体已选完」成立，所以词条阶段无条件补一次收尾判断。
+    if (phase === PHASE.SP_DRAFT && this.sp && (this.sp.family === 'overlimit' || this.spTurn() === ps.playerId)) this.startSpTurn();
+    else if (phase === PHASE.PREP) this.maybeEndPrep();
+  }
+
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.externalAI?.close();
+    if (this.runner) { try { this.runner.stop(); } catch { /* ignore */ } }
+    this._stopClientCombat();
+    this._cancelRehearsal();
+    // a plugin interaction window's own deadline timer (MatchOffers); the tracked timers below cover the rest
+    if (typeof this.offersDispose === 'function') { try { this.offersDispose(); } catch { /* ignore */ } }
+    for (const h of this._timers) { try { this.sched.clearTimeout(h); } catch { /* ignore */ } }
+    this._timers.clear();
+    if (this._pubTimer) { try { this.sched.clearTimeout(this._pubTimer); } catch { /* ignore */ } this._pubTimer = null; }
+    if (this.ownsScheduler) this.sched.dispose();
+  }
+}

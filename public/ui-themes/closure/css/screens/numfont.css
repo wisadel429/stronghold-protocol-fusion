@@ -1,0 +1,27 @@
+/* public/ui-themes/closure/css/screens/numfont.css — AC 七段数字（倒计时）的定点修正。
+ *
+ * 故障（业主 2026-11-17）：「选择策略」和「确认本局信息」右上角的倒计时数字字体样式不对。
+ *
+ * 根因：主题 ac-theme-closure.css 把 10 个数字做成 mask（`.numfont__d--N::after` +
+ * `mask-size: 100% 100%`，格子按 32/48 × 68/48 设计），引用的是
+ * `/ui-art/img/official/hub/ac/battle/numfont/digit_N.png`；但该目录里放的是**裁掉留白的字形切片**
+ * （实测 29×31 / 14×31 / …），被拉伸到 35×75 的格子里 → 数字变形、糊成一团。
+ * 同一套图的完整整格版本在 `/ui-art/original/img/.../numfont/` 下，是 32×68，正好是主题要的比例。
+ *
+ * 已做两件事：
+ *   1. 资源侧：把 original/ 的 10 张 32×68 整格图覆盖回 img/ 目录（旧的那批备份在
+ *      `.cache/backup/numfont.bak-cropped-2026-11-17/`），所以主题 CSS 不用改也能对。
+ *   2. 这里再加一层带 `?v=2` 的覆盖：旧图当初是经 artLock 下发的（`Cache-Control: public, max-age=3600`），
+ *      换文件不改 URL，玩家浏览器最多一小时内还会用旧图 —— 加版本号强制重新取。
+ *      以后主题更新换图时，把 v=2 递增即可。
+ */
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--0::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_0.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_0.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--1::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_1.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_1.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--2::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_2.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_2.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--3::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_3.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_3.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--4::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_4.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_4.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--5::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_5.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_5.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--6::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_6.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_6.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--7::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_7.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_7.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--8::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_8.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
+html[data-ac-terminal-theme="ac_s_closur"] .numfont__d--9::after { -webkit-mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_9.png?v=2") !important; mask-image: url("/ui-art/img/official/hub/ac/battle/numfont/digit_9.png?v=2") !important; -webkit-mask-size: 100% 100% !important; mask-size: 100% 100% !important; }
