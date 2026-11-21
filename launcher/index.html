@@ -176,7 +176,10 @@ document.getElementById('exportLog').onclick = function () {
         <div class="announce__text" id="announceText"></div>
         <div class="announce__meta" id="announceMeta"></div>
       </div>
-      <div class="announce__foot"><button type="button" class="btn" id="announceOk">知道了</button></div>
+      <div class="announce__foot">
+        <label class="announce__snooze"><input type="checkbox" id="announceSnooze" /> 今天不再弹出</label>
+        <button type="button" class="btn" id="announceOk">知道了</button>
+      </div>
     </div>
   </div>
 </body>

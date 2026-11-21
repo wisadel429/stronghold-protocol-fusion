@@ -7,6 +7,23 @@
 // 原生 DOM，不依赖 Preact 树，标题页/大厅都能出。
 
 const OPEN_KEY = 'sp-announcement-popup';
+const SNOOZE_KEY = 'sp.announce.snooze';
+
+/** 同一条公告（id 相同）今天勾过「不再弹出」就跳过；公告一更新（id 变）照常弹。 */
+function snoozed(notice) {
+  try {
+    const raw = localStorage.getItem(SNOOZE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    const today = new Date().toISOString().slice(0, 10);
+    return !!s && s.id === (notice && notice.id) && s.day === today;
+  } catch { return false; }
+}
+function setSnooze(notice) {
+  try {
+    localStorage.setItem(SNOOZE_KEY, JSON.stringify({ id: notice && notice.id, day: new Date().toISOString().slice(0, 10) }));
+  } catch { /* ignore */ }
+}
 
 const LEVEL_STYLE = {
   info: { bar: '#50e0b0', label: '公告' },
@@ -36,7 +53,9 @@ function show(notice) {
       #${OPEN_KEY} .ap-kicker { font-size: 11px; letter-spacing: .18em; color: ${st.bar}; text-transform: uppercase; }
       #${OPEN_KEY} .ap-title { margin: 6px 0 10px; font-size: 18px; font-weight: 800; color: #eafff7; }
       #${OPEN_KEY} .ap-text { font-size: 14px; line-height: 1.75; color: #c8d6d0; white-space: pre-wrap; word-break: break-word; }
-      #${OPEN_KEY} .ap-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 18px; }
+      #${OPEN_KEY} .ap-foot { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 18px; }
+      #${OPEN_KEY} .ap-snooze { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #8a9a94; cursor: pointer; }
+      #${OPEN_KEY} .ap-snooze input { accent-color: ${st.bar}; }
       #${OPEN_KEY} .ap-ok { padding: 7px 22px; font-size: 13px; font-weight: 700; cursor: pointer;
         background: #50e0b0; color: #06110d; border: 0; }
       #${OPEN_KEY} .ap-ok:hover { filter: brightness(1.08); }
@@ -48,10 +67,19 @@ function show(notice) {
         ${notice.title ? `<h2 class="ap-title">${esc(notice.title)}</h2>` : ''}
         <div class="ap-text">${esc(notice.text)}</div>
       </div>
-      <div class="ap-foot"><button type="button" class="ap-ok" data-ap-close>知道了</button></div>
+      <div class="ap-foot">
+        <label class="ap-snooze"><input type="checkbox" data-ap-snooze /> 今天不再弹出</label>
+        <button type="button" class="ap-ok" data-ap-close>知道了</button>
+      </div>
     </div>`;
   document.body.appendChild(wrap);
-  const close = () => { try { wrap.remove(); } catch { /* ignore */ } };
+  const close = () => {
+    try {
+      const box = wrap.querySelector('[data-ap-snooze]');
+      if (box && box.checked) setSnooze(notice);
+    } catch { /* ignore */ }
+    try { wrap.remove(); } catch { /* ignore */ }
+  };
   wrap.addEventListener('click', (ev) => {
     const t = ev.target;
     if (t === wrap || (t && t.closest && t.closest('[data-ap-close]'))) close();
@@ -69,7 +97,7 @@ export async function installAnnouncementPopup() {
     if (!r.ok) return;
     const j = await r.json();
     const notice = j && j.announcement;
-    if (notice && notice.text) {
+    if (notice && notice.text && !snoozed(notice)) {
       // 等首屏渲染完再弹，避免盖住加载动画
       setTimeout(() => show(notice), 800);
     }

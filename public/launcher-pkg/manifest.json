@@ -1,10 +1,10 @@
 {
-    "version":  "20261122-03",
-    "at":  "2026-11-22T00:08:22",
+    "version":  "20261122-04",
+    "at":  "2026-11-22T01:11:26",
     "zip":  "/launcher-pkg/launcher-pkg.zip",
-    "sha256":  "28ba6d2b0194fd279362c037699b60c444d972c9cf3d33aee9ed477e2386210c",
-    "bytes":  6031251,
+    "sha256":  "9f5032777a68ca2b123e378436d01fe47d37b4535906b048b671e5c75ffdc260",
+    "bytes":  6032005,
     "files":  1071,
-    "notes":  "修复更新提示条不显示；重启提示更准确",
+    "notes":  "公告加「今天不再弹出」；宿主允许重启占用3000的进程",
     "policy":  "code-only; no art assets"
 }

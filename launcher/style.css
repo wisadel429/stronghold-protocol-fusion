@@ -187,3 +187,6 @@ body.is-loading .loading { display: flex; }
 .update-bar[hidden] { display: none; }
 .update-bar__text { flex: 1; }
 .update-bar .btn--sm { height: 28px; padding: 0 12px; font-size: 12.5px; }
+.announce__foot { align-items: center; justify-content: space-between; }
+.announce__snooze { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #9fb0aa; cursor: pointer; }
+.announce__snooze input { accent-color: #50e0b0; }

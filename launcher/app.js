@@ -524,6 +524,23 @@
     }
     return null;
   }
+  function noticeSnoozed(n) {
+    try {
+      const raw = localStorage.getItem('sp.announce.snooze');
+      if (!raw) return false;
+      const s = JSON.parse(raw);
+      const today = new Date().toISOString().slice(0, 10);
+      // 同一条公告（id 相同）今天勾过就不再弹；公告一更新（id 变了）照常弹
+      return s && s.id === (n && n.id) && s.day === today;
+    } catch { return false; }
+  }
+  function snoozeNotice(n) {
+    try {
+      const box = $('announceSnooze');
+      if (!box || !box.checked || !n) return;
+      localStorage.setItem('sp.announce.snooze', JSON.stringify({ id: n.id, day: new Date().toISOString().slice(0, 10) }));
+    } catch { /* ignore */ }
+  }
   function onHostAnnouncement(body) {
     try {
       const j = JSON.parse(body);
@@ -531,7 +548,7 @@
         noticeState.notice = j.announcement;
         noticeState.fetchedAt = Date.now();
         paintNotice();
-        openNotice();          // 启动即弹
+        if (!noticeSnoozed(j.announcement)) openNotice();   // 启动即弹（勾了「今天不再弹」且同一条则跳过）
         return true;
       }
     } catch { /* 不是公告 JSON */ }
@@ -583,12 +600,12 @@
     const btn = $('noticeBtn');
     if (btn) btn.addEventListener('click', () => { if (!noticeState.notice) void fetchAnnouncement().then(() => { paintNotice(); openNotice(); }); else openNotice(); });
     const ok = $('announceOk');
-    if (ok) ok.addEventListener('click', closeNotice);
+    if (ok) ok.addEventListener('click', () => { snoozeNotice(noticeState.notice); closeNotice(); });
     const modal = $('announceModal');
     if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeNotice(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeNotice(); });
-    // 每次打开启动器拉一次；有内容就自动弹（和游戏内表现一致）
-    void fetchAnnouncement().then((n) => { paintNotice(); if (n) setTimeout(openNotice, 400); });
+    // 每次打开启动器拉一次；有内容就自动弹（勾过「今天不再弹」且同一条则跳过）
+    void fetchAnnouncement().then((n) => { paintNotice(); if (n && !noticeSnoozed(n)) setTimeout(openNotice, 400); });
     // 每 10 分钟刷新一次未读标记
     setInterval(() => { void fetchAnnouncement().then(paintNotice); }, 600000);
   }

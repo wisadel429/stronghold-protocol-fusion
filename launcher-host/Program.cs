@@ -518,16 +518,21 @@ namespace StrongholdLauncher
         private void RestartLocalServer()
         {
             var owned = _node != null && !_node.HasExited;
-            if (!owned && Host.PortOpen(GAME_PORT))
+            if (owned)
             {
-                // 端口被别的实例占着：不是我们起的进程，杀不得，提示玩家重启启动器即可用上新代码
-                Program.Log("restart skipped: port " + GAME_PORT + " owned by another process");
-                Send("{\"t\":\"update-status\",\"kind\":\"ok\",\"text\":\"代码已更新；本地服务器是另一个进程在跑，重启启动器后生效\"}");
+                StopNode();
+                Thread.Sleep(600);
+                Program.Log("restart local server (owned)");
+                StartLocal(false);
                 return;
             }
-            StopNode();
-            Thread.Sleep(600);
-            Program.Log("restart local server (owned=" + owned + ")");
+            if (Host.PortOpen(GAME_PORT))
+            {
+                // 业主 2026-11-22 决定：允许结束占用 3000 的进程再重启，这样服务端改动也能一键生效。
+                var killed = Host.KillPortOwner(GAME_PORT, Program.Log);
+                Program.Log("restart: killed " + killed + " process(es) on port " + GAME_PORT);
+                Thread.Sleep(800);
+            }
             StartLocal(false);
         }
 
@@ -858,6 +863,63 @@ namespace StrongholdLauncher
                 }
             }
             return count;
+        }
+
+        /// <summary>结束占用指定端口的进程（只结束监听该端口的那个 PID）。返回结束的进程数。</summary>
+        public static int KillPortOwner(int port, Action<string> log)
+        {
+            var killed = 0;
+            try
+            {
+                var props = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+                var listeners = props.GetActiveTcpListeners();
+                var pids = new List<int>();
+                foreach (var ep in listeners)
+                {
+                    if (ep.Port != port) continue;
+                    // 通过 netstat 反查 PID（GetActiveTcpListeners 不带 PID）
+                }
+                // 用 netstat -ano 解析
+                var psi = new ProcessStartInfo("netstat", "-ano")
+                {
+                    RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true,
+                };
+                using (var p = Process.Start(psi))
+                {
+                    var text = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit(4000);
+                    foreach (var line in text.Split('\n'))
+                    {
+                        if (line.IndexOf("LISTENING", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        var parts = line.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length < 5) continue;
+                        var local = parts[1];
+                        var idx = local.LastIndexOf(':');
+                        if (idx < 0) continue;
+                        int p2;
+                        if (!int.TryParse(local.Substring(idx + 1), out p2) || p2 != port) continue;
+                        int procId;
+                        if (!int.TryParse(parts[parts.Length - 1], out procId)) continue;
+                        if (procId == Process.GetCurrentProcess().Id) continue;
+                        if (pids.Contains(procId)) continue;
+                        pids.Add(procId);
+                    }
+                }
+                foreach (var procId in pids)
+                {
+                    try
+                    {
+                        var victim = Process.GetProcessById(procId);
+                        log("kill port " + port + " owner: pid " + procId + " (" + victim.ProcessName + ")");
+                        victim.Kill();
+                        victim.WaitForExit(3000);
+                        killed++;
+                    }
+                    catch (Exception e) { log("kill failed pid " + procId + ": " + e.Message); }
+                }
+            }
+            catch (Exception e) { log("KillPortOwner failed: " + e.Message); }
+            return killed;
         }
 
         public static bool Probe(string url, int timeoutMs)
