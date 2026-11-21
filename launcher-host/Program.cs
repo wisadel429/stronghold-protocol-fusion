@@ -111,6 +111,8 @@ namespace StrongholdLauncher
     internal sealed class LauncherForm : Form
     {
         private readonly WebView2 _web;
+        private readonly Label _splash;
+        private NotifyIcon _tray;
         private readonly string _launcherDir;
         private readonly string _configFile;
         private Process _node;
@@ -132,10 +134,29 @@ namespace StrongholdLauncher
             BackColor = Color.FromArgb(11, 15, 14);
             try { Icon = Icon.ExtractAssociatedIcon(Path.Combine(Program.Root, "Stronghold.exe")); } catch { }
 
-            _web = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.FromArgb(11, 15, 14) };
+            _web = new WebView2 { Dock = DockStyle.Fill, Visible = false, DefaultBackgroundColor = Color.FromArgb(11, 15, 14) };
             Controls.Add(_web);
+
+            // 启动闪屏（业主 2026-11-22：这个提示词不见了，做回来）
+            // 与旧宿主一致：WebView2 起来之前先显示「正在启动内置浏览器…」，就绪后自动隐藏。
+            _splash = new Label
+            {
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Text = "正在启动内置浏览器…",
+                ForeColor = Color.FromArgb(123, 240, 176),
+                BackColor = Color.FromArgb(11, 15, 14),
+                Font = new Font("Microsoft YaHei", 11f),
+            };
+            Controls.Add(_splash);
+            _splash.BringToFront();
+
             Load += async (s, e) => await InitAsync();
-            FormClosing += (s, e) => StopNode();
+            FormClosing += (s, e) => { SaveBounds(); try { if (_tray != null) { _tray.Visible = false; _tray.Dispose(); } } catch { } StopNode(); };
+            // 业主 2026-11-22 Q-07：最小化到托盘
+            Resize += (s, e) => { if (WindowState == FormWindowState.Minimized) HideToTray(); };
+            SetupTray();
+            RestoreWindowBounds();
         }
 
         private async Task InitAsync()
@@ -146,7 +167,9 @@ namespace StrongholdLauncher
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "StrongholdProtocol", "WebView2", "EBWebView");
                 Directory.CreateDirectory(userData);
+                SetSplash("正在启动内置浏览器…");
                 var env = await CoreWebView2Environment.CreateAsync(null, userData);
+                SetSplash("正在载入启动页…");
                 await _web.EnsureCoreWebView2Async(env);
 
                 var core = _web.CoreWebView2;
@@ -167,6 +190,8 @@ namespace StrongholdLauncher
                 catch { }
 
                 Program.Log("webview ready; root=" + Program.Root);
+                // 内置浏览器就绪 → 收起闪屏，显示页面
+                HideSplash();
                 core.Navigate("https://app.local/index.html");
                 PushConfig(core);
 
@@ -184,7 +209,7 @@ namespace StrongholdLauncher
             catch (Exception e)
             {
                 Program.Log("webview init failed: " + e.Message);
-                MessageBox.Show("启动器初始化失败：\n" + e.Message, "卫戍协议：盟约", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                SetSplash("内置浏览器启动失败：\r\n" + e.Message);
             }
         }
 
@@ -393,9 +418,139 @@ namespace StrongholdLauncher
             });
         }
 
+        /// <summary>托盘图标 + 右键菜单（业主 2026-11-22 Q-07）。</summary>
+        private void SetupTray()
+        {
+            try
+            {
+                var icon = Icon;
+                try { icon = Icon.ExtractAssociatedIcon(Path.Combine(Program.Root, "Stronghold.exe")) ?? Icon; } catch { }
+                _tray = new NotifyIcon
+                {
+                    Icon = icon ?? SystemIcons.Application,
+                    Text = "卫戍协议：盟约 · 电脑版",
+                    Visible = true,
+                };
+                var menu = new ContextMenuStrip();
+                menu.Items.Add("显示启动器", null, delegate { ShowFromTray(); });
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add("重启本地服务器", null, delegate { RestartLocalServer(); ShowFromTray(); });
+                menu.Items.Add("打开后台", null, delegate
+                {
+                    try { Process.Start("http://127.0.0.1:" + GAME_PORT + "/admin"); } catch { }
+                });
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add("退出", null, delegate { _tray.Visible = false; Close(); });
+                _tray.ContextMenuStrip = menu;
+                _tray.DoubleClick += delegate { ShowFromTray(); };
+                Program.Log("tray icon ready");
+            }
+            catch (Exception e) { Program.Log("tray setup failed: " + e.Message); }
+        }
+
+        private void HideToTray()
+        {
+            try
+            {
+                Hide();
+                ShowInTaskbar = false;
+                if (_tray != null)
+                {
+                    _tray.Visible = true;
+                    try { _tray.ShowBalloonTip(1500, "卫戍协议：盟约", "已最小化到托盘，双击图标可以恢复。", ToolTipIcon.Info); } catch { }
+                }
+                Program.Log("minimized to tray");
+            }
+            catch { }
+        }
+
+        private void ShowFromTray()
+        {
+            try
+            {
+                ShowInTaskbar = true;
+                Show();
+                WindowState = FormWindowState.Normal;
+                Activate();
+            }
+            catch { }
+        }
+
+        private string BoundsFile { get { return Path.Combine(Program.Root, "data", "launcher-window.json"); } }
+
+        /// <summary>记住窗口位置与大小（业主 2026-11-22 Q-07）。</summary>
+        private void SaveBounds()
+        {
+            try
+            {
+                var max = WindowState == FormWindowState.Maximized;
+                var b = max ? RestoreBounds : Bounds;
+                Directory.CreateDirectory(Path.GetDirectoryName(BoundsFile));
+                File.WriteAllText(BoundsFile,
+                    "{\"x\":" + b.X + ",\"y\":" + b.Y + ",\"w\":" + b.Width + ",\"h\":" + b.Height + ",\"max\":" + (max ? "true" : "false") + "}",
+                    new UTF8Encoding(false));
+                Program.Log("bounds saved " + b.Width + "x" + b.Height + " max=" + max);
+            }
+            catch { }
+        }
+
+        private void RestoreWindowBounds()
+        {
+            try
+            {
+                if (!File.Exists(BoundsFile)) return;
+                var raw = File.ReadAllText(BoundsFile, Encoding.UTF8);
+                var w = (int)Host.JsonNumber(raw, "w", 0);
+                var h = (int)Host.JsonNumber(raw, "h", 0);
+                var x = (int)Host.JsonNumber(raw, "x", 0);
+                var y = (int)Host.JsonNumber(raw, "y", 0);
+                var max = Host.JsonValue(raw, "max") == "true" || raw.IndexOf("\"max\":true", StringComparison.Ordinal) >= 0;
+                if (w < 800 || h < 560) return;
+                var rect = new Rectangle(x, y, w, h);
+                var visible = false;
+                foreach (var scr in Screen.AllScreens) { if (scr.WorkingArea.IntersectsWith(rect)) { visible = true; break; } }
+                if (!visible) return;
+                StartPosition = FormStartPosition.Manual;
+                Bounds = rect;
+                if (max) WindowState = FormWindowState.Maximized;
+                Program.Log("bounds restored " + w + "x" + h + " max=" + max);
+            }
+            catch { }
+        }
+
         private void Send(string json)
         {
             try { BeginInvoke(new Action(delegate { try { _web.CoreWebView2.PostWebMessageAsJson(json); } catch { } })); } catch { }
+        }
+
+        /// <summary>显示/更新启动闪屏（「正在启动内置浏览器…」）。</summary>
+        private void SetSplash(string text)
+        {
+            try
+            {
+                if (_splash == null) return;
+                if (InvokeRequired) { BeginInvoke(new Action(delegate { SetSplash(text); })); return; }
+                _splash.Visible = true;
+                _splash.BringToFront();
+                _splash.Text = text;
+                Program.Log("splash: " + text);
+            }
+            catch { }
+        }
+
+        /// <summary>收起闪屏，把 WebView2 显示出来。</summary>
+        private void HideSplash()
+        {
+            try
+            {
+                if (_splash == null) return;
+                if (InvokeRequired) { BeginInvoke(new Action(HideSplash)); return; }
+                _splash.Visible = false;
+                _web.Visible = true;
+                _web.BringToFront();
+                Program.Log("splash hidden (webview shown)");
+            }
+            catch { }
         }
         // ---- 热更新（业主 2026-11-22）----
         // 铁律：**更新包里绝不含美术资源**。所以解压只接受代码/配置类文件（.js/.mjs/.css/.html），
@@ -684,6 +839,23 @@ namespace StrongholdLauncher
             if (close < 0) return "{\"" + key + "\":\"" + Esc(value) + "\"}";
             var sep = json.Substring(0, close).TrimEnd().EndsWith("{") ? "" : ",";
             return json.Substring(0, close) + sep + "\"" + key + "\":\"" + Esc(value) + "\"}";
+        }
+
+        /// <summary>取 JSON 里的数字字段（不存在返回 def）。</summary>
+        public static double JsonNumber(string json, string key, double def)
+        {
+            if (string.IsNullOrEmpty(json)) return def;
+            var marker = "\"" + key + "\"";
+            var i = json.IndexOf(marker, StringComparison.Ordinal);
+            if (i < 0) return def;
+            i = json.IndexOf(':', i + marker.Length);
+            if (i < 0) return def;
+            i++;
+            var start = i;
+            while (i < json.Length && (char.IsDigit(json[i]) || json[i] == '-' || json[i] == '.')) i++;
+            double v;
+            if (i > start && double.TryParse(json.Substring(start, i - start), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v)) return v;
+            return def;
         }
 
         public static bool IsDigits(string s)

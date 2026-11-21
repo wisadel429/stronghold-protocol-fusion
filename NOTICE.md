@@ -70,3 +70,16 @@ purposes only: no selling, paid distribution, paid hosting, ads, donations or an
 can request removal through a GitHub issue and the content will be taken down. No warranty of any kind.
 The English UI strings were seeded from GitHub PR #70 by @YuriRestia (credited, released with the project under
 GPL-3.0-or-later); the English game texts (`data/i18n/en.json`) are official EN client data like `data/*.json`.
+
+---
+
+## 本仓库的素材政策（2026-11-22）
+
+**本仓库只包含源码，不包含、也不二次分发任何美术资源。**
+
+- 不含：角色立绘、Spine 模型、界面切图、图标、字体、音乐音效（`public/assets/`、`public/ui-art/`、`public/icons/`、`public/fonts/` 等目录均不在仓库内）
+- 强制手段：`.gitignore` 排除 + `.githooks/pre-commit` 拦截（暂存区出现图片/音频/字体/二进制即拒绝提交）
+- 热更新包同样只含代码（`.js/.mjs/.css/.html/.md`），解压侧按扩展名与目录双白名单校验
+- 需要运行本项目时，请自行准备**来源合法**的资源；本仓库不提供、不引导获取这些素材
+
+所有《明日方舟》及「卫戍协议」相关素材的权利归上海鹰角网络科技有限公司及其授权方所有。
