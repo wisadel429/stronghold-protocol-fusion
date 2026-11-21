@@ -45,6 +45,10 @@ admin-update-key.json
 launcher-config.json
 protected-allow-login.flag
 *.log
+*.out
+*.err
+_*.out
+_*.err
 
 # ---- 运行时、依赖与构建产物 ----
 webview2/

@@ -19,6 +19,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# git 会把正常进度写到 stderr，PowerShell 5.1 在 Stop 模式下会误判为异常，所以 git 调用一律走 cmd
+function GitRun { param([string[]]$argv) $out = & cmd /c ('git ' + ($argv -join ' ') + ' 2>&1'); $code = $LASTEXITCODE; $out | ForEach-Object { Write-Host ('    ' + $_) }; return $code }
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 $gcm = 'C:\Program Files\Git\mingw64\bin\git-credential-manager.exe'
