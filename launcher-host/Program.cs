@@ -1172,23 +1172,41 @@ namespace StrongholdLauncher
             }
             catch { }
         }
-        // ---- 热更新（业主 2026-11-22）----
-        // 铁律：**更新包里绝不含美术资源**。所以解压只接受代码/配置类文件（.js/.mjs/.css/.html），
-        // 且路径必须在 launcher/、public/js/、public/css/、server/、shared/ 之下；
-        // data/（账号存档）、public/assets、public/ui-art、任何图片/音频一律拒绝。
-        private static readonly string[] UpdateAllowedDirs =
-        {
-            "launcher/", "public/js/", "public/css/", "server/", "shared/",
-            "public/index.html", "public/dashboard.html",
-        };
+        // ---- 热更新（业主 2026-11-22「拆分启动器热更」）----
+        // 两条**互相独立**的通道，各自白名单、各自版本标记、各自解压根目录：
+        //   launcher：只含 launcher/（启动页）→ 解压到启动器根目录 → 应用后**只重载页面**，不动 node；
+        //   game    ：游戏代码 → 解压到**当前选中的游戏目录** → 应用后重启那个版本的 node。
+        // 这样「换启动器界面」不会逼游戏重启，「改游戏代码」也不会去碰启动器文件。
+        // 铁律不变：任何一条通道都只收代码/配置类文件，美术资源一律拒绝。
+        private static readonly string[] LauncherPkgDirs = { "launcher/" };
         private static readonly string[] UpdateAllowedExt = { ".js", ".mjs", ".css", ".html", ".json", ".txt", ".md" };
 
-        private string VersionFile { get { return Path.Combine(Program.Root, "data", "launcher-version.json"); } }
+        /// <summary>
+        /// 热更总开关（业主 2026-11-22 二次口径）：`data/update-channel.json` 的 enabled 必须为 true 才联网检查。
+        /// **文件不存在 = 关闭**（fail-closed）。分发版一律带 `enabled:false`，只有业主自己那套开着。
+        /// 另外「游戏代码」通道已按业主要求**关闭**：这里只剩「启动器页面」一条，且只覆盖 launcher/。
+        /// </summary>
+        private static bool UpdateChannelEnabled()
+        {
+            try
+            {
+                var file = Path.Combine(Program.Root, "data", "update-channel.json");
+                var raw = File.ReadAllText(file, Encoding.UTF8);
+                return Host.JsonBool(raw, "enabled", false);
+            }
+            catch { return false; }
+        }
+
+        private string VersionFileOf()
+        {
+            return Path.Combine(Program.Root, "data", "launcher-version.json");
+        }
+
         private string LocalVersion()
         {
             try
             {
-                var raw = File.ReadAllText(VersionFile, Encoding.UTF8);
+                var raw = File.ReadAllText(VersionFileOf(), Encoding.UTF8);
                 var v = Host.JsonValue(raw, "version");
                 return v ?? "";
             }
@@ -1197,52 +1215,62 @@ namespace StrongholdLauncher
 
         private void StartUpdateCheck()
         {
+            // 分发版封死：不联网、不提示，只在日志留一行
+            if (!UpdateChannelEnabled())
+            {
+                Program.Log("update channel disabled (data/update-channel.json 缺失或 enabled!=true)");
+                Send("{\"t\":\"update-off\"}");
+                return;
+            }
             Task.Run(delegate
             {
-                // 业主 2026-11-22 定：C 方案 —— **自有服务器优先**（国内实测 9 MB/s，1 秒更新完），
-                // 连不上或下载失败时才落到 GitHub Release（实测 63 KB/s，7 MB 约 2 分钟，但服务器挂了也能更）。
-                var sources = new[]
-                {
-                    "http://8.134.50.56:3000/launcher-pkg/manifest.json",
-                    // 业主 2026-11-22：mon3tr.fun 停用（域名另作他用）→ 不再作为更新源。
-                    // 安全理由：manifest 与 zip 的 sha 都由来源方提供，域名换手后等于把"可执行代码的供源"交出去。
-                    GitHubPkgBase + "/launcher-pkg-manifest.json",
-                };
-                for (int i = 0; i < sources.Length; i++)
-                {
-                    var src = sources[i];
-                    var isGitHub = src.IndexOf("github.com", StringComparison.OrdinalIgnoreCase) >= 0;
-                    // GitHub 要走一次 302 再连 release-assets 域，6 秒在跨国链路上容易被掐断
-                    var body = Host.FetchText(src + "?t=" + DateTime.UtcNow.Ticks, 256 * 1024, isGitHub ? 15000 : 6000);
-                    if (string.IsNullOrEmpty(body)) continue;
-                    var ver = Host.JsonValue(body, "version");
-                    if (string.IsNullOrEmpty(ver)) continue;
-                    var zip = Host.JsonValue(body, "zip");
-                    var sha = Host.JsonValue(body, "sha256");
-                    var notes = Host.JsonValue(body, "notes");
-                    var fallback = Host.JsonValue(body, "zipFallback");
-                    var local = LocalVersion();
-                    Program.Log("manifest source=" + (isGitHub ? "github" : src) + " version=" + ver + " local=" + (local.Length == 0 ? "(none)" : local));
-                    // 服务器上的版本必须**比本机新**才提示更新（版本号是 YYYYMMDD-NN，字典序即时间序）：
-                    // 否则会出现「已经是最新的还把玩家『升级』回旧版」——本地自测时踩到过。
-                    if (local.Length > 0 && string.CompareOrdinal(ver, local) <= 0)
-                    {
-                        Send("{\"t\":\"update-none\",\"version\":\"" + Host.Esc(local) + "\"}");
-                        return;
-                    }
-                    _pendingUpdate = new UpdateInfo
-                    {
-                        Version = ver,
-                        Url = Host.ResolveUrl(src, zip),
-                        FallbackUrl = string.IsNullOrEmpty(fallback) ? "" : Host.ResolveUrl(src, fallback),
-                        Sha256 = sha,
-                        Notes = notes,
-                    };
-                    Send("{\"t\":\"update-available\",\"version\":\"" + Host.Esc(ver) + "\",\"notes\":\"" + Host.Esc(notes) + "\"}");
-                    return;
-                }
-                Program.Log("manifest unreachable");
+                CheckLauncherChannel();
+                if (_pending == null)
+                    Send("{\"t\":\"update-none\",\"version\":\"" + Host.Esc(LocalVersion()) + "\"}");
             });
+        }
+
+        /// <summary>自有服务器（IP，不用域名 —— 域名换手等于把代码供源交出去）。</summary>
+        private const string ServerOrigin = "http://8.134.50.56:3000";
+
+        /// <summary>
+        /// 查「启动器页面」通道：自有服务器优先（国内实测 9 MB/s），连不上/下载失败才落到 GitHub Release
+        /// （实测 63 KB/s，但服务器挂了也能更）。**游戏代码通道已关闭，这里不再有第二条。**
+        /// </summary>
+        private void CheckLauncherChannel()
+        {
+            var ghManifest = GitHubPkgBase + "/launcher-pkg-manifest.json";
+            var sources = new[] { ServerOrigin + "/launcher-pkg/manifest.json", ghManifest };
+            for (int i = 0; i < sources.Length; i++)
+            {
+                var src = sources[i];
+                var isGitHub = src.IndexOf("github.com", StringComparison.OrdinalIgnoreCase) >= 0;
+                // GitHub 要走一次 302 再连 release-assets 域，6 秒在跨国链路上容易被掐断
+                var body = Host.FetchText(src + "?t=" + DateTime.UtcNow.Ticks, 256 * 1024, isGitHub ? 15000 : 6000);
+                if (string.IsNullOrEmpty(body)) continue;
+                var ver = Host.JsonValue(body, "version");
+                if (string.IsNullOrEmpty(ver)) continue;
+                var local = LocalVersion();
+                Program.Log("manifest source=" + (isGitHub ? "github" : "server")
+                    + " version=" + ver + " local=" + (local.Length == 0 ? "(none)" : local));
+                // 版本号是 YYYYMMDD-NN，字典序即时间序；必须**比本机新**才提示，
+                // 否则服务器临时回退一个旧包会把玩家「升级」回旧版（本地自测踩到过）。
+                if (local.Length > 0 && string.CompareOrdinal(ver, local) <= 0) return;
+                var zip = Host.JsonValue(body, "zip");
+                var fallback = Host.JsonValue(body, "zipFallback");
+                _pending = new UpdateInfo
+                {
+                    Version = ver,
+                    Url = Host.ResolveUrl(src, zip),
+                    FallbackUrl = string.IsNullOrEmpty(fallback) ? "" : Host.ResolveUrl(src, fallback),
+                    Sha256 = Host.JsonValue(body, "sha256"),
+                    Notes = Host.JsonValue(body, "notes"),
+                };
+                Send("{\"t\":\"update-available\",\"version\":\"" + Host.Esc(ver) + "\",\"notes\":\""
+                    + Host.Esc(_pending.Notes) + "\"}");
+                return;
+            }
+            Program.Log("manifest unreachable");
         }
 
         /// <summary>GitHub Release 的稳定地址：latest 永远指向最新一版，不需要 API、不吃速率限制。</summary>
@@ -1258,31 +1286,41 @@ namespace StrongholdLauncher
             public string Notes;
         }
 
-        private UpdateInfo _pendingUpdate;
+        private UpdateInfo _pending;
 
         /// <summary>页面就绪时补发一次更新状态（页面可能错过启动瞬间的推送）。</summary>
         private void ResendUpdateState()
         {
-            var info = _pendingUpdate;
-            if (info != null)
+            if (!UpdateChannelEnabled()) { Send("{\"t\":\"update-off\"}"); return; }
+            if (_pending != null)
             {
-                Send("{\"t\":\"update-available\",\"version\":\"" + Host.Esc(info.Version) + "\",\"notes\":\"" + Host.Esc(info.Notes) + "\"}");
+                Send("{\"t\":\"update-available\",\"version\":\"" + Host.Esc(_pending.Version)
+                    + "\",\"notes\":\"" + Host.Esc(_pending.Notes) + "\"}");
                 return;
             }
             var local = LocalVersion();
             if (local.Length > 0) Send("{\"t\":\"update-none\",\"version\":\"" + Host.Esc(local) + "\"}");
         }
 
+        /// <summary>
+        /// 应用更新：只覆盖 launcher/（启动器页面）。装完只重载界面，**不重启 node**。
+        /// 游戏代码通道已关闭 —— 分发版想换代码只能整包换。
+        /// </summary>
         private void ApplyUpdate()
         {
-            var info = _pendingUpdate;
+            if (!UpdateChannelEnabled())
+            {
+                Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"这个分发包已关闭热更通道\"}");
+                return;
+            }
+            var info = _pending;
             if (info == null) { Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"没有待更新的版本\"}"); return; }
             Task.Run(delegate
             {
                 var tmp = Path.Combine(Path.GetTempPath(), "sp-update-" + DateTime.Now.ToString("HHmmss") + ".zip");
                 try
                 {
-                    Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在下载更新包…\"}");
+                    Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在下载启动器更新包…\"}");
                     // 主源（自有服务器）先试；下载失败或 sha 对不上 → 走 GitHub 兜底重试一次
                     var ok = Host.DownloadFile(info.Url, tmp, 8 * 60 * 1000) && ShaOk(info, tmp);
                     if (!ok) ok = TryFallbackDownload(info, tmp) && ShaOk(info, tmp);
@@ -1291,19 +1329,24 @@ namespace StrongholdLauncher
                         Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"下载失败（主源与备用源都不通）\"}");
                         return;
                     }
-                    Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在解压覆盖（只含代码，不含美术资源）…\"}");
-                    var written = Host.UnzipFiltered(tmp, Program.Root, UpdateAllowedDirs, UpdateAllowedExt, Program.Log);
-                    if (written <= 0) { Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"包里没有可更新的文件\"}"); return; }
+                    Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在解压覆盖启动器页面（只含代码）…\"}");
+                    var written = Host.UnzipFiltered(tmp, Program.Root, LauncherPkgDirs, UpdateAllowedExt, Program.Log);
+                    if (written <= 0)
+                    {
+                        Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"包里没有可更新的文件\"}");
+                        return;
+                    }
                     try
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(VersionFile));
-                        File.WriteAllText(VersionFile, "{\"version\":\"" + Host.Esc(info.Version) + "\",\"at\":\"" + DateTime.Now.ToString("s") + "\"}", new UTF8Encoding(false));
+                        var vf = VersionFileOf();
+                        Directory.CreateDirectory(Path.GetDirectoryName(vf));
+                        File.WriteAllText(vf, "{\"version\":\"" + Host.Esc(info.Version) + "\",\"at\":\"" + DateTime.Now.ToString("s") + "\"}", new UTF8Encoding(false));
                     }
                     catch { }
                     Program.Log("update applied " + written + " files -> " + info.Version);
-                    _pendingUpdate = null;
-                    Send("{\"t\":\"update-status\",\"kind\":\"ok\",\"text\":\"已更新 " + written + " 个文件，正在重启本地服务…\"}");
-                    RestartLocalServer();
+                    _pending = null;
+                    Send("{\"t\":\"update-status\",\"kind\":\"ok\",\"text\":\"已更新 " + written + " 个文件，正在重载界面…\"}");
+                    try { BeginInvoke(new Action(delegate { try { _web.CoreWebView2.Reload(); } catch { } })); } catch { }
                     Send("{\"t\":\"update-done\",\"version\":\"" + Host.Esc(info.Version) + "\"}");
                 }
                 catch (Exception e)
@@ -1462,6 +1505,34 @@ namespace StrongholdLauncher
         {
             if (s == null) return "";
             return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "").Replace("\n", "");
+        }
+
+        /// <summary>
+        /// 读 JSON 布尔值（`true` 与 `"true"` 都认）；缺失或非法返回 def。
+        /// 为什么单独写一个：JsonValue 只解析带引号的字符串，`"enabled": true` 会被它读成空串
+        /// —— 这样「热更总开关」就会永远关着，而且现象极难发现（日志只会说 manifest unreachable）。
+        /// </summary>
+        public static bool JsonBool(string json, string key, bool def)
+        {
+            if (string.IsNullOrEmpty(json)) return def;
+            var marker = "\"" + key + "\"";
+            var i = json.IndexOf(marker, StringComparison.Ordinal);
+            if (i < 0) return def;
+            i = json.IndexOf(':', i + marker.Length);
+            if (i < 0) return def;
+            i++;
+            while (i < json.Length && char.IsWhiteSpace(json[i])) i++;
+            if (i >= json.Length) return def;
+            if (json[i] == '"')
+            {
+                var q2 = json.IndexOf('"', i + 1);
+                if (q2 < 0) return def;
+                return string.Equals(json.Substring(i + 1, q2 - i - 1).Trim(), "true", StringComparison.OrdinalIgnoreCase);
+            }
+            var rest = json.Substring(i);
+            if (rest.StartsWith("true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (rest.StartsWith("false", StringComparison.OrdinalIgnoreCase)) return false;
+            return def;
         }
 
         public static string JsonValue(string json, string key)

@@ -407,6 +407,8 @@
       $('artCount').textContent = data.files ? (data.checked + ' / ' + data.files + ' 文件') : '';
     } else if (data.t === 'update-available') {
       onUpdateAvailable(data);
+    } else if (data.t === 'update-off') {
+      onUpdateOff();
     } else if (data.t === 'update-none') {
       showUpdateBar('已经是最新版本', false);
       setTimeout(hideUpdateBar, 3000);
@@ -474,10 +476,11 @@
     if (text && roomCodeOf(text)) { applyInvite(text); }
   }, true);
 
-  // ---------- 热更新（业主 2026-11-22）----------
-  // 宿主启动即检查 /launcher-pkg/manifest.json；有新版本推送 {t:'update-available'}。
-  // 这里只负责显示提示、发起更新、展示进度。**更新包只含代码，不含美术资源**（白名单在宿主里）。
-  const upd = { pending: null, busy: false };
+  // ---------- 热更（业主 2026-11-22；最终口径：只留「启动器页面」一条通道）----------
+  // 宿主只有在 data/update-channel.json 的 enabled 为 true 时才联网检查 manifest；
+  // **分发版带 enabled:false** → 宿主推 {t:'update-off'}，这里把入口整个藏掉（一点网都不发）。
+  // 即使开着，也只更新 launcher/（启动页），**不碰游戏代码**。
+  const upd = { pending: null, busy: false, off: false };
   function showUpdateBar(text, canGo) {
     const bar = $('updateBar');
     const txt = $('updateText');
@@ -489,9 +492,20 @@
   }
   function hideUpdateBar() { const bar = $('updateBar'); if (bar) bar.hidden = true; }
 
+  function onUpdateOff() {
+    // 分发版：热更整体关闭。藏按钮、收提示，之后任何点击都不会发出请求。
+    upd.off = true;
+    upd.pending = null;
+    hideUpdateBar();
+    const btn = $('updateBtn');
+    if (btn) btn.hidden = true;
+    const later = $('updateLater');
+    if (later) later.hidden = true;
+  }
   function onUpdateAvailable(data) {
+    if (upd.off) return;
     upd.pending = { version: data.version || '', notes: data.notes || '' };
-    showUpdateBar('发现新版本 ' + (data.version || '') + (data.notes ? '：' + data.notes : '') + '（只更新代码，不含美术资源）', true);
+    showUpdateBar('发现启动器新版本 ' + (data.version || '') + (data.notes ? '：' + data.notes : '') + '（只更新启动页）', true);
   }
   function onUpdateStatus(data) {
     const kind = data.kind || 'wait';
@@ -507,7 +521,7 @@
   function onUpdateDone(data) {
     upd.busy = false;
     upd.pending = null;
-    showUpdateBar('已更新到 ' + (data.version || '') + '，正在重新加载…', false);
+    showUpdateBar('启动器已更新到 ' + (data.version || '') + '，正在重新加载…', false);
     setTimeout(() => { try { location.reload(); } catch { /* ignore */ } }, 1200);
   }
 
@@ -516,13 +530,14 @@
     const later = $('updateLater');
     const btn = $('updateBtn');
     if (go) go.addEventListener('click', () => {
-      if (upd.busy) return;
+      if (upd.off || upd.busy || !upd.pending) return;
       upd.busy = true;
-      showUpdateBar('准备更新…', false);
+      showUpdateBar('正在准备更新…', false);
       post({ t: 'update-now' });
     });
     if (later) later.addEventListener('click', hideUpdateBar);
     if (btn) btn.addEventListener('click', () => {
+      if (upd.off) return;
       showUpdateBar('正在检查更新…', false);
       post({ t: 'update-check' });
       setTimeout(() => { if (!upd.pending && !upd.busy) showUpdateBar('已经是最新版本', false); }, 6000);

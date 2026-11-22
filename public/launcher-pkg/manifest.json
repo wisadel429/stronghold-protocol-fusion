@@ -1,12 +1,12 @@
 {
-    "version":  "20261123-07",
-    "at":  "2026-11-22T13:05:11",
+    "version":  "20261123-08",
+    "kind":  "launcher",
+    "at":  "2026-11-22T18:14:41",
     "zip":  "/launcher-pkg/launcher-pkg.zip",
-    "sha256":  "ad033ff9e87e3fa6568ff5c776017b023481acac4766b20ad51a9475ff17c516",
-    "bytes":  7336612,
-    "files":  1174,
-    "notes":  "停用 mon3tr.fun：启动器更新源与公告源不再引用该域名（安全）；房间邀请链接改直连 IP",
-    "policy":  "code-only; no art assets",
-    "launcherVersion":  "1.0.0",
-    "zipFallback":  "https://github.com/wisadel429/stronghold-protocol-fusion/releases/latest/download/launcher-pkg.zip"
+    "sha256":  "d79f2919cbeef30b560deae90275c275517f77705ebd32202daf3f615eea2754",
+    "bytes":  31385,
+    "files":  4,
+    "notes":  "关闭游戏热更通道；热更只更新启动器页面（仅自家服务器）",
+    "policy":  "code-only; launcher page only",
+    "launcherVersion":  "1.1.0"
 }
