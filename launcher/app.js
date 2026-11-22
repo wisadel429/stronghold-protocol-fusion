@@ -547,7 +547,7 @@
     urgent: { color: '#e2534a', label: '紧急', sev: '高', pips: 3, soft: 'rgba(226,83,74,.16)', edge: 'rgba(226,83,74,.85)', tint: '#31211e' },
   };
   const noticeTone = (n) => NOTICE_TONE[(n && n.level) || 'info'] || NOTICE_TONE.info;
-  /** 历史卡片上的时间：历史条目有收录/开始时间；当前这条只有 expiresAt，就显示「至 xx」。 */
+  /** 历史卡片上的时间：历史条目有收录/开始时间；当前这条只有 expiresAt，就显示「至 xx」；都没有 = 永久。 */
   function noticeTime(n) {
     const start = Number(n && (n.startAt || n.at)) || 0;
     const end = Number(n && n.expiresAt) || 0;
@@ -555,7 +555,7 @@
     const fmt = (ms) => { const d = new Date(ms); return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
     if (start) return fmt(start);
     if (end) return '至 ' + fmt(end);
-    return '';
+    return '永久';
   }
   /** 列表标题：有标题用标题，否则截正文。 */
   function noticeListTitle(n) {
@@ -803,7 +803,7 @@
       const end = n.expiresAt ? new Date(Number(n.expiresAt)) : null;
       if (isCurrent) {
         meta.textContent = noticeState.fetchedAt
-          ? '来自服务器公告 · 更新于 ' + new Date(noticeState.fetchedAt).toLocaleString() + (end ? ' · 截止 ' + end.toLocaleString() : '')
+          ? '来自服务器公告 · 更新于 ' + new Date(noticeState.fetchedAt).toLocaleString() + (end ? ' · 截止 ' + end.toLocaleString() : ' · 永久有效')
           : '';
       } else {
         meta.textContent = '历史公告 · ' + (noticeTime(n) || '已存档');

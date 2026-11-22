@@ -323,6 +323,7 @@
               <option value="168">7 天</option>
               <option value="24">1 天</option>
               <option value="6">6 小时</option>
+              <option value="0">永久</option>
             </select>
           </label>
           <label class="t-lo" title="勾上：今天的公告只维护一条，新内容追加到它后面；不勾：整段覆盖今天的公告"><input type="checkbox" id="ap-append" checked /> 追加到当天这条</label>
@@ -1071,8 +1072,11 @@ async function loadPopupAnnouncement() {
       if ($('ap-text')) $('ap-text').value = row.text || '';
       if ($('ap-level') && row.level) $('ap-level').value = row.level;
       if ($('ap-now')) {
+        // durationSeconds = 0 表示永久（业主 2026-11-22）
         const end = row.startAt && row.durationSeconds ? new Date(Date.parse(row.startAt) + row.durationSeconds * 1000) : null;
-        $('ap-now').textContent = '当前生效中，截止 ' + (end ? end.toLocaleString() : '未知');
+        $('ap-now').textContent = row.durationSeconds === 0
+          ? '当前生效中 · 永久有效'
+          : '当前生效中，截止 ' + (end ? end.toLocaleString() : '未知');
       }
     } else if ($('ap-now')) {
       $('ap-now').textContent = '当前没有弹窗公告。';
@@ -1088,7 +1092,10 @@ if ($('btn-ap')) $('btn-ap').onclick = async () => {
   try {
     // 业主 2026-11-22：默认「追加到当天这条」；取消勾选才是整段覆盖
     const mode = ($('ap-append') && !$('ap-append').checked) ? 'replace' : 'append';
-    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours: Number($('ap-hours').value) || 720, mode });
+    // 注意 0 = 永久，不能用 || 兜底（0 || 720 会变成 720）
+    const hoursVal = Number($('ap-hours').value);
+    const hours = Number.isFinite(hoursVal) ? hoursVal : 720;
+    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours, permanent: hoursVal === 0, mode });
     flash($('ap-msg'), (r && r.note) || '已保存', 'ok');
     loadPopupAnnouncement();
     loadPopupHistory();

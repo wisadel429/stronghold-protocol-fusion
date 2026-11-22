@@ -29,7 +29,8 @@ export function parseAnnouncements(doc) {
     if (typeof text !== 'string' || !text.trim() || [...text].length > ANNOUNCEMENT_MAX_TEXT
         || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) throw new Error(`${id}: text must contain 1..${ANNOUNCEMENT_MAX_TEXT} printable characters`);
     if (!validTime(startAt)) throw new Error(`${id}: startAt requires a valid ISO date with an explicit timezone`);
-    if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 2592000) throw new Error(`${id}: durationSeconds must be 1..2592000 (up to 30 days)`);
+    // 业主 2026-11-22：durationSeconds = 0 表示**永久**（endAt = null，永不过期）；其余仍是 1..30 天
+    if (!Number.isInteger(durationSeconds) || durationSeconds < 0 || durationSeconds > 2592000) throw new Error(`${id}: durationSeconds must be 0 (permanent) or 1..2592000 (up to 30 days)`);
     if (typeof level !== 'string' || !own(ANNOUNCEMENT_LEVELS, level) || typeof enabled !== 'boolean') throw new Error(`${id}: invalid level or enabled flag`);
     const at = Date.parse(startAt);
     const platform = ['all', 'android', 'web'].includes(row.platform) ? row.platform : 'all';
@@ -39,14 +40,16 @@ export function parseAnnouncements(doc) {
     return { id, ...(own(row, 'title') ? { title: row.title.trim() } : {}),
       // 业主 2026-11-22：**保留换行**。原来 \s+ 把换行也压成空格，多行公告（更新说明的分条）会被拍平成一行；
       // 客户端的 .ap-text 是 white-space: pre-wrap，本来就是为了显示多行准备的。空格/制表符仍然折叠成一个。
-      text: text.trim().replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' '), startAt: at, endAt: at + durationSeconds * 1000, level, enabled,
+      text: text.trim().replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' '), startAt: at, endAt: durationSeconds === 0 ? null : at + durationSeconds * 1000, level, enabled,
       platform, scene, targetUrl, action };
   });
 }
 
 export function announcementLive(notice, now) {
-  return !!notice && Number.isFinite(now) && Number.isFinite(notice.startAt) && Number.isFinite(notice.endAt)
-    && notice.startAt <= now && now < notice.endAt;
+  if (!notice || !Number.isFinite(now) || !Number.isFinite(notice.startAt)) return false;
+  if (notice.startAt > now) return false;
+  if (notice.endAt == null) return true;                    // 永久公告：只要启用了就一直有效
+  return Number.isFinite(notice.endAt) && now < notice.endAt;
 }
 
 /** Higher severity first; earliest start first among equals. Original file order breaks exact ties. */
@@ -65,15 +68,16 @@ export function activeAnnouncement(rows, now) {
 /** Incoming public frame: accept display fields & targeting parameters; expiry is checked independently by the UI. */
 export function announcementFromMessage(msg) {
   const n = msg?.announcement;
+  const endAt = n && n.endAt == null ? null : (n ? n.endAt : undefined);
   if (!n || typeof n.id !== 'string' || typeof n.text !== 'string' || !n.text || [...n.text].length > ANNOUNCEMENT_MAX_TEXT
-      || typeof n.level !== 'string' || !own(ANNOUNCEMENT_LEVELS, n.level) || !Number.isFinite(n.startAt) || !Number.isFinite(n.endAt)
-      || n.endAt <= n.startAt) return null;
+      || typeof n.level !== 'string' || !own(ANNOUNCEMENT_LEVELS, n.level) || !Number.isFinite(n.startAt)
+      || (endAt !== null && (!Number.isFinite(endAt) || endAt <= n.startAt))) return null;
   return {
     id: n.id,
     text: n.text,
     level: n.level,
     startAt: n.startAt,
-    endAt: n.endAt,
+    endAt,
     platform: typeof n.platform === 'string' ? n.platform : 'all',
     scene: typeof n.scene === 'string' ? n.scene : 'all',
     targetUrl: typeof n.targetUrl === 'string' ? n.targetUrl : null,

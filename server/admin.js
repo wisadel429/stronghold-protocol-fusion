@@ -579,7 +579,10 @@ export function createAdminServer({
       const text = typeof raw.text === 'string' ? raw.text.trim() : '';
       const title = typeof raw.title === 'string' ? raw.title.trim() : '';
       const level = ['info', 'warning', 'urgent'].includes(raw.level) ? raw.level : 'info';
-      const hours = Number.isFinite(Number(raw.hours)) ? Math.max(1, Math.min(720, Number(raw.hours))) : 720;
+      // 业主 2026-11-22：持续时长新增「永久」——hours=0 或 permanent:true，写 durationSeconds=0（endAt=null）
+      const hoursRaw = Number(raw.hours);
+      const permanent = raw.permanent === true || hoursRaw === 0;
+      const hours = permanent ? 720 : (Number.isFinite(hoursRaw) ? Math.max(1, Math.min(720, hoursRaw)) : 720);
       // 业主 2026-11-22：「更新公告不再是更一次发一条」——**同一天内的公告只维护一条**，
       // 再发就是在这一条上**追加内容**（mode:'append'，默认），而不是另起一条。
       // 需要整段替换（例如写错要重写）时传 mode:'replace'。
@@ -605,7 +608,10 @@ export function createAdminServer({
       const finalLevel = text ? (raw.level ? level : (sameDay && prev && appended ? (prev.level || level) : level)) : level;
       // 追加时保留当天的 startAt（同一天一条公告），只把截止时间顺延到「现在 + 时长」
       const startAtMs = sameDay && prev && appended ? Date.parse(prev.startAt) : Date.now() - 60_000;
-      const durationSeconds = Math.max(60, Math.round((Date.now() + hours * 3600_000 - startAtMs) / 1000));
+      // 追加时会保留当天的 startAt，再顺延 720 小时就可能超过 30 天上限 → 截到 2592000 秒（parseAnnouncements 的上限）
+      // 永久（durationSeconds=0）不走这条计算：endAt 为 null，永不过期
+      const durationSeconds = permanent ? 0
+        : Math.min(2592000, Math.max(60, Math.round((Date.now() + hours * 3600_000 - startAtMs) / 1000)));
       const doc = text ? {
         announcements: [{
           id: 'admin',
@@ -636,9 +642,9 @@ export function createAdminServer({
       }
       const chars = [...finalText].length;
       const note = !text ? '已撤下公告'
-        : appended ? `已追加到今天的公告（现在共 ${chars} 字，约 2 秒内对全服生效）`
-          : (sameDay && mode === 'replace' ? `已覆盖今天的公告（共 ${chars} 字，约 2 秒内生效）` : '已保存，约 2 秒内对全服生效（客户端每次连接弹窗）');
-      sendJson(res, 200, { ok: true, mode, appended, chars, doc, note });
+        : appended ? `已追加到今天的公告（现在共 ${chars} 字${permanent ? '，永久有效' : ''}，约 2 秒内对全服生效）`
+          : (sameDay && mode === 'replace' ? `已覆盖今天的公告（共 ${chars} 字${permanent ? '，永久有效' : ''}，约 2 秒内生效）` : `已保存${permanent ? '（永久有效）' : ''}，约 2 秒内对全服生效（客户端每次连接弹窗）`);
+      sendJson(res, 200, { ok: true, mode, appended, permanent, chars, doc, note });
       return;
     }
     // 历史公告（业主 2026-11-22）：玩家在弹窗右侧能翻回旧公告，后台在这里看/删

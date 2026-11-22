@@ -59,7 +59,7 @@ const rankOf = (n) => ({ info: 1, warning: 2, urgent: 3 }[levelOf(n).key] || 1);
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-/** 历史卡片上的时间：历史条目有开始/收录时间；当前这条只有 expiresAt，就显示「至 xx」。 */
+/** 历史卡片上的时间：历史条目有开始/收录时间；当前这条只有 expiresAt，就显示「至 xx」；都没有 = 永久（业主 2026-11-22）。 */
 function fmtTime(n) {
   const start = Number(n && (n.startAt || n.at)) || 0;
   const end = Number(n && n.expiresAt) || 0;
@@ -67,7 +67,7 @@ function fmtTime(n) {
   const fmt = (ms) => { const d = new Date(ms); return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
   if (start) return fmt(start);
   if (end) return '至 ' + fmt(end);
-  return '';
+  return '永久';
 }
 /** 历史列表标题：有标题用标题，否则截取正文。 */
 function listTitle(n) {
