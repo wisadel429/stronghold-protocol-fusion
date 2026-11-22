@@ -521,4 +521,12 @@ export function roomCodeFromArgv(argv = process.argv.slice(2)) {
 }
 
 // `node server/index.js` / npm start: listen, print the banner, stop on SIGINT / SIGTERM (http/boot.js).
-if (isProcessEntry(import.meta.url)) runMain(() => startServer({ roomCode: roomCodeFromArgv() }));
+if (isProcessEntry(import.meta.url)) {
+  runMain(() => startServer({ roomCode: roomCodeFromArgv() }));
+  // 业主 2026-11-22：可选的「服务器列表上报」（探测与展示分离，方案 A）。
+  // 只有 data/list-agent.json 存在时才会启动；模块内部把所有异常都吞掉了，不影响游戏本体。
+  // 用 .then/.catch 而不是 top-level await —— 别让这个可选功能改变模块的加载时机。
+  import('./listReporter.mjs')
+    .then((m) => m.startListReporter?.({ dataDir: 'data', log: console }))
+    .catch(() => { /* 可选功能：加载失败就当没有 */ });
+}
