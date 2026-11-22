@@ -155,6 +155,8 @@ export class PlayerState {
      */
     this.avatarId = this.isBot ? null : (seat.avatarId || null);
     this.avatarSkin = this.isBot ? null : (seat.avatarSkin || null);
+    /** 业主 2026-11-22：管理员标记（对局内队友栏的 ★ 与金色昵称；公开字段，不含账号 id） */
+    this.admin = this.isBot ? false : seat.admin === true;
     this.connected = this.isBot ? true : !!seat.connected;
     this.left = false;
     this.autoplay = false;

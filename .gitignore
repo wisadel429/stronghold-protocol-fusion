@@ -71,3 +71,7 @@ bundle-staging/
 *.dll
 *.bak*
 *.old
+
+# 运行时状态（各机不同，不入库）
+launcher-versions.json
+launcher-window.json

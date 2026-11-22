@@ -512,7 +512,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onAddBot, onRemoveBot,
       ${isMe && nameCard ? html`<${NameCardLayer} card=${nameCard} />` : null}
       ${isMe ? html`<span class="rseat__me" role="img" aria-label=${t('你')} title=${t('你')}><${Icon} name="info" /></span>` : null}
       <${AvatarFrame} size="sm" name=${seat.name} src=${seatAvatar} seat=${index} bot=${seat.isBot} self=${isMe} />
-      <span class="rseat__who"><b class="seat__name">${botPrefix ? html`<span class="seat__name-pre">${botPrefix[0]}</span>${botPrefix[1]}` : seat.name || t('博士')}</b>${isMe && seatAcct?.tag ? html`<span class="acct-tag">#${seatAcct.tag}</span>` : null}${isMe ? html`<span class="seat__you" aria-hidden="true">${t('你')}</span>` : null}</span>
+      <span class="rseat__who"><b class=${`seat__name${seat.admin ? ' is-admin-name' : ''}`}>${seat.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}${botPrefix ? html`<span class="seat__name-pre">${botPrefix[0]}</span>${botPrefix[1]}` : seat.name || t('博士')}</b>${isMe && seatAcct?.tag ? html`<span class="acct-tag">#${seatAcct.tag}</span>` : null}${isMe ? html`<span class="seat__you" aria-hidden="true">${t('你')}</span>` : null}</span>
       ${seat.isBot ? html`<small class="rseat__doc">AUTONOMOUS UNIT</small>`
         : isMe ? null
           : html`<small class="rseat__doc">DOCTOR #${doctorNo(seat.playerId)}</small>`}

@@ -1013,10 +1013,13 @@ export function placeholderFits(input, text) {
  *   disabled?: boolean, size?: 'md'|'lg'|'code'|string, icon?: string, class?: string, inputRef?: any, name?: string,
  *   type?: string, ariaLabel?: string, modalFocus?: boolean }} props
  */
-export function TextField({ label, micro, value, onInput, onEnter, onPaste, placeholder, placeholderShort, maxLength, transform, autoFocus, disabled, size = 'md', icon, class: cls, inputRef, name, hint, invalid, ariaLabel, type = 'text', modalFocus = false }) {
+export function TextField({ label, micro, value, onInput, onEnter, onPaste, placeholder, placeholderShort, maxLength, transform, autoFocus, disabled, size = 'md', icon, class: cls, inputRef, name, hint, invalid, ariaLabel, type = 'text', revealable = false, modalFocus = false }) {
   const localRef = useRef(null);
   const ref = inputRef || localRef;
   const composing = useRef(false);
+  // 业主 2026-11-22：密码框默认暗文，右侧给一个按钮切换显示/隐藏
+  const [reveal, setReveal] = useState(false);
+  const shownType = revealable ? (reveal ? 'text' : 'password') : type;
   useEffect(() => {
     if (autoFocus) setTimeout(() => ref.current?.focus(), 60);
   }, []);
@@ -1046,7 +1049,7 @@ export function TextField({ label, micro, value, onInput, onEnter, onPaste, plac
     ${label || micro ? html`<span class="field__label">${label}${micro ? html`<span class="micro">${micro}</span>` : null}</span>` : null}
     <span class="field__box brackets">
       ${icon ? html`<${Icon} name=${icon} class="field__icon" />` : null}
-      <input id=${id} ref=${ref} class="field__input" name=${name} type=${type} value=${value} placeholder=${phShort && placeholderShort ? placeholderShort : placeholder}
+      <input id=${id} ref=${ref} class="field__input" name=${name} type=${shownType} value=${value} placeholder=${phShort && placeholderShort ? placeholderShort : placeholder}
         maxLength=${maxLength} disabled=${disabled} autocomplete="off" spellcheck=${false}
         aria-label=${ariaLabel} data-autofocus=${modalFocus ? '' : undefined}
         onInput=${handle}
@@ -1054,6 +1057,13 @@ export function TextField({ label, micro, value, onInput, onEnter, onPaste, plac
         oncompositionstart=${() => { composing.current = true; }}
         oncompositionend=${(e) => { composing.current = false; handle(e); }}
         onKeyDown=${(e) => { if (e.key === 'Enter' && !e.isComposing && !composing.current) onEnter?.(e); }} />
+      ${revealable ? html`<button type="button" class="field__reveal" aria-label=${reveal ? t('隐藏密码') : t('显示密码')}
+        aria-pressed=${reveal ? 'true' : 'false'} title=${reveal ? t('隐藏密码') : t('显示密码')}
+        onClick=${(e) => { e.preventDefault(); e.stopPropagation(); setReveal((v) => !v); }}>
+        ${reveal
+          ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l18 18" /><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" /><path d="M6.7 6.7C4.6 8.1 3 10.2 2.2 12c1.5 3.4 5.1 6 9.8 6 1.8 0 3.4-.4 4.8-1.1" /><path d="M9.9 5.2A9.6 9.6 0 0 1 12 5c4.7 0 8.3 2.6 9.8 6-.4.9-1 1.8-1.7 2.6" /></svg>`
+          : html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2.2 12C3.7 8.6 7.3 6 12 6s8.3 2.6 9.8 6c-1.5 3.4-5.1 6-9.8 6S3.7 15.4 2.2 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>`}
+      <//>` : null}
     </span>
     ${hint ? html`<span class="field__hint">${hint}</span>` : null}
   </label>`;

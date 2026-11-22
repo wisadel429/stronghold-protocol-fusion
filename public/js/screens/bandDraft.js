@@ -247,7 +247,7 @@ function OrderRow({ p, i, picked, cur, self, arts, medal, gd, onPeek }) {
         onError=${() => setBadArt((b) => (b.includes(art) ? b : [...b, art]))} />` : null}
       <span class="dorder__face"><${PlayerAvatar} player=${p} self=${self} />${self ? html`<span class="dorder__me" title=${t('你')}><${Icon} name="user" /></span>` : null}</span>
       <div class="dorder__text">
-        <b class="dorder__name">${medal ? html`<${Img} src=${medal} class="dorder__medal" />` : null}<span>${p.name || t('博士')}</span>${p.isBot ? html`<span class="dorder__ai">AI</span>` : null}</b>
+        <b class=${`dorder__name${p.admin ? ' is-admin-name' : ''}`}>${p.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}${medal ? html`<${Img} src=${medal} class="dorder__medal" />` : null}<span>${p.name || t('博士')}</span>${p.isBot ? html`<span class="dorder__ai">AI</span>` : null}</b>
         <span class="dorder__state">${picked ? html`<span class="t-mint">${pband?.name || t('已选择')}</span>`
           : cur ? html`<span class="t-gold">${t('决策中')}</span>` : html`<span class="t-dim">${t('等待中')}</span>`}</span>
       </div>

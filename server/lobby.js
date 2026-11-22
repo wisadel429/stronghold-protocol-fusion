@@ -435,6 +435,20 @@ function sameSkins(a, b) {
   return ka.length === kb.length && ka.every((k) => a[k] === b[k]);
 }
 
+/**
+ * 业主 2026-11-22「未选择策略以及创建了房间未开始游戏的对局不保存」：
+ * 从一帧 m.public / m.result 里判断这间房**是否真的开局并选了策略** —— 有真人座位带 `bandId` 就是。
+ * 只看真人（`isBot` 排除）：机器人会自动挑策略，不能替玩家作证。
+ * 一旦置位就不再回退（房间可能重新开一局，标记只增不减）。
+ * @param {Room} room @param {{ players?: any[] }} [frame]
+ */
+function markProgress(room, frame) {
+  if (!room || room.progressed || !frame || !Array.isArray(frame.players)) return;
+  for (const p of frame.players) {
+    if (p && !p.isBot && p.bandId) { room.progressed = true; return; }
+  }
+}
+
 /** One room: 4 seat slots, host, difficulty, optional running match. */
 export class Room {
   /**
@@ -471,6 +485,15 @@ export class Room {
     this.aiPicksLast = false;
     // [ASSUMED] Remake cooperation option, approved 2026-10-24; host opt-in before the match.
     this.aiTakeoverEnabled = false;
+    /**
+     * 业主 2026-11-22「未选择策略以及创建了房间未开始游戏的对局不保存，退出后视为房间关闭」：
+     * 这间房有没有「真的开过局、并且真的选了策略」。
+     * 只有 true 的房间才值得在最后一人离开时**停放**（parkSoloRoom，24 小时内可恢复）；
+     * 没开局（建了房直接退出）或开局了但没选策略（策略草稿还没挑）的，都不保存 ——
+     * 退出即视为房间关闭（调用方落到 disposeRoom('empty')）。
+     * 置位点：matchBroadcast 收到 m.public 时，看到某个真人座位带 bandId（见 markProgressFromPublic）。
+     */
+    this.progressed = false;
     /**
      * 「不限时」 (room.setSoloUnlimited, DESIGN §35.23.10; a timed solo only, off by default): the match is built with
      * opts.soloUnlimited. room.state omits the key unless this is true.
@@ -597,6 +620,9 @@ export class Room {
       ...(this.maxSeats > MAX_SEATS ? { maxSeats: this.maxSeats } : {}),
       seats: this.seats.map((s) => (s
         ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left,
+        // 业主 2026-11-22：管理员标记（座位卡上的 ★ 与金色昵称）。只有 true 才带这个键 ——
+        // 非管理员座位与以前逐字节一致（room.state 不因本改动变形）。
+        ...(!s.isBot && s.admin ? { admin: true } : {}),
           // a room with gameplay plugins (header "Gameplay plugins"): has this player's page loaded and checked its content?
           ...(this.needsContent && !s.isBot ? { content: s.content || 'loading' } : {}),
           // 名片干员 (room.card): only a human seat with a card carries the key
@@ -2670,6 +2696,10 @@ export class Lobby {
     if (msg.t === 'm.public' && reconcileAiTakeover(this, room)) this.broadcastState(room);
     const data = this.broadcastRoom(room, msg, encoded);
     if (data == null) return;
+    // 业主 2026-11-22：看到真人座位带 bandId，就说明「真的开局并选了策略」，这间房才值得停放。
+    // 只看真人（isBot）—— 机器人会自动选策略，不能替玩家作证。
+    // 两个时机都记：m.public（选完策略的下一帧）与 m.result（结算帧也带 bandId），少一个都可能漏记。
+    if (msg.t === 'm.public' || msg.t === 'm.result') markProgress(room, msg);
     if (msg.t === 'm.public') ctx.lastPublic = data;
     else if (msg.t === 'm.result') ctx.sharedResult = data;
   }
@@ -2896,8 +2926,12 @@ export class Lobby {
     // 账号头像（业主 2026-11-14）：头像＝干员立绘，属于公开身份（与好友列表同口径，QQ 号仍不公开）。
     // 座位带上它，对局与结算才拿得到每个玩家**自己**的头像，而不是只能拿本机账号的。
     const avatar = this.accountAvatar(session.accountId);
+    /** 业主 2026-11-22：管理员标识要出现在**房间等待室座位卡**与**对局内队友栏**，
+     *  所以座位与对局玩家都要带这个公开标记（只带布尔值，不带账号 id / QQ）。 */
+    const admin = this.accountIsAdmin(session.accountId);
     return {
       seat: idx, playerId: session.playerId, name: session.name, isBot: false, ready: false, connected: session.connected, left: false,
+      admin,
       loadout: session.loadout || null,
       ops: session.ops || null,
       notOwned: session.notOwned || null,
@@ -2928,6 +2962,18 @@ export class Lobby {
     return { avatarId: (a && a.avatarId) || null, avatarSkin: (a && a.avatarSkin) || null };
   }
 
+  /**
+   * 这个账号是不是管理员（业主 2026-11-22）：只用于公开的「★ 管理员」标记与金色昵称，
+   * 不向任何人暴露账号 id / QQ 号。账号系统关掉或读不到时按 false。
+   * @param {string|null|undefined} accountId @returns {boolean}
+   */
+  accountIsAdmin(accountId) {
+    try {
+      const a = accountId && this.accounts ? this.accounts.accountById(accountId) : null;
+      return !!(a && a.admin === true);
+    } catch { return false; }
+  }
+
   /** 独立模拟暂离（业主 2026-11-14）：不断连接、不移除座位，把这一局挂起 24 小时。
    *  对局在打就暂停（match.setPause，冻结所有时钟），play 状态原样留着；
    *  session.roomCode 清空，服务端不再向这个连接推 room.state（大厅因此显示正常的开始界面）。
@@ -2938,6 +2984,11 @@ export class Lobby {
     if (baseRoomMode(room.mode) !== 'solo') return fail(ERR.WRONG_PHASE, 'only a solo simulation can be parked');
     const seat = room.seatOf(session.playerId);
     if (!seat || seat.isBot) return fail(ERR.NOT_IN_ROOM);
+    // 业主 2026-11-22：没「真正开局并选过策略」的一局不许暂离。
+    // 暂离会把房间挂起 24 小时（客户端文案还承诺"保留进度 24 小时"），而策略草稿正好在对局界面里 ——
+    // 不拦的话「开局了但没选策略」也能靠暂离被保存，与「未选择策略的对局不保存」冲突。
+    // 拒绝后玩家只能退出房间，走 removeMember → 房间直接关闭。
+    if (!room.progressed) return fail(ERR.WRONG_PHASE, 'no strategy picked yet: this run is not kept');
     // 对局暂停（战斗阶段才有效；备战阶段 setPause 会拒绝，忽略即可）
     if (room.match) { try { room.match.setPause(session, true); } catch (e) { this.log.warn?.('[lobby] 暂停失败', e); } }
     seat.connected = false;
@@ -3057,6 +3108,9 @@ export class Lobby {
     if (room.parkedAt) return true;                       // 已经停放过了
     if (room.match) return false;                         // 对局还在跑：交给 match 结束流程
     if (baseRoomMode(room.mode) !== 'solo') return false; // 只对独立模拟生效
+    // 业主 2026-11-22：没「真正开局并选过策略」的房间不保存 —— 建了房直接退出、或开局了但策略还没挑，
+    // 都返回 false 交给调用方 disposeRoom('empty')，即「退出后视为房间关闭」。
+    if (!room.progressed) return false;
     const accountId = room.parkedFor || room.lastAccountId || null;
     if (!accountId) return false;                         // 没有账号：无法找回，按原样销毁
     if (this.rooms.get(room.code) !== room) return false;

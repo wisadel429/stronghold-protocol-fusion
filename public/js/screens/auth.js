@@ -161,9 +161,9 @@ export function AuthCard({ onReady, autoFocus = false, onTabChange = () => {} })
         onInput=${setQq} onEnter=${submit} />
       ${tab === 'register' ? html`<${TextField} label=${t('昵称')} micro="公开显示" value=${nickname} maxLength=${12}
         placeholder=${t('默认「博士」')} onInput=${setNickname} onEnter=${submit} />` : null}
-      <${TextField} type="password" label=${t('密码')} value=${password} maxLength=${128}
+      <${TextField} type="password" revealable=${true} label=${t('密码')} value=${password} maxLength=${128}
         placeholder=${tab === 'login' ? t('输入密码') : t('至少 8 位')} onInput=${setPassword} onEnter=${submit} />
-      ${tab === 'register' ? html`<${TextField} type="password" label=${t('确认密码')} value=${password2} maxLength=${128}
+      ${tab === 'register' ? html`<${TextField} type="password" revealable=${true} label=${t('确认密码')} value=${password2} maxLength=${128}
         placeholder=${t('再输一次')} onInput=${setPassword2} onEnter=${submit} />` : null}
     </div>
     ${tab === 'register' ? html`<label class="title-auth__agree">

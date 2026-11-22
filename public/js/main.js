@@ -366,6 +366,12 @@ function wireNet() {
     store.set({ flashWarn: null });
     if (msg && msg.open === false) toast(msg.text ? ('服务器已关闭：' + msg.text) : t('服务器已关闭，请稍后再来'), 'warn', { ttl: 8000 });
   });
+  // 消息中心实时推送（业主 2026-11-22）：server/accounts/messages.js 一落盘就推 `account.msg`（好友请求 / 同盟邀请 /
+  // 后台回复反馈都走这一条通道）。消息中心是原生 DOM 浮层、不在 Preact 树里，所以这里只广播一个窗口事件，
+  // 由 ui/messageCenter.js 自己监听并刷新 —— 那边还有 60 秒兜底轮询，推送只是把延迟从「一个轮询周期」降到即时。
+  net.on('account.msg', (msg) => {
+    try { window.dispatchEvent(new CustomEvent('sp:messages', { detail: msg || null })); } catch { /* 浮层的事不该影响对局 */ }
+  });
   // 搜寻队友 (server/matchmaking.js): queue progress, then the room the server formed
   // 两个字段名同时写：本仓大厅 (`screens/lobby.js`) 读 `matchmake`，而分享包的主题 UI（可露希尔 / 卫戍协议终端）
   // 读的是 `matchmaking`（它的 `isSearching = mm?.status === 'searching'`）。store 里本来就有 `matchmaking`
@@ -496,7 +502,14 @@ function ScreenCrashed({ error, reset }) {
   </div>`;
 }
 
-/** 闪断预警条：顶部常驻倒计时，纯 transform/opacity 动画，一个 1s 定时器。 */
+/**
+ * 闪断预警条：顶部常驻倒计时，纯 transform/opacity 动画，一个 1s 定时器。
+ *
+ * 业主 2026-11-22 第三轮调整：
+ *   1) 「走马灯」＝原来在背景上的那道斜向扫光，现在挪到**外框**上跑，并且带渐散（彗星头 + 长渐隐尾巴）；
+ *   2) 左侧红点换成**三角感叹号**警报图标，辉光闪动频率放慢（2.6 秒一轮，不抢注意力）；
+ *   3) 文字过长时**自动滚动**（量溢出宽度，超出才启用）。
+ */
 function FlashWarnBar() {
   const w = useStore((s) => s.flashWarn);
   const [left, setLeft] = useState(0);
@@ -513,12 +526,117 @@ function FlashWarnBar() {
   const sec = Math.ceil(left / 1000);
   const mm = String(Math.floor(sec / 60)).padStart(2, '0');
   const ss = String(sec % 60).padStart(2, '0');
-  return html`<div class=${`flashwarn${show ? ' is-show' : ''}${sec <= 60 ? ' is-soon' : ''}${sec <= 10 ? ' is-urgent' : ''}`}
+
+  // 文字过长才滚：文本变化时量一次溢出宽度，按每秒约 45px 折算时长，两端各留停留（关键帧里留了）。
+  const text = show ? w.text : '';
+  const [marquee, setMarquee] = useState(null);
+  useEffect(() => {
+    setMarquee(null);
+    if (!text) return undefined;
+    // 等两帧再量：第一帧 DOM 刚插入还没排版，scrollWidth / clientWidth 都可能是 0，
+    // 量出 0 就会误判成"溢出 0"或算出荒谬的位移（文字被推出可视区，看起来就像"没有文字"）。
+    let raf2 = 0;
+    const raf = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          const track = document.querySelector('[data-testid="flash-warn"] .flashwarn__track');
+          const box = track && track.parentElement;
+          if (!track || !box) return;
+          const boxW = box.clientWidth;
+          if (boxW < 40) return;                 // 还没排好版（或条是收起的），这次不滚
+          const overflow = Math.ceil(track.scrollWidth - boxW);
+          if (overflow > 8) {                    // 8px 以内不值得滚，反而显得抖
+            const dur = Math.max(7, Math.round((overflow / 45) * 2) + 6);
+            setMarquee({ shift: overflow, dur });
+          }
+        } catch { /* 量不到就退化成不滚：预警条本身不能因为量不到尺寸而挂掉 */ }
+      });
+    });
+    return () => { cancelAnimationFrame(raf); if (raf2) cancelAnimationFrame(raf2); };
+  }, [text]);
+  const trackStyle = marquee ? `--marquee-shift:-${marquee.shift}px;--marquee-dur:${marquee.dur}s` : null;
+
+  // 注意：is-soon / is-urgent 必须挂在 show 上。
+  // 曾经只判断秒数，倒计时归零后 sec = 0 让两者都成立，而 is-show 已经撤掉 ——
+  // CSS 里 `.is-soon`/`.is-urgent` 各自带 animation: flashwarn-in … both，both 会保持末帧
+  // （opacity:1 + translate(-50%,0)），结果就是预警结束后顶上留一条空的残留条。
+  const tone = `${show ? ' is-show' : ''}${show && sec <= 60 ? ' is-soon' : ''}${show && sec <= 10 ? ' is-urgent' : ''}`;
+  return html`<div class=${`flashwarn${tone}`}
       role="status" aria-live="polite" data-testid="flash-warn">
-    <span class="flashwarn__dot" aria-hidden="true"></span>
-    <span class="flashwarn__text">${show ? w.text : ''}</span>
+    <span class="flashwarn__ring" aria-hidden="true"></span>
+    <span class="flashwarn__ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.3 22 20.2H2Z" />
+        <path d="M12 9.4v4.7" />
+        <path d="M12 17.5h.01" />
+      </svg>
+    </span>
+    <span class="flashwarn__scroll">
+      <span class=${`flashwarn__track${marquee ? ' is-scroll' : ''}`} style=${trackStyle}>${text}</span>
+    </span>
     <b class="flashwarn__time num">${show ? `${mm}:${ss}` : ''}</b>
   </div>`;
+}
+
+/**
+ * 闪断预警的「强调特效」（业主 2026-11-22：照 ClassIsland 的强调提醒做，颜色用红）。
+ *
+ * ClassIsland 那边的实现是 RippleEffect：提醒触发时弹一个**全屏透明置顶窗**，在里面放一个圆形色块，
+ * 圆心取通知的 CenterPoint、填充取这条通知自己的 Color，然后
+ *   直径 = 圆心到窗口四角最远距离 × 2（展开后刚好盖满整屏）
+ *   Scale  0 → 1  QuadraticEaseIn  600ms
+ *   Opacity 1 → 0 SineEaseIn        600ms
+ *   750ms 后收尾（EffectCompleted）
+ * 而且一次提醒**只播一个**波纹，不是连播。
+ *
+ * 本项目口径（业主 2026-11-22 第二轮调整）：
+ *   1) **圆心 = 闪断预警条的中心**（业主：「从闪断条的位置出现然后对外扩散」）——
+ *      这正是 ClassIsland 取「通知自身 CenterPoint」的同一套逻辑，比屏幕中心更合理：
+ *      玩家的注意力先被条吸住，波纹就从那里铺开；
+ *   2) 直径按**实测算的距离**给（圆心到四角最远者 × 2，向上取整），不再写死 vmax ——
+ *      条在最顶上，竖屏/超宽屏下写死的比例会露出角落；
+ *   3) 不透明度拉高（业主：「不透明度高一点」）：填充改纯色，且开头保持全不透明一小段再淡出；
+ *   4) 颜色固定红（我们这条预警本来就该是红的；ClassIsland 用的是通知色）。
+ * 另外除了「出现」播一次，进入最后 10 秒再补一次 —— 那才是玩家真正要抬头的时候。
+ */
+function FlashRipple() {
+  const w = useStore((s) => s.flashWarn);
+  const until = w && w.until ? Number(w.until) : 0;
+  // 每次要播就换一个新 id：<i key> 变化时 Preact 会重挂这个节点，CSS 动画自然从头开始
+  const [burst, setBurst] = useState(null);
+  useEffect(() => {
+    if (!until) return undefined;
+    const fire = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // 圆心：预警条的中心。条由 FlashWarnBar 渲染（data-testid="flash-warn"），它可能还在入场动画里，
+      // 但 getBoundingClientRect 取的是**变换后**的位置，正好就是玩家此刻看到的位置。
+      let x = vw / 2;
+      let y = 0;
+      try {
+        const bar = document.querySelector('[data-testid="flash-warn"]');
+        const r = bar && bar.getBoundingClientRect();
+        if (r && r.width > 0 && r.height > 0) { x = r.left + r.width / 2; y = r.top + r.height / 2; }
+      } catch { /* 量不到就退回屏幕正上方中点 */ }
+      // 半径 = 圆心到四个角最远的那个（ClassIsland 的 EllipseSize 就是这么来的），向上取整
+      const radius = Math.ceil(Math.max(
+        Math.hypot(x, y), Math.hypot(vw - x, y), Math.hypot(x, vh - y), Math.hypot(vw - x, vh - y),
+      ));
+      setBurst({ id: `${until}:${Date.now()}`, x, y, size: radius * 2 });
+    };
+    fire();
+    // 最后 10 秒再强调一次（已经进最后 10 秒了就不补）
+    const ms = until - 10_000 - Date.now();
+    if (ms <= 0) return undefined;
+    const id = setTimeout(fire, ms);
+    return () => clearTimeout(id);
+  }, [until]);
+  if (!burst || !until) return null;
+  const { x, y, size } = burst;
+  // 用负 margin 把圆盘的中心对到 (x, y)：动画只动 transform: scale()，不用 transform 做定位，
+  // 这样缓动曲线和 ClassIsland 完全一致（缩放从 0 起，不掺平移）
+  const style = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;margin-left:${-size / 2}px;margin-top:${-size / 2}px`;
+  return html`<div class="flashripple" aria-hidden="true"><i key=${burst.id} class="flashripple__disc" style=${style}></i></div>`;
 }
 
 function App() {
@@ -543,6 +661,7 @@ function App() {
     <${TrustedNotice} />
     <${ConnectionBanner} />
     <${FlashWarnBar} />
+    <${FlashRipple} />
     <${ToastHost} />
     <${ErrorDialogHost} />
     <${UiHosts} />
@@ -668,11 +787,13 @@ async function boot() {
     try { installSocialInvites(); } catch (err) { console.warn('[social] 邀请浮层安装失败', err); }
   // 全局「消息」入口（业主 2026-11-21）：主页/大厅/等待室都在，只在对局内与拓展选择界面隐藏
   try { installMessageCenter(); } catch (err) { console.warn('[messages] 入口安装失败', err); }
-  // 全服公告弹窗（业主 2026-11-21）：每次连接弹一次，内容在后台「公告」卡片里改
-  void installAnnouncementPopup();
   // 好友红点（业主 2026-11-14）：房间里/顶栏的好友入口显示待处理请求数
   import('./ui/friends.js').then((m) => { try { m.installSocialBadges(); } catch (e) { console.warn('[social] 红点安装失败', e); } }, () => {});
   }
+  // 全服公告弹窗（业主 2026-11-21）：每次连接弹一次，内容在后台「公告」卡片里改。
+  // 2026-11-22：**移到 `if (account)` 之外** —— 公告是全服的，未登录/只用代号的玩家也必须看到，
+  // 紧急公告还要能在对局中插播。原来放在账号块里，等于这批玩家从来收不到公告（实测发现的）。
+  void installAnnouncementPopup();
   installStatsRecorder(store); // follows the match on screen, so a 放弃模拟 can be recorded (ui/stats.js)
   // the loadout / 干员持有 / 自选 settings by operator, shown for the data on screen (DESIGN §35.23; a v1 store migrates)
   installSettingsViews();

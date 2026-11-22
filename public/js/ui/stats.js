@@ -519,9 +519,9 @@ export function buildRecord(res, ctx = {}) {
   const myId = str(ctx.myId);
   const selfRow = r.players.find((p) => isObj(p) && p.playerId === myId);
   if (!selfRow) return null; // spectator / observer: not my match
-  // 业主 2026-11-21「独立游戏没有选好策略不保存对局」：
-  // 独立模拟（单人）里策略还没选好的一局不落记录 —— 没有策略的对局不算一次完整对局。
-  if (roomModeOf(str(r.modeId), ctx.roomMode) === 'solo' && !str(selfRow.bandId)) return null;
+  // 业主 2026-11-21「独立游戏没有选好策略不保存对局」→ 2026-11-22 扩到**所有模式**：
+  // 策略还没选好的一局不落记录 —— 没有策略的对局不算一次完整对局（联机里没挑策略就散了的同样不算）。
+  if (!str(selfRow.bandId)) return null;
   return normalizeRecord({
     v: STATS_VERSION,
     t: int(ctx.now, 0),
@@ -626,7 +626,8 @@ export function buildQuitRecord(state, ctx = {}) {
   const row = Array.isArray(pub.players) ? pub.players.find((p) => isObj(p) && p.playerId === myId) : null;
   if (!row) return null; // a spectator seat is no player of the match
   // 业主 2026-11-21「独立游戏没有选好策略不保存对局」：独立模拟里还没选策略就退出/放弃的，不记这一局
-  if (roomModeOf(str(pub.modeId), state.room?.mode) === 'solo' && !str(row.bandId)) return null;
+  // 同 buildRecord：没选策略的一局不落记录（2026-11-22 起对所有模式生效，中途放弃也算）
+  if (!str(row.bandId)) return null;
   const alive = row.alive !== false;
   const round = Number(pub.round) || 0;
   // alive: the rounds cleared so far; already eliminated: the round it was seen alive in, less one (unknown when the

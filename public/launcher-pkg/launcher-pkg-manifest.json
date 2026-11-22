@@ -1,0 +1,12 @@
+{
+    "version":  "20261123-05",
+    "at":  "2026-11-22T12:17:15",
+    "zip":  "https://github.com/wisadel429/stronghold-protocol-fusion/releases/latest/download/launcher-pkg.zip",
+    "sha256":  "5e49c8a104ec7a3edf8ce97fd9550465815b1258eedcbe97626991e83dfa46a8",
+    "bytes":  7335948,
+    "files":  1174,
+    "notes":  "启动器：独立版本号 1.0.0、公告历史列表、自绘滚动条、多版本选择（导入目录/面包屑/目录详情）、WebView2 不再随包、TLS 与代理修复、GitHub 兜底",
+    "policy":  "code-only; no art assets",
+    "source":  "github",
+    "launcherVersion":  "1.0.0"
+}

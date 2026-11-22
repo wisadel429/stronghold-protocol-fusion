@@ -226,7 +226,7 @@ function OrderRow({ p, i, picks, rounds, random, cur, self, art, gd, onPeek, int
       ${art && !acct?.card ? html`<span class="dorder__art" style=${`background-image:url("${art}")`} aria-hidden="true"></span>` : null}
       <span class="dorder__face"><${PlayerAvatar} player=${p} self=${self} />${self ? html`<span class="dorder__me" title=${t('我')}><${Icon} name="user" /></span>` : null}</span>
       <div class="dorder__text">
-        <b class="dorder__name"><${TrophyBadge} count=${acct?.trophies} class="tbadge--inline" /><span>${p.name || t('博士')}</span><${AccountTag} playerId=${p.isBot ? null : p.playerId} />${p.isBot ? html`<span class="dorder__ai">AI</span>` : null}</b>
+        <b class=${`dorder__name${p.admin ? ' is-admin-name' : ''}`}>${p.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}<${TrophyBadge} count=${acct?.trophies} class="tbadge--inline" /><span>${p.name || t('博士')}</span><${AccountTag} playerId=${p.isBot ? null : p.playerId} />${p.isBot ? html`<span class="dorder__ai">AI</span>` : null}</b>
         <span class="dorder__state">${picked ? html`<span class="t-mint">${pband?.name || t('已选择')}${pband2 ? `、${pband2.name || ''}` : picks.length < rounds && random ? `（${picks.length}/${rounds}）` : ''}</span>`
           : intent ? html`<span class="t-gold">想玩：${gd.band(intent)?.name || intent}${intentTaken ? '（已被选走）' : ''}</span>`
           : cur ? html`<span class="t-gold">${t('决策中')}</span>` : html`<span class="t-dim">${t('等待中')}</span>`}</span>

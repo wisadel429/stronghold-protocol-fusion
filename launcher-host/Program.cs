@@ -1,11 +1,11 @@
-// Program.cs — 启动器宿主（重建版 v2，2026-11-21）
+﻿// Program.cs — 启动器宿主（重建版 v2，2026-11-21）
 //
 // 背景：原 Program.cs 随 E:\stronghold\_merge-work 被删除且无备份。本文件是**重写**的宿主，
 // 目标：尽量还原原版的能力（按 launcher.log 里留下的行为线索逐项对齐）。
 //
 // 已还原的能力：
-//   1. WebView2 运行时探测：优先用安装目录 webview2\msedgewebview2.exe（WEBVIEW2_BROWSER_EXECUTABLE_FOLDER），
-//      否则用系统 Evergreen —— 对应旧日志 bundled / installed webview2。
+//   1. WebView2 运行时探测：**优先系统已装的 Evergreen**（业主 2026-11-22：不再随包分发），
+//      只有系统没有、且安装目录里还留着旧 webview2\ 时才回退到包内那份。
 //   2. Node 探测与激活：node\node.exe → 系统 node；日志记 `node activated rc=0 out=vX`。
 //   3. 预热本地服务器：启动即拉起 server/index.js（旧日志 `warm node started pid N`）。
 //   4. 本地资源扫描：统计 public/assets 等目录的文件数，按 `art` 消息回报进度（旧界面 53673/53673）。
@@ -55,6 +55,15 @@ namespace StrongholdLauncher
             Log("software=False");
             Log("os=" + Environment.OSVersion + " 64bit=" + Environment.Is64BitProcess);
             Log("clr=" + Environment.Version);
+            // 业主 2026-11-22：宿主默认只开 TLS 1.0（实测 SecurityProtocol = Ssl3, Tls），
+            // GitHub 只接受 TLS 1.2+，不开就会 SecureChannelFailure ——
+            // 顺带修好 https 公告源（mon3tr.fun）一直失败的问题（日志里 https 公告成功次数是 0）。
+            try { ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11; }
+            catch (Exception e) { Log("tls setup failed: " + e.Message); }
+            // 业主 2026-11-22：启动器有**自己的**版本号（launcher/version.json），与游戏热更包版本分开
+            Log("launcher version=" + (LauncherVersion().Length > 0 ? LauncherVersion() : "(none)"));
+            // 业主 2026-11-22：启动器独立于游戏版本 —— 先读版本注册表（launcher-versions.json）
+            try { VersionStore.Load(); } catch (Exception e) { Log("versions init failed: " + e.Message); }
             PrepareWebView2Runtime();
             // 调试开关（默认关）：SP_LAUNCHER_DEBUG=1 时开本地 CDP 端口，便于用 DevTools 查页面真实 DOM。
             try
@@ -82,29 +91,277 @@ namespace StrongholdLauncher
             lock (LogLock) { try { _log.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + msg); } catch { } }
         }
 
+        /// <summary>启动器版本号（launcher/version.json 里的 launcher 字段）。读不到返回空串。</summary>
+        public static string LauncherVersion()
+        {
+            try
+            {
+                var file = Path.Combine(Root ?? AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\'), "launcher", "version.json");
+                if (!File.Exists(file)) return "";
+                var raw = File.ReadAllText(file, Encoding.UTF8);
+                const string key = "\"launcher\"";
+                var i = raw.IndexOf(key, StringComparison.Ordinal);
+                if (i < 0) return "";
+                var q1 = raw.IndexOf('"', i + key.Length);
+                if (q1 < 0) return "";
+                var q2 = raw.IndexOf('"', q1 + 1);
+                if (q2 < 0) return "";
+                return raw.Substring(q1 + 1, q2 - q1 - 1).Trim();
+            }
+            catch { return ""; }
+        }
+
         private static void TryCloseLog()
         {
             try { if (_log != null) { _log.Flush(); _log.Dispose(); } } catch { }
             _log = null;
         }
 
-        /// <summary>优先用安装目录自带的 WebView2 运行时（原版行为）。</summary>
+        /// <summary>系统已安装的 WebView2 运行时版本号（Evergreen）；找不到返回空串。</summary>
+        public static string SystemWebView2Version()
+        {
+            try
+            {
+                var roots = new[]
+                {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft", "EdgeWebView", "Application"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft", "EdgeWebView", "Application"),
+                };
+                foreach (var root in roots)
+                {
+                    if (!Directory.Exists(root)) continue;
+                    foreach (var dir in Directory.GetDirectories(root))
+                    {
+                        if (File.Exists(Path.Combine(dir, "msedgewebview2.exe"))) return Path.GetFileName(dir);
+                    }
+                }
+            }
+            catch { }
+            try
+            {
+                using (var reg = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"))
+                {
+                    if (reg != null)
+                    {
+                        var pv = reg.GetValue("pv") as string;
+                        if (!string.IsNullOrEmpty(pv)) return pv;
+                    }
+                }
+            }
+            catch { }
+            return "";
+        }
+
+        /// <summary>
+        /// 业主 2026-11-22：WebView2 **不再随包分发**，用系统已装的 Evergreen 运行时。
+        /// 只有系统里没有、而安装目录里还留着旧 webview2\ 时才回退到包内那份（兼容老的安装包）。
+        /// </summary>
         private static void PrepareWebView2Runtime()
         {
             try
             {
+                var sys = SystemWebView2Version();
                 var bundled = Path.Combine(Root, "webview2", "msedgewebview2.exe");
-                if (File.Exists(bundled))
+                if (sys.Length > 0 || !File.Exists(bundled))
                 {
-                    Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", Path.GetDirectoryName(bundled));
-                    Log("bundled webview2=" + bundled);
+                    Program.Log("installed webview2 (evergreen)" + (sys.Length > 0 ? " " + sys : "（未查到版本号，交给 loader 自行查找）"));
+                    return;
                 }
-                else
+                Environment.SetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", Path.GetDirectoryName(bundled));
+                Program.Log("bundled webview2 (legacy fallback)=" + bundled);
+            }
+            catch (Exception e) { Program.Log("webview2 probe failed: " + e.Message); }
+        }
+    }
+
+    /// <summary>一个可开服/游玩的游戏版本（业主 2026-11-22：启动器独立于游戏版本）。</summary>
+    internal sealed class VersionEntry
+    {
+        public string Id;
+        public string Name;
+        /// <summary>相对启动器根目录，或绝对路径。</summary>
+        public string Dir;
+        public int Port;
+
+        public string FullDir
+        {
+            get
+            {
+                try { return Path.IsPathRooted(Dir) ? Dir : Path.GetFullPath(Path.Combine(Program.Root, Dir)); }
+                catch { return Program.Root; }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 版本注册表（launcher-versions.json）。
+    /// 格式：{"active":"id","versions":[{"id","name","dir","port"}]}
+    /// 解析用 Host.JsonValue 逐块读，避免为了一个 JSON 数组引入依赖（C# 5 / 无外部库）。
+    /// </summary>
+    internal static class VersionStore
+    {
+        public static readonly List<VersionEntry> Entries = new List<VersionEntry>();
+        public static string ActiveId = "";
+
+        private static string FilePath { get { return Path.Combine(Program.Root, "launcher-versions.json"); } }
+
+        public static void Load()
+        {
+            Entries.Clear();
+            ActiveId = "";
+            try
+            {
+                if (File.Exists(FilePath))
                 {
-                    Log("installed webview2 (evergreen)");
+                    var raw = File.ReadAllText(FilePath, Encoding.UTF8);
+                    ActiveId = Host.JsonValue(raw, "active") ?? "";
+                    var start = raw.IndexOf("\"versions\"", StringComparison.Ordinal);
+                    if (start >= 0)
+                    {
+                        var open = raw.IndexOf('[', start);
+                        var close = raw.LastIndexOf(']');
+                        if (open >= 0 && close > open)
+                        {
+                            var body = raw.Substring(open + 1, close - open - 1);
+                            var depth = 0;
+                            var from = -1;
+                            for (var i = 0; i < body.Length; i++)
+                            {
+                                var c = body[i];
+                                if (c == '{') { if (depth == 0) from = i; depth++; }
+                                else if (c == '}')
+                                {
+                                    depth--;
+                                    if (depth == 0 && from >= 0)
+                                    {
+                                        var block = body.Substring(from, i - from + 1);
+                                        from = -1;
+                                        var id = Host.JsonValue(block, "id") ?? "";
+                                        var name = Host.JsonValue(block, "name") ?? "";
+                                        var dir = Host.JsonValue(block, "dir") ?? ".";
+                                        // port 是数字型（JsonValue 只认字符串值），这里直接按字段抓数字
+                                        var port = 0;
+                                        var pIdx = block.IndexOf("\"port\"", StringComparison.Ordinal);
+                                        if (pIdx >= 0)
+                                        {
+                                            var colon = block.IndexOf(':', pIdx);
+                                            if (colon >= 0)
+                                            {
+                                                var digits = new StringBuilder();
+                                                for (var j = colon + 1; j < block.Length; j++)
+                                                {
+                                                    var ch2 = block[j];
+                                                    if (ch2 >= '0' && ch2 <= '9') digits.Append(ch2);
+                                                    else if (digits.Length > 0) break;
+                                                }
+                                                int.TryParse(digits.ToString(), out port);
+                                            }
+                                        }
+                                        if (id.Length > 0) Entries.Add(new VersionEntry
+                                        {
+                                            Id = id,
+                                            Name = name.Length > 0 ? name : id,
+                                            Dir = dir.Length > 0 ? dir : ".",
+                                            Port = port > 0 ? port : 3000,
+                                        });
+                                        Program.Log("versions parse: block=" + block + " -> id=" + id + " port=" + port);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            catch (Exception e) { Log("webview2 probe failed: " + e.Message); }
+            catch (Exception e) { Program.Log("versions load failed: " + e.Message); }
+
+            // 首次运行：把「当前目录」登记成唯一版本 —— 老安装包不用改结构就能继续玩
+            if (Entries.Count == 0)
+            {
+                Entries.Add(new VersionEntry { Id = "local", Name = "当前目录（内置）", Dir = ".", Port = 3000 });
+                ActiveId = "local";
+                Save();
+                Program.Log("versions: 初始化注册表（当前目录 + 端口 3000）");
+            }
+            if (Find(ActiveId) == null) ActiveId = Entries[0].Id;
+        }
+
+        public static void Save()
+        {
+            try
+            {
+                var sb = new StringBuilder();
+                sb.Append("{\"active\":\"").Append(Host.Esc(ActiveId)).Append("\",\"versions\":[");
+                for (var i = 0; i < Entries.Count; i++)
+                {
+                    var e = Entries[i];
+                    if (i > 0) sb.Append(',');
+                    sb.Append("{\"id\":\"").Append(Host.Esc(e.Id))
+                      .Append("\",\"name\":\"").Append(Host.Esc(e.Name))
+                      .Append("\",\"dir\":\"").Append(Host.Esc(e.Dir))
+                      .Append("\",\"port\":").Append(e.Port).Append('}');
+                }
+                sb.Append("]}");
+                File.WriteAllText(FilePath, sb.ToString(), new UTF8Encoding(false));
+            }
+            catch (Exception e) { Program.Log("versions save failed: " + e.Message); }
+        }
+
+        public static VersionEntry Find(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            foreach (var e in Entries) if (e.Id == id) return e;
+            return null;
+        }
+
+        public static VersionEntry Active { get { var e = Find(ActiveId); return e ?? (Entries.Count > 0 ? Entries[0] : null); } }
+
+        /// <summary>这个目录是不是一个游戏（能开服）—— 包含 server\index.js。</summary>
+        public static bool LooksLikeGame(string dir)
+        {
+            return !string.IsNullOrEmpty(dir) && File.Exists(Path.Combine(dir, "server", "index.js"));
+        }
+
+        /** 找一个没被占用的端口（从 3000 起，逐 10 递增，避开 3000 默认值）。 */
+        public static int FreePort()
+        {
+            for (var p = 3010; p < 3200; p += 10)
+            {
+                var used = false;
+                foreach (var e in Entries) if (e.Port == p) used = true;
+                if (!used && !Host.PortOpen(p)) return p;
+            }
+            return 3999;
+        }
+
+        /** 登记一个已存在的游戏目录。返回新条目，失败返回 null。 */
+        public static VersionEntry Add(string dir, string name)
+        {
+            try
+            {
+                var full = Path.GetFullPath(dir).TrimEnd('\\');
+                foreach (var e in Entries)
+                    if (string.Equals(e.FullDir.TrimEnd('\\'), full, StringComparison.OrdinalIgnoreCase)) return e;
+                var folder = Path.GetFileName(full);
+                var id = (name.Length > 0 ? name : folder).ToLowerInvariant();
+                var clean = new StringBuilder();
+                foreach (var ch in id)
+                {
+                    if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')) clean.Append(ch);
+                    else if (clean.Length > 0 && clean[clean.Length - 1] != '-') clean.Append('-');
+                }
+                var slug = clean.ToString().Trim('-');
+                if (slug.Length == 0) slug = "version";
+                var unique = slug;
+                var n = 2;
+                while (Find(unique) != null) { unique = slug + "-" + n; n++; }
+                var entry = new VersionEntry { Id = unique, Name = name.Length > 0 ? name : folder, Dir = full, Port = FreePort() };
+                Entries.Add(entry);
+                Save();
+                Program.Log("versions: 导入 " + entry.Id + " -> " + full + " :" + entry.Port);
+                return entry;
+            }
+            catch (Exception e) { Program.Log("versions add failed: " + e.Message); return null; }
         }
     }
 
@@ -115,7 +372,8 @@ namespace StrongholdLauncher
         private NotifyIcon _tray;
         private readonly string _launcherDir;
         private readonly string _configFile;
-        private Process _node;
+        /// <summary>每个版本一个 node 进程（业主 2026-11-22：允许同时跑多个版本，各占一个端口）。</summary>
+        private readonly Dictionary<string, Process> _runs = new Dictionary<string, Process>();
         private bool _navigatedToGame;
 
         private const int GAME_PORT = 3000;
@@ -127,6 +385,8 @@ namespace StrongholdLauncher
             _configFile = Path.Combine(Program.Root, "launcher-config.json");
 
             Text = "卫戍协议：盟约 · 电脑版";
+            var lv = Program.LauncherVersion();
+            if (lv.Length > 0) Text += "（启动器 v" + lv + "）";
             Width = 1296;
             Height = 939;
             StartPosition = FormStartPosition.CenterScreen;
@@ -179,7 +439,16 @@ namespace StrongholdLauncher
                 core.SetVirtualHostNameToFolderMapping("app.local", _launcherDir, CoreWebView2HostResourceAccessKind.Allow);
                 core.WebMessageReceived += OnWebMessage;
                 core.NavigationStarting += OnNavigationStarting;
-                core.DocumentTitleChanged += (s, e) => { try { Text = core.DocumentTitle; } catch { } };
+                core.DocumentTitleChanged += (s, e) =>
+                {
+                    // 页面标题会覆盖窗口标题：把启动器版本号接回去，免得和游戏版本混淆
+                    try
+                    {
+                        var lv = Program.LauncherVersion();
+                        Text = core.DocumentTitle + (lv.Length > 0 ? "（启动器 v" + lv + "）" : "");
+                    }
+                    catch { }
+                };
 
                 // JS 错误回传（旧日志 JS ERROR ...）
                 try
@@ -209,7 +478,16 @@ namespace StrongholdLauncher
             catch (Exception e)
             {
                 Program.Log("webview init failed: " + e.Message);
-                SetSplash("内置浏览器启动失败：\r\n" + e.Message);
+                // 业主 2026-11-22：运行时不再随包，缺了要**说清楚怎么装**，而不是丢一句异常
+                var missing = Program.SystemWebView2Version().Length == 0;
+                var hint = missing
+                    ? "未检测到 WebView2 运行时。\r\n本启动器已不再自带它，请先安装微软官方的「Microsoft Edge WebView2 Runtime」（常青版，约 2 MB）后重试：\r\nhttps://go.microsoft.com/fwlink/p/?LinkId=2124703\r\n\r\n"
+                    : "";
+                SetSplash("内置浏览器启动失败：\r\n" + hint + e.Message);
+                if (missing)
+                {
+                    try { Process.Start("https://go.microsoft.com/fwlink/p/?LinkId=2124703"); } catch { }
+                }
             }
         }
 
@@ -250,6 +528,7 @@ namespace StrongholdLauncher
             if (t == "ready" || t == "config")
             {
                 PushConfig(_web.CoreWebView2);
+                PushVersions();
                 // 页面就绪后回报本地资源进度（旧界面那一行）
                 ReportArtNow();
                 // 页面可能错过了启动时的推送，这里补发一次公告与更新状态
@@ -317,9 +596,102 @@ namespace StrongholdLauncher
             if (t == "start-public")
             {
                 StartLocal(false);
+                var port = ActivePort;
                 Task.Delay(1500).ContinueWith(delegate
                 {
-                    try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate("http://127.0.0.1:3000/admin"); })); } catch { }
+                    try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate("http://127.0.0.1:" + port + "/admin"); })); } catch { }
+                });
+                return;
+            }
+            // ---- 多版本（业主 2026-11-22：启动器独立于游戏版本，可分别开服/游玩）----
+            if (t == "versions") { PushVersions(); return; }
+            if (t == "fs-list") { SendFsList(Host.JsonValue(raw, "path") ?? ""); return; }
+            if (t == "fs-detail")
+            {
+                var dpath = Host.JsonValue(raw, "path") ?? "";
+                Task.Run(delegate { SendFsDetail(dpath); });
+                return;
+            }
+            if (t == "version-import")
+            {
+                var dir = Host.JsonValue(raw, "dir") ?? "";
+                if (dir.Length == 0) { PickVersionFolder(); return; }
+                if (!VersionStore.LooksLikeGame(dir))
+                {
+                    Send("{\"t\":\"version-status\",\"kind\":\"bad\",\"text\":\"这个目录不是游戏目录（缺 server/index.js）\"}");
+                    return;
+                }
+                var added = VersionStore.Add(dir, Host.JsonValue(raw, "name") ?? "");
+                if (added == null) { Send("{\"t\":\"version-status\",\"kind\":\"bad\",\"text\":\"导入失败，看日志\"}"); return; }
+                Send("{\"t\":\"version-status\",\"kind\":\"ok\",\"text\":\"已导入 " + Host.Esc(added.Name) + "（端口 " + added.Port + "）\"}");
+                PushVersions();
+                return;
+            }
+            if (t == "version-active")
+            {
+                var id = Host.JsonValue(raw, "id");
+                if (VersionStore.Find(id) != null)
+                {
+                    VersionStore.ActiveId = id;
+                    VersionStore.Save();
+                    Program.Log("versions: 当前版本 -> " + id);
+                    PushVersions();
+                }
+                return;
+            }
+            if (t == "version-start")
+            {
+                var target = VersionStore.Find(Host.JsonValue(raw, "id"));
+                StartVersion(target, false);
+                var entry = target;
+                Task.Run(delegate
+                {
+                    if (entry == null) return;
+                    for (var i = 0; i < 90; i++)
+                    {
+                        if (Host.Probe("http://127.0.0.1:" + entry.Port + "/healthz", 1200))
+                        {
+                            Send("{\"t\":\"version-status\",\"id\":\"" + Host.Esc(entry.Id) + "\",\"kind\":\"ok\",\"text\":\"" + Host.Esc(entry.Name) + " 已就绪（端口 " + entry.Port + "）\"}");
+                            PushVersions();
+                            return;
+                        }
+                        Thread.Sleep(500);
+                    }
+                    Send("{\"t\":\"version-status\",\"id\":\"" + Host.Esc(entry.Id) + "\",\"kind\":\"bad\",\"text\":\"启动超时，看日志\"}");
+                });
+                return;
+            }
+            if (t == "version-stop") { StopVersion(Host.JsonValue(raw, "id")); return; }
+            if (t == "version-remove")
+            {
+                var rid = Host.JsonValue(raw, "id");
+                if (rid == VersionStore.ActiveId) { Send("{\"t\":\"version-status\",\"kind\":\"bad\",\"text\":\"当前版本不能删除，先切到别的版本\"}"); return; }
+                StopVersion(rid);
+                for (var i = VersionStore.Entries.Count - 1; i >= 0; i--)
+                    if (VersionStore.Entries[i].Id == rid) VersionStore.Entries.RemoveAt(i);
+                VersionStore.Save();
+                PushVersions();
+                return;
+            }
+            if (t == "version-enter")
+            {
+                var ev = VersionStore.Find(Host.JsonValue(raw, "id"));
+                if (ev == null) return;
+                VersionStore.ActiveId = ev.Id;
+                VersionStore.Save();
+                StartVersion(ev, false);
+                var url = "http://127.0.0.1:" + ev.Port + "/";
+                Task.Run(delegate
+                {
+                    for (var i = 0; i < 120; i++)
+                    {
+                        if (Host.Probe(url + "healthz", 1200))
+                        {
+                            try { BeginInvoke(new Action(delegate { _navigatedToGame = true; _web.CoreWebView2.Navigate(url); })); } catch { }
+                            return;
+                        }
+                        Thread.Sleep(500);
+                    }
                 });
                 return;
             }
@@ -333,6 +705,16 @@ namespace StrongholdLauncher
         }
 
         // ---- 服务器列表：探测 → 打开（旧日志 probe error / list unreachable / list-test click sent）----
+        //
+        // 业主 2026-11-22：探测改并行。
+        // 旧版是串行 foreach + Host.Probe(url, 6000)：三站里前两站不通时要**等两次超时**（最坏 18 秒）
+        // 才轮到第三站，玩家看到的就是「点服务器游玩之后卡住十几秒」。
+        // 现在所有候选同时探，然后**按原来的优先顺序**逐个取结果：
+        //   * 主站活着 → 300ms 就进去，和以前一样，不会为了等备站而多等；
+        //   * 主站死了 → 备站大概率早就探完了，最坏总耗时从 18 秒降到约 6 秒（一次超时）。
+        // 站点顺序（Q-02「保持现有顺序不动」）在这里没有被改动：并行只影响等待时间，不影响选谁。
+        private const int ListProbeTimeoutMs = 6000;
+
         private void OpenServerList(string primary)
         {
             var cfg = File.Exists(_configFile) ? File.ReadAllText(_configFile) : "";
@@ -345,50 +727,288 @@ namespace StrongholdLauncher
             }
             Task.Run(delegate
             {
-                foreach (var url in candidates)
+                var started = DateTime.UtcNow;
+                var n = candidates.Count;
+                var results = new bool[n];
+                var tasks = new Task[n];
+                for (var i = 0; i < n; i++)
                 {
+                    var idx = i;              // 闭包捕获的是这个副本，不是循环变量
+                    var url = candidates[i];
                     Program.Log("probe " + url);
-                    if (Host.Probe(url, 6000))
+                    tasks[i] = Task.Factory.StartNew(delegate
                     {
-                        Program.Log("list ok " + url);
-                        try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate(url); })); } catch { }
-                        return;
-                    }
-                    Program.Log("probe error " + url);
+                        try { results[idx] = Host.Probe(url, ListProbeTimeoutMs); }
+                        catch (Exception ex) { Program.Log("probe threw " + url + ": " + ex.Message); results[idx] = false; }
+                    });
                 }
-                Program.Log("list unreachable");
+                // 按优先顺序取结果：等第一个的时候其余几个在并行跑，所以「主站活」不会变慢
+                for (var i = 0; i < n; i++)
+                {
+                    try { tasks[i].Wait(ListProbeTimeoutMs + 2000); } catch { /* 探测线程自己会记日志 */ }
+                    var ms = (int)(DateTime.UtcNow - started).TotalMilliseconds;
+                    if (!results[i]) { Program.Log("probe error " + candidates[i] + " (" + ms + "ms)"); continue; }
+                    Program.Log("list ok " + candidates[i] + " (" + ms + "ms, " + n + " 个候选并行)");
+                    var target = candidates[i];
+                    try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate(target); })); } catch { }
+                    return;
+                }
+                Program.Log("list unreachable (" + (int)(DateTime.UtcNow - started).TotalMilliseconds + "ms, " + n + " 个候选并行)");
             });
         }
 
-        // ---- 本地服务器 ----
-        private void StartLocal(bool warm)
+        // ---- 本地服务器（按版本起停，可同时跑多个） ----
+        private int ActivePort { get { var e = VersionStore.Active; return e != null ? e.Port : GAME_PORT; } }
+        private string ActiveUrl { get { return "http://127.0.0.1:" + ActivePort + "/"; } }
+
+        private void StartLocal(bool warm) { StartVersion(VersionStore.Active, warm); }
+
+        private bool RunningOf(VersionEntry entry)
         {
-            if (_node != null && !_node.HasExited) { if (warm) Program.Log("warm: server already running"); return; }
-            // 端口已被别的实例占着 = 本地服务器本来就在跑（旧日志正是这句）
-            if (Host.PortOpen(GAME_PORT)) { Program.Log(warm ? "warm: server already running" : "server already running"); return; }
+            if (entry == null) return false;
+            Process p;
+            if (_runs.TryGetValue(entry.Id, out p) && p != null && !p.HasExited) return true;
+            return Host.PortOpen(entry.Port);
+        }
+
+        private void StartVersion(VersionEntry entry, bool warm)
+        {
+            if (entry == null) return;
+            if (RunningOf(entry))
+            {
+                Program.Log((warm ? "warm" : "start") + ": " + entry.Id + " 已在运行（端口 " + entry.Port + "）");
+                return;
+            }
             try
             {
-                var node = Host.FindNode(Program.Root);
+                var dir = entry.FullDir;
+                if (!VersionStore.LooksLikeGame(dir))
+                {
+                    Program.Log("start " + entry.Id + " 失败：目录里没有 server\\index.js（" + dir + "）");
+                    Send("{\"t\":\"version-status\",\"id\":\"" + Host.Esc(entry.Id) + "\",\"kind\":\"bad\",\"text\":\"这个目录不是游戏目录（缺 server/index.js）\"}");
+                    return;
+                }
+                // 版本目录里可能不自带 node（别人给的游戏目录），依次回退：本目录 → 启动器根目录 → 系统 node
+                var node = Path.Combine(dir, "node", "node.exe");
+                if (!File.Exists(node)) node = Path.Combine(Program.Root, "node", "node.exe");
+                if (!File.Exists(node)) node = Host.FindNode(dir);
                 Program.Log("node activated rc=0 out=" + Host.NodeVersion(node));
                 var psi = new ProcessStartInfo(node, "server/index.js")
                 {
-                    WorkingDirectory = Program.Root,
+                    WorkingDirectory = dir,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
-                psi.EnvironmentVariables["PORT"] = GAME_PORT.ToString();
+                psi.EnvironmentVariables["PORT"] = entry.Port.ToString();
                 var p = new Process { StartInfo = psi };
-                p.OutputDataReceived += (s, e) => { if (e.Data != null) Program.Log("node: " + e.Data); };
-                p.ErrorDataReceived += (s, e) => { if (e.Data != null) Program.Log("node! " + e.Data); };
+                p.OutputDataReceived += (s, e) => { if (e.Data != null) Program.Log("node[" + entry.Id + "]: " + e.Data); };
+                p.ErrorDataReceived += (s, e) => { if (e.Data != null) Program.Log("node![" + entry.Id + "] " + e.Data); };
                 p.Start();
                 p.BeginOutputReadLine();
                 p.BeginErrorReadLine();
-                _node = p;
-                Program.Log((warm ? "warm node started pid " : "node started pid ") + p.Id);
+                _runs[entry.Id] = p;
+                Program.Log((warm ? "warm node started pid " : "node started pid ") + p.Id + " [" + entry.Id + ":" + entry.Port + "]");
+                PushVersions();
             }
             catch (Exception e) { Program.Log("start-local failed: " + e.Message); }
+        }
+
+        private void StopVersion(string id)
+        {
+            Process p;
+            if (_runs.TryGetValue(id, out p))
+            {
+                try { if (p != null && !p.HasExited) p.Kill(); } catch { }
+                _runs.Remove(id);
+                Program.Log("stopped " + id);
+            }
+            var entry = VersionStore.Find(id);
+            if (entry != null && Host.PortOpen(entry.Port))
+            {
+                var killed = Host.KillPortOwner(entry.Port, Program.Log);
+                Program.Log("stopped " + id + "（结束占用端口 " + entry.Port + " 的 " + killed + " 个进程）");
+            }
+            PushVersions();
+        }
+
+        /// <summary>把版本列表与运行状态推给页面。</summary>
+        private void PushVersions()
+        {
+            var sb = new StringBuilder();
+            sb.Append("{\"t\":\"versions\",\"active\":\"").Append(Host.Esc(VersionStore.ActiveId)).Append("\",\"items\":[");
+            for (var i = 0; i < VersionStore.Entries.Count; i++)
+            {
+                var e = VersionStore.Entries[i];
+                if (i > 0) sb.Append(',');
+                sb.Append("{\"id\":\"").Append(Host.Esc(e.Id))
+                  .Append("\",\"name\":\"").Append(Host.Esc(e.Name))
+                  .Append("\",\"dir\":\"").Append(Host.Esc(e.FullDir))
+                  .Append("\",\"port\":").Append(e.Port)
+                  .Append(",\"running\":").Append(RunningOf(e) ? "true" : "false")
+                  .Append(",\"game\":").Append(VersionStore.LooksLikeGame(e.FullDir) ? "true" : "false")
+                  .Append('}');
+            }
+            sb.Append("]}");
+            Send(sb.ToString());
+        }
+
+        /// <summary>
+        /// 目录列举（业主 2026-11-22：不再用系统文件夹对话框，改成页面里那套「UI 编辑器选择器」样式的界面）。
+        /// path 为空 → 列驱动器；否则列该目录下的子目录，并标出哪些是游戏目录。
+        /// </summary>
+        private void SendFsList(string path)
+        {
+            var sb = new StringBuilder();
+            sb.Append("{\"t\":\"fs\",\"path\":\"");
+            try
+            {
+                sb.Append(Host.Esc(path)).Append("\",\"parent\":\"");
+                var items = new List<string>();
+                if (string.IsNullOrEmpty(path))
+                {
+                    foreach (var d in DriveInfo.GetDrives())
+                    {
+                        try
+                        {
+                            if (!d.IsReady) continue;
+                            items.Add("{\"name\":\"" + Host.Esc(d.Name) + "\",\"path\":\"" + Host.Esc(d.RootDirectory.FullName)
+                                + "\",\"game\":false,\"drive\":true,\"free\":\"" + (d.AvailableFreeSpace / (1024L * 1024L * 1024L)) + " GB\"}");
+                        }
+                        catch { }
+                    }
+                    sb.Append("\",\"items\":[");
+                }
+                else
+                {
+                    var full = Path.GetFullPath(path);
+                    var parent = Path.GetDirectoryName(full.TrimEnd('\\'));
+                    sb.Append(Host.Esc(parent ?? "")).Append("\",\"items\":[");
+                    var dirs = Directory.GetDirectories(full);
+                    Array.Sort(dirs, StringComparer.OrdinalIgnoreCase);
+                    var first = true;
+                    foreach (var d in dirs)
+                    {
+                        if (!first) items.Add(null);   // 占位，下面统一拼接
+                        items.Add("{\"name\":\"" + Host.Esc(Path.GetFileName(d)) + "\",\"path\":\"" + Host.Esc(d)
+                            + "\",\"game\":" + (VersionStore.LooksLikeGame(d) ? "true" : "false") + "}");
+                        first = false;
+                    }
+                    items.RemoveAll(x => x == null);
+                }
+                sb.Append(string.Join(",", items.ToArray())).Append("]}");
+            }
+            catch (Exception e)
+            {
+                sb.Append(Host.Esc(path)).Append("\",\"parent\":\"\",\"error\":\"").Append(Host.Esc(e.Message)).Append("\",\"items\":[]}");
+            }
+            Send(sb.ToString());
+        }
+
+        /// <summary>
+        /// 一个目录的「整体情况」（业主 2026-11-22：可用的游戏文件夹要标出包内版本与规模）。
+        /// 目录可能上 GB，统计有 3 秒预算，超时返回 partial=true 的近似值。
+        /// </summary>
+        private void SendFsDetail(string path)
+        {
+            Program.Log("fs-detail ask " + path);
+            var version = "";
+            var files = 0L;
+            var bytes = 0L;
+            var partial = false;
+            var hasNode = false;
+            var hasData = false;
+            var hasAssets = false;
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                {
+                    Send("{\"t\":\"fs-detail\",\"path\":\"" + Host.Esc(path) + "\",\"error\":\"目录不存在\",\"game\":false}");
+                    return;
+                }
+                hasNode = File.Exists(Path.Combine(path, "node", "node.exe"));
+                hasData = Directory.Exists(Path.Combine(path, "data"));
+                hasAssets = Directory.Exists(Path.Combine(path, "public", "assets"));
+                // 版本：package.json 里第一个 version（注意后面 extraMetadata 还有一份）
+                try
+                {
+                    var pkg = Path.Combine(path, "package.json");
+                    if (File.Exists(pkg))
+                    {
+                        var txt = File.ReadAllText(pkg, Encoding.UTF8);
+                        var idx = txt.IndexOf("\"version\"", StringComparison.Ordinal);
+                        if (idx >= 0)
+                        {
+                            var c = txt.IndexOf(':', idx);
+                            var q1 = c >= 0 ? txt.IndexOf('"', c) : -1;
+                            var q2 = q1 >= 0 ? txt.IndexOf('"', q1 + 1) : -1;
+                            if (q1 >= 0 && q2 > q1) version = txt.Substring(q1 + 1, q2 - q1 - 1).Trim();
+                        }
+                    }
+                }
+                catch { }
+                var sw = Stopwatch.StartNew();
+                var stack = new Stack<string>();
+                stack.Push(path);
+                var seen = 0;
+                while (stack.Count > 0)
+                {
+                    if (sw.ElapsedMilliseconds > 2000) { partial = true; break; }
+                    var dir = stack.Pop();
+                    try
+                    {
+                        foreach (var f in Directory.EnumerateFiles(dir))
+                        {
+                            files++;
+                            // 每 500 个文件检查一次预算：单个目录里可能有几万个文件，只在目录边界检查会卡很久
+                            if ((++seen % 500) == 0 && sw.ElapsedMilliseconds > 2000) { partial = true; break; }
+                            try { bytes += new FileInfo(f).Length; } catch { }
+                        }
+                        if (partial) break;
+                        foreach (var d in Directory.EnumerateDirectories(dir)) stack.Push(d);
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception e)
+            {
+                Program.Log("fs-detail failed: " + e.GetType().Name + " " + e.Message);
+                Send("{\"t\":\"fs-detail\",\"path\":\"" + Host.Esc(path) + "\",\"error\":\"" + Host.Esc(e.Message) + "\",\"game\":false}");
+                return;
+            }
+            var json = "{\"t\":\"fs-detail\",\"path\":\"" + Host.Esc(path) + "\",\"game\":" + (VersionStore.LooksLikeGame(path) ? "true" : "false")
+                + ",\"version\":\"" + Host.Esc(version) + "\",\"files\":" + files + ",\"bytes\":" + bytes
+                + ",\"partial\":" + (partial ? "true" : "false")
+                + ",\"node\":" + (hasNode ? "true" : "false") + ",\"data\":" + (hasData ? "true" : "false")
+                + ",\"assets\":" + (hasAssets ? "true" : "false") + "}";
+            Program.Log("fs-detail send " + json.Length + "B partial=" + partial + " files=" + files);
+            Send(json);
+        }
+
+        /// <summary>导入一个游戏目录（老路径：宿主自带文件夹对话框；页面选择器走 version-import + dir）。</summary>
+        private void PickVersionFolder()
+        {
+            try
+            {
+                using (var dlg = new FolderBrowserDialog())
+                {
+                    dlg.Description = "选择游戏根目录（包含 server/index.js 的那一层）";
+                    dlg.ShowNewFolderButton = false;
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    var dir = dlg.SelectedPath;
+                    if (!VersionStore.LooksLikeGame(dir))
+                    {
+                        Send("{\"t\":\"version-status\",\"kind\":\"bad\",\"text\":\"这个目录不是游戏目录（缺 server/index.js）\"}");
+                        return;
+                    }
+                    var entry = VersionStore.Add(dir, "");
+                    if (entry == null) { Send("{\"t\":\"version-status\",\"kind\":\"bad\",\"text\":\"导入失败，看日志\"}"); return; }
+                    Send("{\"t\":\"version-status\",\"kind\":\"ok\",\"text\":\"已导入 " + Host.Esc(entry.Name) + "（端口 " + entry.Port + "）\"}");
+                    PushVersions();
+                }
+            }
+            catch (Exception e) { Program.Log("pick folder failed: " + e.Message); }
         }
 
         /// <summary>轮询 /healthz，就绪后回报 boot / server-started 并进入游戏。</summary>
@@ -400,14 +1020,14 @@ namespace StrongholdLauncher
                 var started = DateTime.UtcNow;
                 for (var i = 0; i < 120; i++)
                 {
-                    if (Host.Probe(GAME_URL + "healthz", 1500))
+                    if (Host.Probe(ActiveUrl + "healthz", 1500))
                     {
                         var ms = (int)(DateTime.UtcNow - started).TotalMilliseconds;
                         Send("{\"t\":\"boot\",\"text\":\"服务器已就绪，正在进入游戏…\",\"pct\":100}");
-                        Send("{\"t\":\"server-started\",\"lan\":\"" + Host.Esc(Host.LanUrls(GAME_PORT)) + "\",\"ms\":" + ms + "}");
-                        Program.Log("boot 100% 服务器已就绪，正在进入游戏…");
+                        Send("{\"t\":\"server-started\",\"lan\":\"" + Host.Esc(Host.LanUrls(ActivePort)) + "\",\"ms\":" + ms + "}");
+                        Program.Log("boot 100% 服务器已就绪，正在进入游戏… (" + ActiveUrl + ")");
                         _navigatedToGame = true;
-                        try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate(GAME_URL); })); } catch { }
+                        try { BeginInvoke(new Action(delegate { _web.CoreWebView2.Navigate(ActiveUrl); })); } catch { }
                         return;
                     }
                     Thread.Sleep(500);
@@ -437,7 +1057,7 @@ namespace StrongholdLauncher
                 menu.Items.Add("重启本地服务器", null, delegate { RestartLocalServer(); ShowFromTray(); });
                 menu.Items.Add("打开后台", null, delegate
                 {
-                    try { Process.Start("http://127.0.0.1:" + GAME_PORT + "/admin"); } catch { }
+                    try { Process.Start("http://127.0.0.1:" + ActivePort + "/admin"); } catch { }
                 });
                 menu.Items.Add(new ToolStripSeparator());
                 menu.Items.Add("退出", null, delegate { _tray.Visible = false; Close(); });
@@ -579,24 +1199,44 @@ namespace StrongholdLauncher
         {
             Task.Run(delegate
             {
-                var bases = new[]
+                // 业主 2026-11-22 定：C 方案 —— **自有服务器优先**（国内实测 9 MB/s，1 秒更新完），
+                // 连不上或下载失败时才落到 GitHub Release（实测 63 KB/s，7 MB 约 2 分钟，但服务器挂了也能更）。
+                var sources = new[]
                 {
-                    "http://8.134.50.56:3000",
-                    "https://mon3tr.fun",
+                    "http://8.134.50.56:3000/launcher-pkg/manifest.json",
+                    "https://mon3tr.fun/launcher-pkg/manifest.json",
+                    GitHubPkgBase + "/launcher-pkg-manifest.json",
                 };
-                foreach (var b in bases)
+                for (int i = 0; i < sources.Length; i++)
                 {
-                    var body = Host.FetchText(b + "/launcher-pkg/manifest.json?t=" + DateTime.UtcNow.Ticks, 256 * 1024);
+                    var src = sources[i];
+                    var isGitHub = src.IndexOf("github.com", StringComparison.OrdinalIgnoreCase) >= 0;
+                    // GitHub 要走一次 302 再连 release-assets 域，6 秒在跨国链路上容易被掐断
+                    var body = Host.FetchText(src + "?t=" + DateTime.UtcNow.Ticks, 256 * 1024, isGitHub ? 15000 : 6000);
                     if (string.IsNullOrEmpty(body)) continue;
                     var ver = Host.JsonValue(body, "version");
                     if (string.IsNullOrEmpty(ver)) continue;
                     var zip = Host.JsonValue(body, "zip");
                     var sha = Host.JsonValue(body, "sha256");
                     var notes = Host.JsonValue(body, "notes");
+                    var fallback = Host.JsonValue(body, "zipFallback");
                     var local = LocalVersion();
-                    Program.Log("manifest version=" + ver + " local=" + (local.Length == 0 ? "(none)" : local));
-                    if (local == ver) { Send("{\"t\":\"update-none\",\"version\":\"" + Host.Esc(ver) + "\"}"); return; }
-                    _pendingUpdate = new UpdateInfo { Version = ver, Url = (zip.StartsWith("/") ? b + zip : zip), Sha256 = sha, Notes = notes };
+                    Program.Log("manifest source=" + (isGitHub ? "github" : src) + " version=" + ver + " local=" + (local.Length == 0 ? "(none)" : local));
+                    // 服务器上的版本必须**比本机新**才提示更新（版本号是 YYYYMMDD-NN，字典序即时间序）：
+                    // 否则会出现「已经是最新的还把玩家『升级』回旧版」——本地自测时踩到过。
+                    if (local.Length > 0 && string.CompareOrdinal(ver, local) <= 0)
+                    {
+                        Send("{\"t\":\"update-none\",\"version\":\"" + Host.Esc(local) + "\"}");
+                        return;
+                    }
+                    _pendingUpdate = new UpdateInfo
+                    {
+                        Version = ver,
+                        Url = Host.ResolveUrl(src, zip),
+                        FallbackUrl = string.IsNullOrEmpty(fallback) ? "" : Host.ResolveUrl(src, fallback),
+                        Sha256 = sha,
+                        Notes = notes,
+                    };
                     Send("{\"t\":\"update-available\",\"version\":\"" + Host.Esc(ver) + "\",\"notes\":\"" + Host.Esc(notes) + "\"}");
                     return;
                 }
@@ -604,10 +1244,15 @@ namespace StrongholdLauncher
             });
         }
 
+        /// <summary>GitHub Release 的稳定地址：latest 永远指向最新一版，不需要 API、不吃速率限制。</summary>
+        private const string GitHubPkgBase = "https://github.com/wisadel429/stronghold-protocol-fusion/releases/latest/download";
+
         private sealed class UpdateInfo
         {
             public string Version;
             public string Url;
+            /// <summary>主源下载失败/校验不通过时改用的备用地址（业主口径：GitHub 兜底）。</summary>
+            public string FallbackUrl;
             public string Sha256;
             public string Notes;
         }
@@ -637,12 +1282,12 @@ namespace StrongholdLauncher
                 try
                 {
                     Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在下载更新包…\"}");
-                    if (!Host.DownloadFile(info.Url, tmp, 8 * 60 * 1000)) { Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"下载失败\"}"); return; }
-                    var got = Host.Sha256File(tmp);
-                    if (!string.IsNullOrEmpty(info.Sha256) && !string.Equals(got, info.Sha256, StringComparison.OrdinalIgnoreCase))
+                    // 主源（自有服务器）先试；下载失败或 sha 对不上 → 走 GitHub 兜底重试一次
+                    var ok = Host.DownloadFile(info.Url, tmp, 8 * 60 * 1000) && ShaOk(info, tmp);
+                    if (!ok) ok = TryFallbackDownload(info, tmp) && ShaOk(info, tmp);
+                    if (!ok)
                     {
-                        Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"校验失败（包可能损坏）\"}");
-                        Program.Log("update sha mismatch want=" + info.Sha256 + " got=" + got);
+                        Send("{\"t\":\"update-status\",\"kind\":\"bad\",\"text\":\"下载失败（主源与备用源都不通）\"}");
                         return;
                     }
                     Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"正在解压覆盖（只含代码，不含美术资源）…\"}");
@@ -669,10 +1314,32 @@ namespace StrongholdLauncher
             });
         }
 
+        /// <summary>sha256 与 manifest 一致（manifest 没给 sha 时视为通过）。</summary>
+        private static bool ShaOk(UpdateInfo info, string file)
+        {
+            if (info == null) return false;
+            if (string.IsNullOrEmpty(info.Sha256)) return true;
+            var got = Host.Sha256File(file);
+            if (string.Equals(got, info.Sha256, StringComparison.OrdinalIgnoreCase)) return true;
+            Program.Log("update sha mismatch want=" + info.Sha256 + " got=" + got);
+            return false;
+        }
+
+        /// <summary>主源（自有服务器）失败时改走 GitHub 兜底 —— 业主 2026-11-22 定的 C 方案。</summary>
+        private bool TryFallbackDownload(UpdateInfo info, string tmp)
+        {
+            if (info == null || string.IsNullOrEmpty(info.FallbackUrl)) return false;
+            if (string.Equals(info.FallbackUrl, info.Url, StringComparison.OrdinalIgnoreCase)) return false;
+            Program.Log("update: 主源失败，改用备用源 " + info.FallbackUrl);
+            Send("{\"t\":\"update-status\",\"kind\":\"wait\",\"text\":\"主源不可用，正在从备用源（GitHub）下载，可能较慢…\"}");
+            return Host.DownloadFile(info.FallbackUrl, tmp, 15 * 60 * 1000);
+        }
+
         /// <summary>重启本地 node 服务（自重启：旧进程退出 → 起新进程）。</summary>
         private void RestartLocalServer()
         {
-            var owned = _node != null && !_node.HasExited;
+            var owned = false;
+            foreach (var kv in _runs) { if (kv.Value != null && !kv.Value.HasExited) owned = true; }
             if (owned)
             {
                 StopNode();
@@ -681,11 +1348,11 @@ namespace StrongholdLauncher
                 StartLocal(false);
                 return;
             }
-            if (Host.PortOpen(GAME_PORT))
+            if (Host.PortOpen(ActivePort))
             {
-                // 业主 2026-11-22 决定：允许结束占用 3000 的进程再重启，这样服务端改动也能一键生效。
-                var killed = Host.KillPortOwner(GAME_PORT, Program.Log);
-                Program.Log("restart: killed " + killed + " process(es) on port " + GAME_PORT);
+                // 业主 2026-11-22 决定：允许结束占用端口的进程再重启，这样服务端改动也能一键生效。
+                var killed = Host.KillPortOwner(ActivePort, Program.Log);
+                Program.Log("restart: killed " + killed + " process(es) on port " + ActivePort);
                 Thread.Sleep(800);
             }
             StartLocal(false);
@@ -759,10 +1426,14 @@ namespace StrongholdLauncher
             catch (Exception e) { Program.Log("save-server failed: " + e.Message); }
         }
 
+        /// <summary>停掉所有由本启动器拉起的 node（业主 2026-11-22：可能同时有多个版本在跑）。</summary>
         private void StopNode()
         {
-            try { if (_node != null && !_node.HasExited) _node.Kill(); } catch { }
-            _node = null;
+            foreach (var kv in _runs)
+            {
+                try { if (kv.Value != null && !kv.Value.HasExited) kv.Value.Kill(); } catch { }
+            }
+            _runs.Clear();
         }
 
         /// <summary>
@@ -922,7 +1593,7 @@ namespace StrongholdLauncher
         }
 
         /// <summary>取一个 URL 的文本正文（宿主侧发起，绕开页面的混合内容限制）。失败返回空串。</summary>
-        public static string FetchText(string url, int maxBytes)
+        public static string FetchText(string url, int maxBytes, int timeoutMs = 6000)
         {
             try
             {
@@ -931,9 +1602,10 @@ namespace StrongholdLauncher
                     && !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return "";
                 var req = (HttpWebRequest)WebRequest.Create(url);
                 req.Method = "GET";
-                req.Timeout = 6000;
-                req.ReadWriteTimeout = 6000;
+                req.Timeout = timeoutMs;
+                req.ReadWriteTimeout = timeoutMs;
                 req.UserAgent = "StrongholdLauncher/1";
+                req.Proxy = null;
                 using (var res = (HttpWebResponse)req.GetResponse())
                 using (var s = res.GetResponseStream())
                 {
@@ -951,6 +1623,18 @@ namespace StrongholdLauncher
             catch (Exception e) { Program.Log("fetch failed " + url + " : " + e.Message); return ""; }
         }
 
+        /// <summary>把 manifest 里的相对路径解析成绝对地址（已是绝对 URL 就原样返回）。
+        /// 相对路径按**清单所在目录**解析 —— GitHub 上的清单与 zip 是同一目录的兄弟资产，
+        /// 按 origin 拼会丢路径（例如 /x.zip 会变成 https://github.com/x.zip）。</summary>
+        public static string ResolveUrl(string manifestUrl, string rel)
+        {
+            if (string.IsNullOrEmpty(rel)) return "";
+            if (rel.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || rel.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return rel;
+            try { return new Uri(new Uri(manifestUrl), rel).AbsoluteUri; }
+            catch { return rel; }
+        }
+
         /// <summary>下载到文件（带超时）。成功返回 true。</summary>
         public static bool DownloadFile(string url, string saveTo, int timeoutMs)
         {
@@ -962,6 +1646,7 @@ namespace StrongholdLauncher
                 req.Timeout = timeoutMs;
                 req.ReadWriteTimeout = timeoutMs;
                 req.UserAgent = "StrongholdLauncher/1";
+                req.Proxy = null;
                 using (var res = (HttpWebResponse)req.GetResponse())
                 using (var s = res.GetResponseStream())
                 using (var f = File.Create(saveTo))
@@ -1103,6 +1788,9 @@ namespace StrongholdLauncher
                 req.Timeout = timeoutMs;
                 req.ReadWriteTimeout = timeoutMs;
                 req.AllowAutoRedirect = true;
+                // 业主 2026-11-22：本机的系统代理是「自动检测」，.NET 每次请求都可能卡在 WPAD 上十几秒，
+                // 实测同一地址走代理 12 秒超时、直连 330 毫秒返回 —— 服务器列表探测超时也是这个原因。
+                req.Proxy = null;
                 using (var res = (HttpWebResponse)req.GetResponse())
                     return (int)res.StatusCode >= 200 && (int)res.StatusCode < 500;
             }

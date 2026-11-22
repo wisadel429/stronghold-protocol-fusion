@@ -238,7 +238,7 @@ export function multiHudView({ pub, myId, openTeam = -1, onPick = () => {} }) {
               ${p.isBot ? html`<span class="team__ai">AI</span>` : null}
             </span>
             <div class="team__info">
-              <span class="team__name">${p.name || t('博士')}</span>
+              <span class=${`team__name${p.admin ? ' is-admin-name' : ''}`}>${p.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}${p.name || t('博士')}</span>
               <div class="team__line">
                 ${i === mine && p.alive !== false && Number.isFinite(p.hp)
                   ? html`<span class="gm-team__hp num">${lpDisplay(p.hp)}</span>` : null}

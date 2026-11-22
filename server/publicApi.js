@@ -259,11 +259,21 @@ export function createPublicApi({ lobby, announcements, trustProxy, sendJson, se
       const active = announcements.lastError ? null : announcements.current;
       let announcement = null;
       if (active) {
-        const content = { title: active.title || '维护公告', text: active.text, expiresAt: active.endAt };
-        const id = createHash('sha256').update(JSON.stringify(content)).digest('hex').slice(0, 24);
+        // 业主 2026-11-22：**level 必须下发** —— 以前这里只给 title/text/expiresAt，
+        // 后台设的 info/warning/urgent 三档客户端根本收不到，界面上自然全是同一个样子。
+        const content = {
+          title: active.title || '维护公告',
+          text: active.text,
+          expiresAt: active.endAt,
+          level: ['info', 'warning', 'urgent'].includes(active.level) ? active.level : 'info',
+        };
+        // id 与历史条目同一个算法（announcements.currentId），玩家翻历史时点开的就是当初那条
+        const id = announcements.currentId || createHash('sha256').update(JSON.stringify({ title: content.title, text: content.text, expiresAt: content.expiresAt })).digest('hex').slice(0, 24);
         announcement = { id, ...content };
       }
-      sendJson(req, res, 200, { announcement, serverTime });
+      // 历史公告（业主 2026-11-22）：新的在前，玩家点右侧列表就能翻回去看
+      const history = typeof announcements.historyList === 'function' ? announcements.historyList() : [];
+      sendJson(req, res, 200, { announcement, history, serverTime });
       return true;
     }
     return false;

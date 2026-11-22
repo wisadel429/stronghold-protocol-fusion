@@ -92,6 +92,7 @@ import { createPublicApi } from './publicApi.js';
 import { Announcements } from './announcements.js';
 import { createFeedbackStore, createFeedbackApi } from './feedback.js';
 import { MessageStore } from './accounts/messages.js';
+import { createAutostart } from './autostart.js';
 import { lanUrls, displayHost, isProcessEntry, runMain } from './http/boot.js';
 
 // The public API of this module (tests and tools import it from here); the code lives in ./http/.
@@ -211,7 +212,16 @@ export async function startServer(opts = {}) {
   // 社交（账号系统第二期）：好友 / 黑名单 / 邀请；在线状态由 network 现算，不落盘
   const socialStore = accountsOn ? new SocialStore({ dir: accountsDir, log }) : null;
   // 消息中心（业主 2026-11-21）：好友请求 / 房间邀请 / 后台回复反馈，都往这里追加一条
-  const messageStore = accountsOn ? new MessageStore({ dir: accountsDir, log }) : null;
+  // 实时推送（业主 2026-11-22）：消息一落盘就顺着 sendToAccount() 推给该账号在线的连接（`account.msg`），
+  // 客户端收到立刻刷新列表；没在线的人下次拉 /api/messages 照样拿到，所以推送只是加速，不是唯一通道。
+  // 用参数传进来的 unread 而不是回头读 messageStore —— 构造期间它还不可见（TDZ）。
+  const messageStore = accountsOn
+    ? new MessageStore({
+      dir: accountsDir,
+      log,
+      notify: (accountId, row, unread) => { network.sendToAccount(accountId, { t: 'account.msg', item: row, unread }); },
+    })
+    : null;
   const socialService = socialStore ? new SocialService({ store: socialStore, accounts: accountService, network, log, messages: messageStore }) : null;
   if (socialService) lobby.social = socialService;   // 房间列表可见性（黑名单）由 lobby 读取
   // 账号头像（业主 2026-11-14）：座位/对局/结算按 accountId 读每个玩家**自己**的干员立绘头像
@@ -267,6 +277,11 @@ export async function startServer(opts = {}) {
   buildTag(ROOT, { servedVersionDirs: versions.servedDirs() });
 
   const traffic = createTrafficCounter();
+  // 开机自启（业主 2026-11-22，待办 T-06）：每次启动自检一遍计划任务，缺了就自己建一个。
+  // 建任务要管理员权限；失败只记一条 warn 并在 /healthz 里写 'denied'，绝不阻断启动。
+  // 用函数暴露状态：ensure() 是异步的（要跑 schtasks），/healthz 每次读到的都是当前值。
+  const autostart = createAutostart({ root: ROOT, dataDir, log });
+  const autostartStatus = () => autostart.status();
   const serverName = opts.serverName ?? process.env.SERVER_NAME ?? 'server1';
   // 后台 (server/admin.js): the portable backend + this tree's adapter (admin-live.js). The gate wraps the WebSocket hook,
   // so it is wired before the HTTP listener exists; the page rides on the game port at /admin.
@@ -286,6 +301,8 @@ export async function startServer(opts = {}) {
     feedback: () => feedbackStore,
     // 消息中心（业主 2026-11-21）：后台回复反馈后给该账号推一条消息
     messages: () => messageStore,
+    // 历史公告（业主 2026-11-22）：后台要能列出/删除历史，必须用同一个内存实例（否则会被下次写盘覆盖回去）
+    announcements: () => announcements,
   });
   // 缺人同盟：GET /api/recruit — public co-op rooms still waiting for players (the lobby card polls it every 8 s)
   const recruitApi = async (req, res, pathname) => {
@@ -328,7 +345,15 @@ export async function startServer(opts = {}) {
   // 导入热更包（启动器「导入热更包」按键 → server/updateApi.js）：只接受本机回环请求，解压到安装根目录
   const updateApi = createUpdateApi({ root: ROOT, log, trustProxy: network.opts.trustProxy });
   // 公开只读 API：房间目录与开关服探针（服务器列表用）。公告文件不存在就当作没有公告。
-  const announcements = new Announcements({ file: path.join(dataDir, 'announcement.json'), log });
+  // 公告文件不存在就当作没有公告。历史公告另存一份（业主 2026-11-22）：被覆盖的旧公告要能被玩家翻回去、被后台删掉
+  const announcements = new Announcements({
+    file: path.join(dataDir, 'announcement.json'),
+    historyFile: path.join(dataDir, 'announcement-history.json'),
+    // 业主 2026-11-22：公告一变就推给在线客户端（以前这里没接 broadcast，只能靠客户端轮询）。
+    // 紧急公告因此能在对局中「立刻」弹出，而不是最多等一轮轮询。
+    broadcast: (frame) => { try { live.broadcast(frame); } catch (e) { log.warn?.('[announcements] 推送失败', e); } },
+    log,
+  });
   announcements.start().catch((e) => log.warn?.('[announcements] 启动失败', e));
   const publicApi = createPublicApi({
     lobby, announcements, trustProxy: network.opts.trustProxy, sendJson, sendError, now: Date.now,
@@ -347,7 +372,7 @@ export async function startServer(opts = {}) {
       } catch { return ''; }
     },
   });
-  const server = http.createServer(createRequestHandler({ serveStatic, csp: process.env.SP_CSP === 'off' ? null : siteCsp(publicDir), admin: adminMounted, adminCsp: ADMIN_CSP, recruitApi, accountApi, socialApi, updateApi, publicApi, feedbackApi, health: { startedAt, network, registry, lobby, content, traffic, assetIndex, views, trusted:trustedRuntime?.health, versions, versionHosts, artKey: artKeyStatus }, log, trustProxy: network.opts.trustProxy, studio, trustedRuntime }));
+  const server = http.createServer(createRequestHandler({ serveStatic, csp: process.env.SP_CSP === 'off' ? null : siteCsp(publicDir), admin: adminMounted, adminCsp: ADMIN_CSP, recruitApi, accountApi, socialApi, updateApi, publicApi, feedbackApi, health: { startedAt, network, registry, lobby, content, traffic, assetIndex, views, trusted:trustedRuntime?.health, versions, versionHosts, artKey: artKeyStatus, autostart: autostartStatus }, log, trustProxy: network.opts.trustProxy, studio, trustedRuntime }));
   server.on('clientError', answerClientError);
   const wss = attachWebSocket(server, { network, log, traffic });
 
@@ -406,6 +431,8 @@ export async function startServer(opts = {}) {
   assetIndex?.start();
   // started only once the server is listening: the first window then reports real counts, not a half-built hall
   eventLoop?.start();
+  // 自启自检放在监听成功之后：起不来就别去动系统的计划任务（业主 2026-11-22）
+  void autostart.ensure();
 
   const addr = server.address();
   const actualPort = typeof addr === 'object' && addr ? addr.port : port;

@@ -81,8 +81,13 @@ export const LONG_CACHE = 'public, max-age=86400';          // 1 day
 // 2026-11-21 域名接入（Cloudflare 隧道）：代码/样式/数据原来一律 no-cache，于是每个请求都要回源；
 // 经隧道回源约 2 秒，首屏要 30 多秒。给共享缓存一个短 TTL：边缘 10 分钟、浏览器 1 分钟，
 // 让 Cloudflare 能命中缓存（HIT），同时改代码后最多 10 分钟生效。
-// 需要立刻生效：Cloudflare 面板 → 缓存 → 清除缓存（Purge Everything）。
-const CODE_CACHE = 'public, max-age=60, s-maxage=600, stale-while-revalidate=600';
+//
+// 2026-11-22 改回 no-cache（业主改界面期间踩到）：CL-20261122-02 已把 Cloudflare 缓存**关掉**，
+// 上面那条「让边缘命中」的理由随之作废；而 60 秒 + stale-while-revalidate=600 的后果是
+// 「热更已经生效、玩家却还在看旧界面」——业主连改三轮都看不到变化，就是它。
+// 现在一律回源校验：文件没变时服务端答 304（无 body，几十字节），变了立刻拿到新的。
+// 图片/音频/字体仍走 LONG_CACHE / IMMUTABLE_CACHE，不受影响。
+const CODE_CACHE = 'no-cache';
 const CODE_CACHE_EXTS = new Set(['.js', '.mjs', '.css', '.json', '.map', '.wasm', '.txt']);
 export const IMMUTABLE_CACHE = 'public, max-age=31536000, immutable';
 const LONG_CACHE_DIRS = ['assets', 'fonts', 'vendor']; // first path segment under public/

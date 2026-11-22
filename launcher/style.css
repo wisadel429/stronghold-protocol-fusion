@@ -41,6 +41,169 @@ h1 { margin: 0; font-size: 27px; letter-spacing: .06em; font-weight: 800; }
   font-size: 12px; letter-spacing: .08em; background: #0a110d;
 }
 .pill__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+/* 启动器版本号（业主 2026-11-22）：弱化显示，与「资源就绪」那个胶囊区分开 */
+.pill--ver { font-size: 11.5px; letter-spacing: .04em; color: #9fb0aa; border-color: rgba(53, 208, 127, .28); background: rgba(6, 12, 10, .5); cursor: default; }
+
+/* ---- 游戏版本列表（版式参考 UI 编辑器的选择页）---- */
+.vpanel .vlist {
+  display: flex; flex-direction: column; margin-top: 8px;
+  border: 1px solid var(--line, #1d2a22); border-radius: 8px; overflow: hidden; background: #080d0a;
+}
+.vempty { color: var(--dim, #5d6f64); font-size: 12.5px; padding: 10px 12px; }
+.vrow {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 0;
+  /* 业主 2026-11-22：每行版本之间加一条分割线 */
+  border-bottom: 1px solid rgba(29, 42, 34, .85);
+  background: transparent;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.vrow:last-child { border-bottom: 0; }
+.vrow:hover { background: rgba(53, 208, 127, .05); }
+.vrow.is-active { background: rgba(53, 208, 127, .09); box-shadow: inset 2px 0 0 var(--green, #35d07f); }
+.vrow__dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4a41; }
+.vrow__dot.is-run { background: var(--green, #35d07f); box-shadow: 0 0 8px var(--green, #35d07f); }
+.vrow__main { min-width: 0; }
+.vrow__name { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: #e8f2ea; }
+.vrow__tag {
+  font: 10px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .12em;
+  padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; color: var(--green-2, #7bf0b0); opacity: .9;
+}
+.vrow__tag--run { color: #35d07f; }
+.vrow__tag--off { color: #7f9488; }
+.vrow__path {
+  margin-top: 4px; font: 11px/1.4 "Cascadia Mono", Consolas, monospace;
+  color: #7f9488; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vrow__acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.vrow__acts .btn, .vrow__acts button {
+  height: 28px; padding: 0 10px; font-size: 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line-2, #263a2d); background: #0d1310; color: #c3cbc7;
+  font-family: inherit;
+}
+.vrow__acts button:hover { border-color: var(--green, #35d07f); color: #e8f2ea; }
+.vrow__acts button[disabled] { opacity: .4; cursor: default; border-color: var(--line, #1d2a22); }
+.vrow__acts .is-primary { border-color: rgba(53, 208, 127, .6); color: #7bf0b0; }
+
+/* 卡片上的版本切换（业主 2026-11-22）：不放在 <button> 里当按钮，用 span 免得触发卡片点击 */
+.card__ver {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px;
+  padding: 3px 9px; border-radius: 999px; border: 1px dashed rgba(53, 208, 127, .45);
+  font-size: 11.5px; color: #9fb0aa; cursor: pointer;
+}
+.card__ver:hover { border-style: solid; color: #e8f2ea; }
+.card__ver b { color: #7bf0b0; font-weight: 700; }
+
+/* ---- 选择器（套用 UI 编辑器那套选择页的样式）---- */
+.pk {
+  position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
+  background: rgba(4, 8, 6, .82);
+}
+.pk[hidden] { display: none; }
+.pk__card {
+  width: min(920px, 94vw); height: min(640px, 86vh);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(180deg, #0b110d, #070b09 60%);
+  border: 1px solid #1d2a22; border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(53, 208, 127, .05);
+}
+.pk__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 20px 12px; border-bottom: 1px solid #1d2a22; flex: 0 0 auto;
+}
+.pk__eyebrow { font: 10px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .22em; color: #5d6f64; }
+.pk__title { margin: 6px 0 0; font-size: 18px; font-weight: 800; letter-spacing: .04em; color: #e8f2ea; }
+.pk__nav { display: flex; gap: 8px; }
+.pk__icon {
+  width: 30px; height: 30px; border-radius: 7px; cursor: pointer;
+  border: 1px solid #263a2d; background: #0d1310; color: #c3cbc7; font-size: 13px;
+}
+.pk__icon:hover { border-color: #35d07f; color: #e8f2ea; }
+.pk__pathbar {
+  display: flex; align-items: center; gap: 10px; margin: 12px 20px 0;
+  padding: 8px 12px; border: 1px solid #1d2a22; border-radius: 8px; background: #0a100c; flex: 0 0 auto;
+}
+.pk__prompt { font: 10px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .2em; color: #355243; }
+.pk__input {
+  flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
+  font: 12px/1.4 "Cascadia Mono", Consolas, monospace; color: #c3cbc7;
+}
+.pk__drives { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px 0; flex: 0 0 auto; }
+/* 面包屑（业主 2026-11-22：路径要可点击，点了就跳到那一层） */
+.pk__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 8px 20px 0; flex: 0 0 auto; }
+.pk__crumbs:empty { display: none; }
+.pk__crumb {
+  padding: 3px 7px; border-radius: 5px; cursor: pointer;
+  font: 11px/1.2 "Cascadia Mono", Consolas, monospace; color: #9fb0aa;
+  border: 1px solid transparent; background: transparent;
+}
+.pk__crumb:hover { color: #e8f2ea; background: rgba(53, 208, 127, .12); border-color: rgba(53, 208, 127, .35); }
+.pk__crumb.is-here { color: #7bf0b0; border-color: rgba(53, 208, 127, .35); }
+.pk__sep { color: #355243; font: 11px/1 monospace; padding: 0 1px; }
+.pk__row--up { color: #9fb0aa; }
+.pk__row--up .pk__rname { color: #9fb0aa; font-weight: 700; }
+/* 可用的游戏目录要一眼看出来（业主 2026-11-22）：左侧绿条 + 淡绿底 + 名字提亮 */
+.pk__row--game { background: rgba(53, 208, 127, .07); box-shadow: inset 2px 0 0 rgba(53, 208, 127, .75); }
+.pk__row--game:hover { background: rgba(53, 208, 127, .13); }
+.pk__row--game .pk__rname { color: #a8f0cc; }
+.pk__drives:empty { display: none; }
+.pk__drive {
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #263a2d; background: #0d1310;
+  font: 11px/1 "Cascadia Mono", Consolas, monospace; color: #9fb0aa; cursor: pointer;
+}
+.pk__drive:hover { border-color: #35d07f; color: #e8f2ea; }
+.pk__listwrap { position: relative; flex: 1 1 auto; min-height: 0; margin: 12px 20px 0; }
+.pk__list {
+  height: 100%; overflow: auto; border: 1px solid #1d2a22; border-radius: 8px; background: #080d0a;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.pk__list::-webkit-scrollbar { width: 0; height: 0; }
+.pk__state { position: absolute; inset: 0; display: grid; place-items: center; color: #5d6f64; font-size: 12.5px; pointer-events: none; }
+.pk__state[hidden] { display: none; }
+.pk__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 9px 12px; border-bottom: 1px solid rgba(29, 42, 34, .7); cursor: pointer;
+}
+.pk__row:last-child { border-bottom: 0; }
+.pk__row:hover { background: rgba(53, 208, 127, .06); }
+.pk__row.is-on { background: rgba(53, 208, 127, .12); box-shadow: inset 2px 0 0 #35d07f; }
+.pk__rname { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #e8f2ea; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk__rpath { margin-top: 2px; font: 10.5px/1.4 "Cascadia Mono", Consolas, monospace; color: #5d6f64; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk__rtag {
+  font: 9.5px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .12em;
+  padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; color: #7bf0b0;
+}
+.pk__rtag--off { color: #5d6f64; }
+.pk__detail {
+  flex: 0 0 auto; margin: 12px 20px 0; padding: 10px 12px;
+  border: 1px solid #1d2a22; border-radius: 8px; background: #0a100c;
+}
+.pk__dtop { display: flex; align-items: center; gap: 8px; }
+.pk__dname { font-size: 13px; font-weight: 700; color: #e8f2ea; }
+.pk__badge {
+  font: 9.5px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .12em;
+  padding: 3px 6px; border-radius: 3px; border: 1px solid #35d07f; color: #35d07f;
+}
+.pk__badge[hidden] { display: none; }
+.pk__dpath { margin-top: 4px; font: 10.5px/1.4 "Cascadia Mono", Consolas, monospace; color: #7f9488; word-break: break-all; }
+.pk__checks { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: #7f9488; }
+.pk__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 20px 16px; flex: 0 0 auto;
+}
+.pk__hint { font-size: 11.5px; color: #5d6f64; }
+.pk__acts { display: flex; gap: 10px; }
+.pk__ghost, .pk__primary {
+  height: 32px; padding: 0 16px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 12.5px;
+}
+.pk__ghost { border: 1px solid #263a2d; background: #0d1310; color: #c3cbc7; }
+.pk__ghost:hover { border-color: #35d07f; }
+.pk__primary { border: 1px solid rgba(53, 208, 127, .8); background: rgba(53, 208, 127, .16); color: #7bf0b0; font-weight: 700; }
+.pk__primary[disabled] { opacity: .4; cursor: default; }
 
 .notice {
   margin: 18px 0 16px; padding: 11px 16px; border: 1px solid var(--line);
@@ -158,18 +321,62 @@ body.is-loading .loading { display: flex; }
 .announce {
   position: fixed; inset: 0; z-index: 80;
   display: grid; place-items: center;
-  background: rgba(4, 8, 7, .74);
-  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  /* 业主 2026-11-22「不要半透明背景」：原来是 rgba + 毛玻璃，会透出后面的启动器界面 */
+  background: #060b09;
 }
 .announce[hidden] { display: none; }
 .announce__card {
-  width: min(560px, 92vw); max-height: 78vh; overflow: auto;
+  /* 业主 2026-11-22：加了左侧历史公告，卡片随之变宽；宽高仍固定，切换不同公告时不跳动 */
+  width: min(880px, 94vw); height: min(560px, 80vh); max-height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
   background: #0f1715; border: 1px solid #2a3a34;
   box-shadow: 0 18px 60px rgba(0, 0, 0, .65);
 }
-.announce__bar { height: 3px; background: #50e0b0; }
-.announce__body { padding: 18px 20px 14px; }
+.announce__bar { height: 4px; background: #50e0b0; flex: 0 0 auto; }
+.announce__grid { display: grid; grid-template-columns: 250px minmax(0, 1fr); flex: 1 1 auto; min-height: 0; }
+/* 左侧历史公告：与游戏内弹窗同一套口径 —— 最新置顶 + NEW 徽标 + 当前条档位色高光 */
+.announce__hist { display: flex; flex-direction: column; min-height: 0; background: #0c1311; border-right: 1px solid #22302b; }
+.announce__hist-h { flex: 0 0 auto; padding: 12px 12px 8px; font-size: 11.5px; letter-spacing: .12em; color: #7d8f88; }
+.announce__hist-list { overflow: auto; padding: 0 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+.announce__hist-empty { padding: 4px 12px 12px; font-size: 12px; color: #6c7d76; }
+.announce__row {
+  position: relative; display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 7px; align-items: center;
+  padding: 6px 7px; cursor: pointer; background: rgba(255, 255, 255, .02);
+  border: 1px solid transparent; border-radius: 4px;
+}
+.announce__row:hover { background: rgba(255, 255, 255, .06); }
+.announce__row-dot { width: 4px; height: 22px; border-radius: 2px; }
+.announce__row-main { min-width: 0; }
+.announce__row-t { font-size: 12px; color: #c8d6d0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.announce__row-m { font-size: 10.5px; color: #7d8f88; margin-top: 1px; }
+.announce__row-end { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.announce__row-time { font-size: 10.5px; color: #7d8f88; white-space: nowrap; }
+.announce__row-new {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .12em; line-height: 1.4;
+  padding: 0 5px; border-radius: 2px; border: 1px solid currentColor;
+}
+.announce__main { display: flex; flex-direction: column; min-height: 0; }
+.announce__body { padding: 18px 20px 14px; overflow: auto; }
+/* 自绘滚动条（业主 2026-11-22：不要浏览器原生那根）：原生条隐藏，由 app.js 画 .announce__slim */
+.announce__body, .announce__hist-list { scrollbar-width: none; -ms-overflow-style: none; }
+.announce__body::-webkit-scrollbar, .announce__hist-list::-webkit-scrollbar { width: 0; height: 0; }
+.announce__main, .announce__hist { position: relative; }
+.announce__slim { position: absolute; right: 3px; width: 6px; border-radius: 3px; }
+.announce__slim i { display: block; width: 100%; border-radius: 3px; background: rgba(200, 214, 208, .26); }
+.announce__slim:hover i, .announce__slim.is-drag i { background: rgba(200, 214, 208, .55); }
+/* 紧急程度（业主 2026-11-22）：格数 + 文字，配合 绿→黄→红 */
+.announce__head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.announce__pips { display: inline-flex; gap: 3px; align-items: center; }
+.announce__pips i { width: 6px; height: 12px; border-radius: 2px; background: rgba(255, 255, 255, .16); display: block; }
+.announce__pips i.on { box-shadow: 0 0 6px currentColor; }
 .announce__kicker { font-size: 11px; letter-spacing: .18em; color: #50e0b0; text-transform: uppercase; }
+.announce__sev { margin-left: auto; font-size: 11px; letter-spacing: .08em; opacity: .9; }
+/* 紧急档：卡片描边外发光 + 缓慢脉动（频率不快，不干扰阅读） */
+.announce__card[data-level="urgent"] { animation: announce-pulse 1.8s ease-in-out infinite; }
+@keyframes announce-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.12); }
+}
 .announce__title { margin: 6px 0 10px; font-size: 18px; font-weight: 800; color: #eafff7; }
 .announce__title[hidden] { display: none; }
 .announce__text { font-size: 14px; line-height: 1.75; color: #c8d6d0; white-space: pre-wrap; word-break: break-word; }
@@ -187,6 +394,14 @@ body.is-loading .loading { display: flex; }
 .update-bar[hidden] { display: none; }
 .update-bar__text { flex: 1; }
 .update-bar .btn--sm { height: 28px; padding: 0 12px; font-size: 12.5px; }
-.announce__foot { align-items: center; justify-content: space-between; }
+/* 业主 2026-11-22：按钮靠右下，「今天不再弹出」紧挨在它左边 */
+.announce__foot { align-items: center; justify-content: flex-end; gap: 14px; }
 .announce__snooze { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #9fb0aa; cursor: pointer; }
 .announce__snooze input { accent-color: #50e0b0; }
+/* 窄窗（<720px）：历史落到正文下方，一打开先看到公告内容 */
+@media (max-width: 720px) {
+  .announce__card { width: 96vw; height: min(600px, 88vh); }
+  .announce__grid { grid-template-columns: minmax(0, 1fr); }
+  .announce__hist { order: 2; border-right: 0; border-top: 1px solid #22302b; max-height: 32vh; }
+  .announce__main { order: 1; }
+}

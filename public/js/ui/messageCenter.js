@@ -37,7 +37,9 @@ export function installMessageCenter() {
   root.id = MARK;
   root.innerHTML = `
     <style>
-      #${MARK} { position: fixed; right: 14px; top: 46%; z-index: 60; font-family: inherit; }
+      /* 业主 2026-11-22：消息按钮挪到**右上角**（原来在右侧中部 top:46%）。
+         68px 是为了避开标题页右上角那排工具按钮与大厅顶栏；面板改成向下展开。 */
+      #${MARK} { position: fixed; right: 14px; top: 68px; z-index: 60; font-family: inherit; }
       #${MARK}[hidden] { display: none; }
       #${MARK} .mc-btn {
         position: relative; width: 44px; height: 44px; border-radius: 50%;
@@ -52,8 +54,10 @@ export function installMessageCenter() {
         border-radius: 9px; background: #e2534a; color: #fff; font-size: 11px; line-height: 18px;
         text-align: center; font-weight: 700;
       }
+      /* 面板从按钮下方展开（右对齐），不再往左弹 —— 挪到顶角后往左弹会顶出屏幕 */
       #${MARK} .mc-panel {
-        position: absolute; right: 56px; top: -8px; width: 330px; max-height: 60vh; overflow: auto;
+        position: absolute; right: 0; top: 52px; width: 330px; max-width: calc(100vw - 28px);
+        max-height: min(60vh, 520px); overflow: auto;
         background: #0f1715; border: 1px solid #2a3a34; box-shadow: 0 12px 40px rgba(0,0,0,.55);
         padding: 10px 12px;
       }
@@ -161,7 +165,29 @@ export function installMessageCenter() {
   timer = setInterval(updateVisible, 2000);
   updateVisible();
   void refresh();
-  const poll = setInterval(refresh, 20000);
 
-  return () => { clearInterval(timer); clearInterval(poll); try { unsub(); } catch { /* ignore */ } root.remove(); };
+  // 实时推送（业主 2026-11-22）：服务端 MessageStore 落盘即推 `account.msg`（main.js 转成 `sp:messages` 窗口事件）。
+  // 合并 150ms 内的多条 —— 一次操作可能同时产生好几条消息，没必要拉几次列表。
+  let pushTimer = 0;
+  const onPush = () => {
+    if (pushTimer) return;
+    pushTimer = setTimeout(() => { pushTimer = 0; void refresh(); }, 150);
+  };
+  window.addEventListener('sp:messages', onPush);
+  // 从后台切回来时补一次（推送可能在标签页休眠期间到了、或者根本没送到）
+  const onVisible = () => { if (!document.hidden) void refresh(); };
+  document.addEventListener('visibilitychange', onVisible);
+
+  // 兜底轮询：有推送之后它只负责「推送丢了」的情况，所以从 20 秒放宽到 60 秒（请求量降到 1/3）。
+  const poll = setInterval(refresh, 60000);
+
+  return () => {
+    clearInterval(timer);
+    clearInterval(poll);
+    if (pushTimer) clearTimeout(pushTimer);
+    window.removeEventListener('sp:messages', onPush);
+    document.removeEventListener('visibilitychange', onVisible);
+    try { unsub(); } catch { /* ignore */ }
+    root.remove();
+  };
 }

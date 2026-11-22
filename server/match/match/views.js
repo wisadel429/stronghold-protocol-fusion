@@ -174,6 +174,9 @@ export class MatchViews {
         ...(this.multiTeam ? { team: teamIndexOf(ps.seat), hp: hpDisplay(ps), hpMax: hpMaxDisplay(ps) } : {}),
         skins: ps.skins || {},
         bandId: ps.bandId,
+        // 业主 2026-11-22：管理员标记（对局内队友栏的 ★ + 金色昵称）；只在是管理员时出现，
+        // 其他玩家的 m.public 与以前逐字节一致。
+        ...(ps.admin === true ? { admin: true } : {}),
         // 账号头像（业主 2026-11-14「结算头像只有自己的」）：每个玩家**自己**的干员立绘（avatarId = charId，
         // avatarSkin = 立绘样式）。座位没设头像时这两个键都不出现，官方房间的 m.public 因此保持原样。
         ...(ps.avatarId ? { avatarId: ps.avatarId, avatarSkin: ps.avatarSkin || null } : {}),

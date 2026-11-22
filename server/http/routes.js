@@ -52,7 +52,7 @@ function contentSets(lobby) {
  *   and their match hosts (DESIGN §35.23)
  * @param {boolean} [withTraffic]
  */
-export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, trusted, versions = null, versionHosts = null, artKey = null }, withTraffic = false) {
+export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, trusted, versions = null, versionHosts = null, artKey = null, autostart = null }, withTraffic = false) {
   const report = {
     // 业主 2026-11-14「version 应该展示版本号」：`version` 改成真正的版本号（0.3.3-Yuan），
     // 协议版本单独放 `protocol`（服务器列表、启动器都按 `version` 显示版本，以前读到的是 1）。
@@ -60,6 +60,9 @@ export function healthReport({ startedAt, network, registry, lobby, content = nu
     // 美术资源密钥状态（业主 2026-11-15）：'ok' = 有；'missing' = 没领到，加密资源会破图，
     // 前端据此弹提示。null = 这台服务器没启用资源加密。可以是函数（每次求值，领到后立刻变 ok）。
     artKey: typeof artKey === 'function' ? artKey() : artKey,
+    // 开机自启（业主 2026-11-22，待办 T-06）：'ok' 任务已就位 / 'denied' 缺管理员权限 / 'error' 注册失败 /
+    // 'disabled' 配置关掉了 / 'unsupported' 非 Windows / 'unknown' 还没自检完。维护时一眼看出「重启后会 502 吗」。
+    ...(autostart ? { autostart: typeof autostart === 'function' ? autostart() : autostart } : {}),
     // the runtime the server is serving right now (public/js/ui/buildGuard.js): a page whose own build is
     // older than this reloads itself, so a deploy reaches clients that never reload
     build: buildTag(),

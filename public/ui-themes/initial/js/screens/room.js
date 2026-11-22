@@ -3,7 +3,7 @@ import {BossHpOption} from '/js/ui/bossHpOption-20261024.js';
 import {publicRoomCode} from '/shared/unifiedRegion-20261024.js';
 import { useRosterScroll } from '/js/ui/rosterScroll.js';
 import { reversePolicyLabel } from '/js/ui/roomPolicy.js';
-import { useAccount, useCurrentAccount, AccountTag, AccountName } from '/js/ui/accounts.js';
+import { useAccount, useCurrentAccount, AccountTag } from '/js/ui/accounts.js';
 import { TrophyBadge } from '/js/ui/trophies.js';
 import { isOwnerName, decorateOwnerName } from '/js/ui/ownerName.js';
 import { enabled as federationEnabled, regionMatching, currentNode } from '/js/federation.js';
@@ -321,7 +321,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, onAd
       ${isMe ? html`<span class="rseat__me" title=${t('你')}><${Icon} name="info" /></span>` : null}
       <${AvatarFrame} size="sm" name=${seat.name} src=${seatAvatar || undefined} seat=${index} bot=${seat.isBot} self=${isMe} />
       <span class="rseat__who">
-        <${TrophyBadge} count=${seatAccount?.trophies} class="tbadge--inline" /><${AccountName} profile=${seatAccount} name=${seat.name||t('博士')} className="rseat__name"/><${AccountTag} playerId=${seat.isBot ? null : seat.playerId} />
+        <${TrophyBadge} count=${seatAccount?.trophies} class="tbadge--inline" /><b class=${`rseat__name${seat.admin ? ' is-admin-name' : ''}`}>${seat.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}${seat.name || t('博士')}</b><${AccountTag} playerId=${seat.isBot ? null : seat.playerId} />
         
       </span>
       ${!isMe&&!seat.isBot?html`<${AddFriendButton} playerId=${seat.playerId} className="rseat__friend"/>`:null}

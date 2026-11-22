@@ -61,6 +61,16 @@ export const ADMIN_DEFAULTS = Object.freeze({
 
 /** Announcement text cap server-side (the adapter caps too; this one keeps a bad body out of the loop). */
 const NOTICE_MAX = 2000;
+/** 公告正文放宽到 4000 字后，请求体上限也得跟着放（4000 汉字约 12 KB，原来那 8 KB 会直接把连接掐掉）。 */
+const ANNOUNCEMENT_BODY_MAX = 96 << 10;
+
+/** 两个时间是否是**同一个本地自然日**（业主 2026-11-22：同一天的公告只维护一条）。 */
+function sameLocalDay(a, b) {
+  const d1 = new Date(a);
+  const d2 = new Date(b);
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return false;
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(HERE, 'admin.html');
@@ -164,6 +174,8 @@ const API_ROUTES = Object.freeze({
   '/api/state': 'GET',
   '/api/notice': 'POST',
   '/api/announcement': 'GET,POST',
+  // 历史公告（业主 2026-11-22）：GET 列表 / POST 删除一条（{id}）或清空（{all:true}）
+  '/api/announcement/history': 'GET,POST',
   '/api/kick': 'POST',
   '/api/close-room': 'POST',
   '/api/gate': 'POST',
@@ -222,13 +234,17 @@ function sendJson(res, status, obj) {
 function readJsonBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     let size = 0;
+    let tooBig = false;
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > maxBytes) { reject(new Error('body too large')); req.destroy(); return; }
+      // 超限时不再缓冲，但把流读完 —— 否则直接 destroy 会让客户端收到「空响应」，
+      // 调用方也就没法回一个明确的 413。
+      if (size > maxBytes) { tooBig = true; return; }
       chunks.push(c);
     });
     req.on('end', () => {
+      if (tooBig) { reject(Object.assign(new Error('body too large'), { code: 'ETOOLARGE' })); return; }
       const text = Buffer.concat(chunks).toString('utf8').trim();
       if (!text) { resolve({}); return; }
       try { resolve(JSON.parse(text)); } catch { reject(new Error('invalid json')); }
@@ -264,6 +280,7 @@ export function createAdminServer({
   startedAt = Date.now(), serverName = 'server1', build = null, options = {},
   mountPath = '/admin', publicPort = null, monitor = null, passwordFromEnv = false, accounts = null,
   root = DEFAULT_ROOT, onFilesUpdated = null, feedback = null, social = null, messages = null,
+  announcements = null,
 }) {
   if (!live) throw new TypeError('createAdminServer needs the live adapter (server/admin-live.js)');
   const opts = { ...ADMIN_DEFAULTS, ...options };
@@ -553,22 +570,51 @@ export function createAdminServer({
         return;
       }
       let raw = null;
-      try { raw = await readJsonBody(req, opts.bodyMaxBytes); } catch { raw = null; }
+      try { raw = await readJsonBody(req, ANNOUNCEMENT_BODY_MAX); } catch (e) {
+        if (e && e.code === 'ETOOLARGE') { sendJson(res, 413, { error: '公告太长：正文上限 4000 字' }); return; }
+        raw = null;
+      }
       if (!raw) { sendJson(res, 400, { error: '请求体不是合法 JSON' }); return; }
       // 空 text = 撤下公告
       const text = typeof raw.text === 'string' ? raw.text.trim() : '';
       const title = typeof raw.title === 'string' ? raw.title.trim() : '';
       const level = ['info', 'warning', 'urgent'].includes(raw.level) ? raw.level : 'info';
       const hours = Number.isFinite(Number(raw.hours)) ? Math.max(1, Math.min(720, Number(raw.hours))) : 720;
+      // 业主 2026-11-22：「更新公告不再是更一次发一条」——**同一天内的公告只维护一条**，
+      // 再发就是在这一条上**追加内容**（mode:'append'，默认），而不是另起一条。
+      // 需要整段替换（例如写错要重写）时传 mode:'replace'。
+      const mode = raw.mode === 'replace' ? 'replace' : 'append';
+      let prev = null;
+      try {
+        const cur = JSON.parse(await fsp.readFile(file, 'utf8'));
+        const row = cur && Array.isArray(cur.announcements) ? cur.announcements[0] : null;
+        if (row && typeof row.text === 'string' && row.text) prev = row;
+      } catch { /* 还没有旧公告 */ }
+      const sameDay = !!(prev && prev.startAt && sameLocalDay(prev.startAt, Date.now()));
+      let finalText = text;
+      let appended = false;
+      if (text && prev && sameDay && mode === 'append') {
+        if (prev.text.indexOf(text) >= 0) {
+          finalText = prev.text;               // 已经加过同样的内容：不重复追加
+        } else {
+          finalText = prev.text.replace(/[\s\u3000]+$/, '') + '\n' + text;
+          appended = true;
+        }
+      }
+      const finalTitle = text ? (title || (sameDay && prev && appended ? (prev.title || '') : '')) : '';
+      const finalLevel = text ? (raw.level ? level : (sameDay && prev && appended ? (prev.level || level) : level)) : level;
+      // 追加时保留当天的 startAt（同一天一条公告），只把截止时间顺延到「现在 + 时长」
+      const startAtMs = sameDay && prev && appended ? Date.parse(prev.startAt) : Date.now() - 60_000;
+      const durationSeconds = Math.max(60, Math.round((Date.now() + hours * 3600_000 - startAtMs) / 1000));
       const doc = text ? {
         announcements: [{
           id: 'admin',
-          ...(title ? { title } : {}),
-          text,
+          ...(finalTitle ? { title: finalTitle } : {}),
+          text: finalText,
           // 服务器时区 ISO（带 +08:00），与 parseAnnouncements 的校验一致
-          startAt: new Date(Date.now() - 60_000).toISOString().replace('Z', '+00:00'),
-          durationSeconds: Math.round(hours * 3600),
-          level,
+          startAt: new Date(startAtMs).toISOString().replace('Z', '+00:00'),
+          durationSeconds,
+          level: finalLevel,
           enabled: true,
         }],
       } : { announcements: [] };
@@ -588,7 +634,38 @@ export function createAdminServer({
         sendJson(res, 500, { error: '写入失败：' + (e && e.message || e) });
         return;
       }
-      sendJson(res, 200, { ok: true, doc, note: text ? '已保存，约 2 秒内对全服生效（客户端每次连接弹窗）' : '已撤下公告' });
+      const chars = [...finalText].length;
+      const note = !text ? '已撤下公告'
+        : appended ? `已追加到今天的公告（现在共 ${chars} 字，约 2 秒内对全服生效）`
+          : (sameDay && mode === 'replace' ? `已覆盖今天的公告（共 ${chars} 字，约 2 秒内生效）` : '已保存，约 2 秒内对全服生效（客户端每次连接弹窗）');
+      sendJson(res, 200, { ok: true, mode, appended, chars, doc, note });
+      return;
+    }
+    // 历史公告（业主 2026-11-22）：玩家在弹窗右侧能翻回旧公告，后台在这里看/删
+    if (route === '/api/announcement/history') {
+      const store = typeof announcements === 'function' ? announcements() : announcements;
+      if (!store || typeof store.historyList !== 'function') {
+        sendJson(res, 503, { error: '公告历史暂不可用（服务端未挂载）' });
+        return;
+      }
+      if (req.method === 'GET') {
+        sendJson(res, 200, { ok: true, history: store.historyList() });
+        return;
+      }
+      let raw = null;
+      try { raw = await readJsonBody(req, opts.bodyMaxBytes); } catch { raw = null; }
+      // 清空
+      if (raw && raw.all === true) {
+        const rows = store.historyList();
+        let n = 0;
+        for (const h of rows) { try { if (store.removeHistory(h.id)) n++; } catch { /* 单条失败不影响其余 */ } }
+        sendJson(res, 200, { ok: true, removed: n, note: `已清空 ${n} 条历史公告` });
+        return;
+      }
+      const id = raw && typeof raw.id === 'string' ? raw.id : '';
+      if (!id) { sendJson(res, 400, { error: '缺少公告 id' }); return; }
+      const removed = store.removeHistory(id);
+      sendJson(res, removed ? 200 : 404, removed ? { ok: true, id, note: '已删除' } : { error: '没有这条历史公告', id });
       return;
     }
     if (route === '/api/feedback/update') {

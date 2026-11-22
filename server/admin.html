@@ -308,7 +308,7 @@
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
         <h3 style="margin:0 0 6px;font-size:13px">弹窗公告 <span class="micro">POPUP · 玩家每次连接都会弹一次（主页/大厅），可写标题与正文</span></h3>
         <input id="ap-title" placeholder="标题（可空，最多 80 字）" maxlength="80" style="width:100%" />
-        <textarea id="ap-text" maxlength="500" placeholder="正文……（留空保存 = 撤下弹窗公告）" style="width:100%;min-height:72px;margin-top:6px"></textarea>
+        <textarea id="ap-text" maxlength="4000" placeholder="正文……（最多 4000 字；留空保存 = 撤下弹窗公告）。同一天再发会**追加到当天这条公告后面**，不会另起一条。" style="width:100%;min-height:72px;margin-top:6px"></textarea>
         <div class="row" style="margin-top:8px">
           <label class="t-lo">级别
             <select id="ap-level">
@@ -325,11 +325,23 @@
               <option value="6">6 小时</option>
             </select>
           </label>
+          <label class="t-lo" title="勾上：今天的公告只维护一条，新内容追加到它后面；不勾：整段覆盖今天的公告"><input type="checkbox" id="ap-append" checked /> 追加到当天这条</label>
           <button id="btn-ap">保存弹窗公告</button>
           <button class="ghost" id="btn-ap-clear">撤下</button>
           <span class="msg" id="ap-msg"></span>
         </div>
         <div class="t-dim" id="ap-now" style="font-size:11.5px;margin-top:6px"></div>
+
+        <!-- 历史公告（业主 2026-11-22）：玩家弹窗右侧能翻回去看，这里可以逐条删除/清空 -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">
+          <h3 style="margin:0 0 6px;font-size:13px">历史公告 <span class="micro">玩家弹窗右侧列表 · 新的在前 · 最多留 40 条</span></h3>
+          <div id="ap-hist"><div class="t-dim" style="font-size:11.5px">加载中…</div></div>
+          <div class="row" style="margin-top:8px">
+            <button class="ghost" id="btn-ap-hist-clear">清空历史</button>
+            <button class="ghost" id="btn-ap-hist">刷新</button>
+            <span class="msg" id="ap-hist-msg"></span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1074,9 +1086,12 @@ if ($('btn-ap')) $('btn-ap').onclick = async () => {
   const title = $('ap-title').value.trim();
   flash($('ap-msg'), '', '');
   try {
-    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours: Number($('ap-hours').value) || 720 });
+    // 业主 2026-11-22：默认「追加到当天这条」；取消勾选才是整段覆盖
+    const mode = ($('ap-append') && !$('ap-append').checked) ? 'replace' : 'append';
+    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours: Number($('ap-hours').value) || 720, mode });
     flash($('ap-msg'), (r && r.note) || '已保存', 'ok');
     loadPopupAnnouncement();
+    loadPopupHistory();
   } catch (e) { flash($('ap-msg'), '保存失败：' + e.message, 'err'); }
 };
 if ($('btn-ap-clear')) $('btn-ap-clear').onclick = async () => {
@@ -1086,9 +1101,81 @@ if ($('btn-ap-clear')) $('btn-ap-clear').onclick = async () => {
     if ($('ap-title')) $('ap-title').value = '';
     flash($('ap-msg'), '弹窗公告已撤下', 'ok');
     loadPopupAnnouncement();
+    loadPopupHistory();
   } catch (e) { flash($('ap-msg'), '撤下失败：' + e.message, 'err'); }
 };
 void loadPopupAnnouncement();
+
+// ---- 历史公告（业主 2026-11-22）：玩家弹窗右侧能翻回去看，后台在这里逐条删除/清空 ----
+const AP_LEVEL_LABEL = { info: '普通', warning: '警告', urgent: '紧急' };
+const AP_LEVEL_COLOR = { info: '#50e0b0', warning: '#ffc65c', urgent: '#e2534a' };
+function apTime(ms) {
+  const t = Number(ms) || 0;
+  if (!t) return '';
+  const d = new Date(t);
+  const p = (v) => String(v).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+async function loadPopupHistory() {
+  const box = $('ap-hist');
+  if (!box) return;
+  try {
+    const r = await api('/api/announcement/history');
+    const rows = (r && Array.isArray(r.history)) ? r.history : [];
+    box.innerHTML = '';
+    if (!rows.length) {
+      const d = document.createElement('div');
+      d.className = 't-dim'; d.style.fontSize = '11.5px';
+      d.textContent = '暂无历史公告（一条公告被新的替换、或被撤下之后才会进这里）';
+      box.appendChild(d);
+      return;
+    }
+    for (const h of rows) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)';
+      const dot = document.createElement('span');
+      dot.style.cssText = 'width:4px;height:20px;border-radius:2px;background:' + (AP_LEVEL_COLOR[h.level] || AP_LEVEL_COLOR.info);
+      const main = document.createElement('div');
+      main.style.cssText = 'min-width:0';
+      const t = document.createElement('div');
+      t.style.cssText = 'font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      t.textContent = h.title || h.text || '';
+      const m = document.createElement('div');
+      m.className = 't-dim'; m.style.fontSize = '11px';
+      m.textContent = (AP_LEVEL_LABEL[h.level] || '普通') + ' · ' + (apTime(h.startAt || h.at) || '时间未知');
+      main.appendChild(t); main.appendChild(m);
+      const del = document.createElement('button');
+      del.className = 'ghost'; del.textContent = '删除';
+      del.style.cssText = 'font-size:11px;padding:2px 8px';
+      del.onclick = async () => {
+        if (!confirm('删除这条历史公告？玩家弹窗右侧将不再显示它。')) return;
+        try {
+          await api('/api/announcement/history', { id: h.id });
+          flash($('ap-hist-msg'), '已删除', 'ok');
+          loadPopupHistory();
+        } catch (e) { flash($('ap-hist-msg'), '删除失败：' + e.message, 'err'); }
+      };
+      row.appendChild(dot); row.appendChild(main); row.appendChild(del);
+      box.appendChild(row);
+    }
+  } catch (e) {
+    box.innerHTML = '';
+    const d = document.createElement('div');
+    d.className = 't-dim'; d.style.fontSize = '11.5px';
+    d.textContent = '读取失败：' + e.message;
+    box.appendChild(d);
+  }
+}
+if ($('btn-ap-hist')) $('btn-ap-hist').onclick = () => void loadPopupHistory();
+if ($('btn-ap-hist-clear')) $('btn-ap-hist-clear').onclick = async () => {
+  if (!confirm('清空全部历史公告？玩家弹窗右侧列表会变空，此操作不可撤销。')) return;
+  try {
+    const r = await api('/api/announcement/history', { all: true });
+    flash($('ap-hist-msg'), (r && r.note) || '已清空', 'ok');
+    loadPopupHistory();
+  } catch (e) { flash($('ap-hist-msg'), '清空失败：' + e.message, 'err'); }
+};
+void loadPopupHistory();
 
 // ---- 开 / 关服务器 -----------------------------------------------------------------------------------
 $('btn-gate').onclick = async () => {

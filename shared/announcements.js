@@ -1,6 +1,6 @@
 // Temporary site notices use absolute server times, independent of rooms, rounds and client clocks.
 export const ANNOUNCEMENT_LEVELS = Object.freeze({ info: 0, warning: 1, urgent: 2 });
-export const ANNOUNCEMENT_MAX_TEXT = 500;
+export const ANNOUNCEMENT_MAX_TEXT = 4000;
 export const ANNOUNCEMENT_MAX_COUNT = 100;
 
 const own = (obj, key) => Object.hasOwn(obj, key);
@@ -27,7 +27,7 @@ export function parseAnnouncements(doc) {
     if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id) || ids.has(id)) throw new Error('announcement ids must be unique (1..64 letters, numbers, _ or -)');
     ids.add(id);
     if (typeof text !== 'string' || !text.trim() || [...text].length > ANNOUNCEMENT_MAX_TEXT
-        || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) throw new Error(`${id}: text must contain 1..500 printable characters`);
+        || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text)) throw new Error(`${id}: text must contain 1..${ANNOUNCEMENT_MAX_TEXT} printable characters`);
     if (!validTime(startAt)) throw new Error(`${id}: startAt requires a valid ISO date with an explicit timezone`);
     if (!Number.isInteger(durationSeconds) || durationSeconds < 1 || durationSeconds > 2592000) throw new Error(`${id}: durationSeconds must be 1..2592000 (up to 30 days)`);
     if (typeof level !== 'string' || !own(ANNOUNCEMENT_LEVELS, level) || typeof enabled !== 'boolean') throw new Error(`${id}: invalid level or enabled flag`);
@@ -37,7 +37,9 @@ export function parseAnnouncements(doc) {
     const targetUrl = typeof row.targetUrl === 'string' && row.targetUrl.trim() ? row.targetUrl.trim() : null;
     const action = typeof row.action === 'string' && row.action.trim() ? row.action.trim() : null;
     return { id, ...(own(row, 'title') ? { title: row.title.trim() } : {}),
-      text: text.trim().replace(/\s+/g, ' '), startAt: at, endAt: at + durationSeconds * 1000, level, enabled,
+      // 业主 2026-11-22：**保留换行**。原来 \s+ 把换行也压成空格，多行公告（更新说明的分条）会被拍平成一行；
+      // 客户端的 .ap-text 是 white-space: pre-wrap，本来就是为了显示多行准备的。空格/制表符仍然折叠成一个。
+      text: text.trim().replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' '), startAt: at, endAt: at + durationSeconds * 1000, level, enabled,
       platform, scene, targetUrl, action };
   });
 }

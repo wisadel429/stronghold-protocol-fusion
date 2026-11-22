@@ -7,7 +7,7 @@
 import { useState } from '../../vendor/hooks.module.js';
 import { html, Button, Modal, PingPill, DifficultyTag, Countdown, MicroLabel } from './components.js';
 import { actions } from './gameActions.js';
-import { toastError } from './toasts.js';
+import { toast, toastError } from './toasts.js';
 import { net } from '../net.js';
 import { store, useStore, shallowEqual, emptyMatch, createStore, isSpectating } from '../store.js';
 import { GIcon } from './gameComponents.js';
@@ -86,6 +86,15 @@ export async function parkSoloMatch() {
   // 只发 room.park：服务端把座位与对局挂起 24 小时，**连接不断**（业主 2026-11-14：
   // 之前这里用 net.close() 断开，大厅就显示「与服务器断联」）。
   try { await net.request('room.park', {}); } catch (err) {
+    // 业主 2026-11-22「未选择策略的对局不保存，退出后视为房间关闭」：
+    // 服务端拒绝暂离（WRONG_PHASE）就是这种情况 —— 这时不该把人留在对局里弹一句看不懂的通用错误，
+    // 而是**按放弃处理**：room.leave → 服务端最后一个人类离开 → 房间直接销毁（= 视为关闭）。
+    if (err?.code === 'WRONG_PHASE') {
+      try { await net.request('room.leave', {}); } catch { /* 房间可能已经被服务端关掉了 */ }
+      store.set({ room: null, match: emptyMatch() });
+      toast(t('本局还没选策略，不保留进度：房间已关闭'), 'warn', { ttl: 5000 });
+      return;
+    }
     // 老服务端没有这条消息：退回原来的放弃流程，至少不留半截状态
     if (err?.code !== 'BAD_MSG' && err?.code !== 'NOT_IN_ROOM') { toastError(err); return; }
     try { await net.request('room.leave', {}); } catch { /* ignore */ }

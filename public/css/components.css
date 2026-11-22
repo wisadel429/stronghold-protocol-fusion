@@ -920,6 +920,38 @@
 .field__input::placeholder { color: var(--text-dim); font-weight: 400; letter-spacing: .04em; }
 .field__icon { width: .22rem; height: .22rem; color: var(--text-dim); }
 .field__box:focus-within .field__icon { color: var(--mint-500); }
+/* 管理员：金色昵称 + ★ 标记（业主 2026-11-22，房间座位卡与对局内队友栏共用）
+   与 profile.css 的 .me-chip__name.is-admin / .lacct__name.is-admin 同一套颜色。 */
+.is-admin-name { color: #f2c94c; text-shadow: 0 0 10px rgba(242, 201, 76, .45); }
+.admin-star {
+  display: inline-block;
+  margin-right: .18em;
+  font-style: normal;
+  font-weight: 900;
+  color: #f2c94c;
+  text-shadow: 0 0 8px rgba(242, 201, 76, .55);
+}
+
+/* 密码框右侧的「显示/隐藏」按钮（业主 2026-11-22）：默认暗文，点一下明文 */
+.field__reveal {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: .34rem;
+  height: .34rem;
+  margin-right: -.06rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: .04rem;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.field__reveal:hover { color: var(--mint-400); background: rgba(80, 224, 176, .08); }
+.field__reveal:focus-visible { outline: 1px solid var(--mint-500); outline-offset: 1px; }
+.field__reveal svg { width: .2rem; height: .2rem; display: block; }
+.field__reveal[aria-pressed="true"] { color: var(--mint-400); }
 .field__hint { font-size: calc(.13 * var(--t)); color: var(--text-dim); }
 .field--lg .field__box { height: .68rem; }
 .field--lg .field__input { font-size: calc(.26 * var(--t)); font-weight: 700; }

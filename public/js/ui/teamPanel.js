@@ -180,7 +180,7 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
             : spMarks?.get(p.playerId) === 'turn' ? html`<span class="team__spmark is-turn" title=${t('正在决策…')}><i></i><i></i><i></i></span>` : null}
         </button>
         <div class="team__info">
-          <span class="team__name">${p.name || t('博士')}</span>
+          <span class=${`team__name${p.admin ? ' is-admin-name' : ''}`}>${p.admin ? html`<i class="admin-star" title=${t('管理员')} aria-hidden="true">★</i>` : null}${p.name || t('博士')}</span>
           <div class="team__line">
             <${LpTower} value=${lp.lp} size="sm" tone=${Number.isFinite(lp.lp) && lp.lp - lp.pending <= 5 ? 'danger' : null} pending=${lp.pending}
               tip=${rowLpTip(lp, cap)} />

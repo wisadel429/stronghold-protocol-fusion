@@ -1,37 +1,232 @@
-/* 闪断预警条（顶部常驻，纯 transform/opacity 动画，不触发布局） */
+/* 闪断预警（业主 2026-11-22：改成 ClassIsland 那种「强调提醒」的动画，颜色用红）
+ *
+ * 三块东西：
+ *   1) .flashwarn        顶部常驻的预警条（倒计时 + 警报图标 + 可滚动文字）
+ *   2) .flashwarn__ring  外框的「走马灯」：一道带渐散尾巴的光带绕框跑
+ *   3) .flashripple      强调特效：从预警条中心向外扩散的红色圆盘（参数照 ClassIsland 的 RippleEffect）
+ *
+ * 动画只用 transform / opacity / conic-gradient —— 不触发布局，对局中也敢开着。
+ * 顶部偏移由 notice.css 的 `.app-root.has-notice .flashwarn` 负责，这里不写 top 的具体值。
+ */
+
+/* ---- 1. 预警条 ---- */
 .flashwarn {
-  position: fixed; left: 0; right: 0; top: 0; z-index: 90;
-  display: flex; align-items: center; justify-content: center; gap: .1rem;
-  padding: .09rem .2rem;
-  background: linear-gradient(180deg, rgba(46, 22, 6, .96), rgba(28, 14, 4, .92));
-  border-bottom: 1px solid rgba(255, 178, 77, .65);
-  color: #ffe9c7; font-size: calc(.16 * var(--t, 16px)); letter-spacing: .04em;
-  transform: translateY(-100%); opacity: 0; pointer-events: none;
-  transition: transform .16s ease-in, opacity .16s ease-in;
-  overflow: hidden;
+  --fa-radius: 12px;
+  /* 业主 2026-11-22：不要吸顶，留出一点距离（有全服公告条时 notice.css 会把它再往下推）。
+     用 vh 让它在高屏上更松一点：847px 高的窗口约 25px。 */
+  position: fixed; left: 50%; top: clamp(14px, 3vh, 32px); z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+  /* 尺寸一律用 clamp(px 下限, 跟 --t 缩放, px 上限)：
+     --t 是按视口缩放的（1rem≈66px 时 --t=66px，小窗口约 40px），纯 calc 会在小窗口把字号压到 8px 甚至 3px，
+     看起来就是"没有文字"。给了 px 下限，再小的窗口也读得清。 */
+  gap: clamp(8px, calc(.17 * var(--t, 16px)), 20px);
+  padding: clamp(5px, calc(.09 * var(--t, 16px)), 11px) clamp(16px, calc(.34 * var(--t, 16px)), 34px);
+  /* 显式宽度，不再靠内容撑：内容撑出来的宽度会让中间那段可伸缩区域算出 0 宽，文字被裁没 */
+  width: min(92vw, 900px);
+  border-radius: var(--fa-radius);
+  background: linear-gradient(180deg, rgba(86, 19, 26, .97), rgba(52, 10, 15, .95));
+  border: 1px solid rgba(255, 90, 90, .45);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+  color: #ffecec; font-size: clamp(15px, calc(.28 * var(--t, 16px)), 26px); letter-spacing: .03em; line-height: 1.1;
+  /* 收起态：整张卡往上推出去，别留半条边在屏幕上 */
+  transform: translate(-50%, -160%) scale(.9); opacity: 0; pointer-events: none;
+  transition: transform .18s ease-in, opacity .18s ease-in;
+  /* 注意：这里**不能** overflow:hidden —— 向外发散的光晕要溢出到框外 */
 }
+
+/* 出现：回弹落下 + 之后常驻呼吸光 */
 .flashwarn.is-show {
-  transform: translateY(0); opacity: 1;
-  transition: transform .2s cubic-bezier(.22,.61,.36,1), opacity .2s cubic-bezier(.22,.61,.36,1);
+  transform: translate(-50%, 0) scale(1); opacity: 1;
+  animation:
+    flashwarn-in .42s cubic-bezier(.16, 1.3, .36, 1) both,
+    flashwarn-glow 2.2s ease-in-out .42s infinite;
 }
+
+/* ---- 2. 外框走马灯：一道纵向亮带**从左往右**滚动 ----
+ * 业主 2026-11-22 第五轮：方向定回从左往右（第四轮试过竖直，业主看过后要改回来）。
+ * 做法：一个 3 倍宽的竖带在框内从左往右平移，左右两端都是渐隐的 —— "渐散"是光带自身的形状
+ * 带来的，不是硬边矩形；再被 .flashwarn__ring 的 mask 裁成 2px 那一圈，看起来就是一道光
+ * 沿着外框横向跑过去。
+ * 只用 transform: translateX，不碰 layout，也不依赖 @property。 */
+.flashwarn__ring {
+  position: absolute; inset: 0; z-index: 0;
+  border-radius: var(--fa-radius);
+  clip-path: inset(0 round var(--fa-radius));
+  padding: 2px;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.flashwarn__ring::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 300%;
+  background: linear-gradient(90deg,
+    rgba(255, 90, 90, 0) 0%,
+    rgba(255, 120, 120, .16) 30%,
+    rgba(255, 200, 200, .62) 45%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 200, 200, .62) 55%,
+    rgba(255, 120, 120, .16) 70%,
+    rgba(255, 90, 90, 0) 100%);
+  transform: translateX(-100%);
+  animation: flashwarn-ring-h 4s linear infinite;
+}
+/* 带子从框左边外面开始（translateX(-100%)），到框右边外面结束（translateX(100%)），
+   中间正好扫过整个外框 —— 头尾各有一段在框外，所以不会出现"突然出现/消失"的硬切 */
+@keyframes flashwarn-ring-h {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* ---- 向外发散的光：跟光带同相位、同速度跑的一层模糊光晕 ----
+ * 业主 2026-11-22「向框外面也散发出一层淡淡的光晕，跟着光带走」：
+ * 外框那道 2px 的光只有"亮"，没有"溢出"。这里再叠一层同样动画的模糊亮带：
+ * 上下左右各溢出 20px、blur(14px)、screen 叠加 —— 光经过时框外会散开一圈淡淡的光，
+ * 而且它跟光带是同一个 keyframes + 同一时长，所以始终"跟着光走"（不会各走各的）。 */
 .flashwarn::after {
-  content: ''; position: absolute; inset: 0; background: #ff8a1e; opacity: 0; pointer-events: none;
+  content: ''; position: absolute;
+  top: -20px; bottom: -20px; left: -20px;
+  width: calc(300% + 40px);
+  background: linear-gradient(90deg,
+    rgba(255, 90, 90, 0) 0%,
+    rgba(255, 90, 90, .12) 28%,
+    rgba(255, 180, 180, .50) 45%,
+    rgba(255, 255, 255, .85) 50%,
+    rgba(255, 180, 180, .50) 55%,
+    rgba(255, 90, 90, .12) 72%,
+    rgba(255, 90, 90, 0) 100%);
+  filter: blur(14px) saturate(1.15);
+  opacity: .9;
+  mix-blend-mode: screen;
+  pointer-events: none; z-index: 0;
+  transform: translateX(-100%);
+  animation: flashwarn-ring-h 4s linear infinite;
 }
-.flashwarn.is-soon::after { animation: flashwarn-breathe 1.6s ease-in-out infinite; }
-.flashwarn.is-urgent { color: #ffd2d2; border-bottom-color: rgba(255, 90, 90, .8); }
-.flashwarn.is-urgent::after { background: #ff2e2e; animation-duration: 1s; }
-.flashwarn__dot {
-  width: .08rem; height: .08rem; border-radius: 50%; background: #ffb24d; flex: 0 0 auto;
+
+/* ---- 警报图标：三角形 + 感叹号，辉光闪动放慢到 2.6 秒一轮 ---- */
+.flashwarn__ico {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  display: grid; place-items: center; color: #ffd7d7;
+}
+.flashwarn__ico svg {
+  display: block;
+  width: clamp(22px, calc(.45 * var(--t, 16px)), 40px);
+  height: clamp(22px, calc(.45 * var(--t, 16px)), 40px);
+  animation: flashwarn-ico 2.6s ease-in-out infinite;
+}
+@keyframes flashwarn-ico {
+  0%, 100% { opacity: .72; filter: drop-shadow(0 0 1px rgba(255, 70, 70, .5)); }
+  45% { opacity: 1; filter: drop-shadow(0 0 9px rgba(255, 96, 96, 1)) brightness(1.4); }
+  62% { opacity: .95; filter: drop-shadow(0 0 4px rgba(255, 70, 70, .8)) brightness(1.15); }
+}
+
+/* ---- 文字：过长才滚动（.is-scroll 由 main.js 量出溢出后加上） ----
+ * 这里**不再用 mask-image** 做两端渐隐：一旦容器宽度被算成 0 或极窄，
+ * 遮罩会把整段文字变成全透明（"看得见条、看不见字"，业主 2026-11-22 遇到的就是这个症状）。
+ * 现在只靠 overflow:hidden + 内距，任何情况下文字至少是可见的。 */
+.flashwarn__scroll {
   position: relative; z-index: 1;
+  min-width: 0; flex: 0 1 auto; overflow: hidden;
+  padding: 0 clamp(4px, calc(.08 * var(--t, 16px)), 10px);
 }
-.flashwarn.is-urgent .flashwarn__dot { background: #ff5a5a; }
-.flashwarn__text, .flashwarn__time { position: relative; z-index: 1; }
-.flashwarn__time { font-variant-numeric: tabular-nums; font-weight: 800; color: #ffd08a; }
+.flashwarn__track {
+  display: inline-block; white-space: nowrap;
+  font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+}
+.flashwarn__track.is-scroll { animation: flashwarn-marquee var(--marquee-dur, 8s) linear infinite; }
+@keyframes flashwarn-marquee {
+  0%, 10% { transform: translateX(0); }
+  45%, 55% { transform: translateX(var(--marquee-shift, 0px)); }
+  90%, 100% { transform: translateX(0); }
+}
+
+.flashwarn__time {
+  position: relative; z-index: 1; flex: 0 0 auto;
+  font-size: clamp(18px, calc(.34 * var(--t, 16px)), 32px);
+  font-variant-numeric: tabular-nums; font-weight: 800; line-height: 1;
+  color: #ffb3b3; padding-left: clamp(10px, calc(.22 * var(--t, 16px)), 22px);
+  border-left: 1px solid rgba(255, 120, 120, .35);
+}
+
+/* 最后 60 秒：呼吸收紧一档，数字更亮
+   注意：这条 animation 必须同时要求 .is-show —— 否则预警结束时（sec 归零但 is-show 已撤）
+   `both` 会把 flashwarn-in 的末帧钉住，顶上留一条空的残留条（业主 2026-11-22 报的 bug）。 */
+.flashwarn.is-soon .flashwarn__time { color: #ffd0d0; }
+.flashwarn.is-show.is-soon { animation: flashwarn-in .42s cubic-bezier(.16, 1.3, .36, 1) both, flashwarn-glow 1.6s ease-in-out .42s infinite; }
+
+/* 最后 10 秒：抖动 + 高亮，压过一切背景音 */
+.flashwarn.is-urgent {
+  color: #fff; border-color: rgba(255, 60, 60, .8);
+  background: linear-gradient(180deg, rgba(122, 16, 22, .98), rgba(70, 8, 12, .96));
+}
+.flashwarn.is-urgent.is-show {
+  animation:
+    flashwarn-in .42s cubic-bezier(.16, 1.3, .36, 1) both,
+    flashwarn-glow .9s ease-in-out .42s infinite,
+    flashwarn-shake .62s ease-in-out .42s infinite;
+}
+.flashwarn.is-urgent .flashwarn__ico { color: #fff; }
+.flashwarn.is-urgent .flashwarn__ico svg { animation-duration: 1.5s; }
+.flashwarn.is-urgent .flashwarn__ring::before { animation-duration: 3.2s; }
 .flashwarn.is-urgent .flashwarn__time { color: #ff9a9a; }
-@keyframes flashwarn-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
-@media (max-width: 767px) {
-  .flashwarn.is-soon::after, .flashwarn.is-urgent::after { animation: none; }
+
+@keyframes flashwarn-in {
+  from { transform: translate(-50%, -160%) scale(.88); opacity: 0; }
+  to { transform: translate(-50%, 0) scale(1); opacity: 1; }
 }
+@keyframes flashwarn-glow {
+  0%, 100% { box-shadow: 0 12px 32px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 0 0 rgba(255, 50, 50, 0); }
+  50% { box-shadow: 0 12px 32px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 26px 3px rgba(255, 50, 50, .55); }
+}
+@keyframes flashwarn-shake {
+  0%, 100% { transform: translate(-50%, 0) rotate(0deg); }
+  12% { transform: translate(calc(-50% - 4px), 0) rotate(-.4deg); }
+  28% { transform: translate(calc(-50% + 4px), 0) rotate(.4deg); }
+  44% { transform: translate(calc(-50% - 3px), 0) rotate(-.3deg); }
+  62% { transform: translate(calc(-50% + 2px), 0) rotate(.2deg); }
+  80% { transform: translate(-50%, 0) rotate(0deg); }
+}
+
+/* 手机：不抖动（整屏都在晃很难受），改成只呼吸 + 变色 */
+@media (max-width: 767px) {
+  .flashwarn.is-urgent.is-show {
+    animation: flashwarn-in .42s cubic-bezier(.16, 1.3, .36, 1) both, flashwarn-glow .9s ease-in-out .42s infinite;
+  }
+  .flashwarn { max-width: 97vw; min-width: 0; }
+}
+
+/* ---- 3. 强调特效：从预警条中心向外扩散的红色圆盘 ----
+ * 圆心与直径由 main.js 按实测位置算出来写进行内样式（left/top/width/height/负 margin），
+ * 因为圆心在**预警条中心**、条的位置随屏幕宽高变化；写死 vmax 在竖屏下会露角。
+ * 这里只负责外观与两段动画，与 ClassIsland 的 RippleEffect 一致：
+ *   Scale 0 → 1  QuadraticEaseIn  600ms
+ *   Opacity 1 → 0（开头保持全不透明一小段才淡出，业主「不透明度高一点」）
+ * 定位不用 transform，位移全交给 left/top + 负 margin —— 动画里就只有 scale，缓动曲线不被平移污染。 */
+.flashripple { position: fixed; inset: 0; z-index: 85; pointer-events: none; overflow: hidden; }
+.flashripple__disc {
+  position: absolute;
+  border-radius: 50%;
+  /* 纯色红（不带 alpha）：业主「不透明度高一点」——旧版用半透明渐变，扩散到一半就发灰 */
+  background: radial-gradient(circle at center, #ff6161 0%, #ff2b31 52%, #d01018 100%);
+  transform: scale(0); opacity: 1;
+  animation:
+    flashripple-scale 600ms cubic-bezier(.55, .085, .68, .53) both,
+    flashripple-fade 600ms linear both;
+  will-change: transform, opacity;
+}
+@keyframes flashripple-scale { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes flashripple-fade {
+  0% { opacity: 1; animation-timing-function: linear; }
+  15% { opacity: 1; animation-timing-function: cubic-bezier(.47, 0, .745, .715); }
+  100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .flashwarn, .flashwarn::after { animation: none !important; transition-duration: 1ms !important; }
+  .flashwarn, .flashwarn.is-show, .flashwarn.is-soon, .flashwarn.is-urgent.is-show,
+  .flashwarn__ring::before, .flashwarn__ico svg, .flashwarn__track.is-scroll,
+  .flashripple, .flashripple__disc {
+    animation: none !important; transition-duration: 1ms !important;
+  }
+  .flashripple { display: none; }
 }

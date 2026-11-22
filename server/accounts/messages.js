@@ -21,12 +21,17 @@ const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim()
 
 export class MessageStore {
   /**
-   * @param {{ dir: string, log?: any, now?: () => number }} o
+   * @param {{ dir: string, log?: any, now?: () => number,
+   *           notify?: (accountId: string, row: any, unread: number) => void }} o
+   *   notify: 新消息落盘后立刻调用（业主 2026-11-22「消息中心改实时推送」）。在这里而不是在各业务调用点挂钩，
+   *   是因为好友请求 / 同盟邀请 / 后台回复反馈全都经由 add() —— 一处覆盖所有消息源，以后新增来源也不用再改。
+   *   回调抛错不影响消息本身（已经写盘了）。
    */
-  constructor({ dir, log = console, now = Date.now }) {
+  constructor({ dir, log = console, now = Date.now, notify = null }) {
     this.dir = dir;
     this.log = log;
     this.now = now;
+    this.notify = typeof notify === 'function' ? notify : null;
     this.file = path.join(dir, 'messages.json');
     /** @type {Record<string, any[]>} */
     this.items = {};
@@ -73,6 +78,11 @@ export class MessageStore {
     list.unshift(row);
     this.items[id] = list.slice(0, MAX_PER_ACCOUNT);
     this.save();
+    // 实时推送（业主 2026-11-22）：已经有连接在线上就直接把这条推过去，客户端立刻刷新，不用等下一轮轮询。
+    // 推送失败绝不能影响消息本身 —— 它对玩家已经「存在」了（/api/messages 随时能取回）。
+    if (this.notify) {
+      try { this.notify(id, row, this.unread(id)); } catch (e) { this.log?.warn?.('[messages] 推送失败', e); }
+    }
     return row;
   }
 

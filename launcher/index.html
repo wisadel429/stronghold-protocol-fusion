@@ -18,7 +18,10 @@
       <div class="hero__mark"><img src="logo.jpg" alt="卫戍协议：盟约" /></div>
       <div>
         <h1>卫戍协议：盟约</h1>
-        <div class="hero__sub">STRONGHOLD PROTOCOL · ALLIANCE <span class="dot"></span> 电脑版 <span class="dot"></span> v0.3.3</div>
+        <div class="hero__sub">STRONGHOLD PROTOCOL · ALLIANCE <span class="dot"></span> 电脑版 <span class="dot"></span> v0.3.3 <span class="dot"></span>
+          <!-- 业主 2026-11-22：启动器有**自己的**版本号（读 launcher/version.json），与热更包版本分开 -->
+          <span id="launcherVer" title="启动器版本（与游戏热更包版本无关）">启动器 v—</span>
+        </div>
       </div>
     </div>
     <div class="hero__right">
@@ -38,6 +41,23 @@
     源码：Stronghold-Protocol（社区版）· 本启动器只负责启动，不修改游戏内容
   </div>
 
+  <!-- 游戏版本（业主 2026-11-22）：启动器独立于游戏版本，每个版本独立目录/端口/存档，可同时运行。
+       版式参考 UI 编辑器的选择页：暗底 + 荧光绿细线 + 等宽小标签 + 描边卡片。 -->
+  <section class="panel vpanel" id="versionsPanel">
+    <div class="panel__head">
+      <span class="label">游戏版本 <em>GAME VERSIONS · 本地</em></span>
+      <span class="hint">每个版本一个目录、一个端口、一份存档；可以同时开两个版本</span>
+    </div>
+    <div class="vlist" id="versionList">
+      <div class="vempty">正在读取版本…</div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="versionImport">导入游戏目录…</button>
+      <button class="btn btn--ghost" id="versionRefresh">刷新</button>
+      <span class="muted" id="versionMsg"></span>
+    </div>
+  </section>
+
   <section class="cards">
     <button class="card" id="localCard">
       <div class="card__eyebrow">LOCAL</div>
@@ -48,6 +68,7 @@
         <li>服务器随此窗口启动 / 退出</li>
         <li id="localState">状态：未启动</li>
       </ul>
+      <div class="card__ver" data-verpick="local">版本：<b id="localVerName">—</b> · 切换 ▾</div>
       <div class="card__go" id="localGo">启动本地服务器 →</div>
     </button>
 
@@ -60,6 +81,7 @@
         <li>就绪后进入 /admin 后台</li>
         <li id="publicState">状态：未部署</li>
       </ul>
+      <div class="card__ver" data-verpick="public">版本：<b id="publicVerName">—</b> · 切换 ▾</div>
       <div class="card__go" id="publicGo">部署并打开后台 →</div>
     </button>
 
@@ -160,25 +182,78 @@
   <button class="btn btn--ghost loading__back" id="loadingBack" hidden>返回启动页</button>
 </div>
 
-<script src="app.js?v=20261121e"></script>
+<script src="app.js?v=20261122h"></script>
 <button id="exportLog" style="position:fixed;left:12px;bottom:12px;z-index:99;padding:6px 12px;border-radius:6px;border:1px solid rgba(53,208,127,.5);background:rgba(8,16,12,.86);color:#7bf0b0;font:13px Microsoft YaHei,sans-serif;cursor:pointer;">导出日志</button>
 <script>
 document.getElementById('exportLog').onclick = function () {
   try { chrome.webview.postMessage({ t: 'exportlog' }); } catch (e) {}
 };
 </script>
+<div class="pk" id="pk" hidden>
+  <div class="pk__card" role="dialog" aria-modal="true" aria-label="选择">
+    <header class="pk__head">
+      <div>
+        <div class="pk__eyebrow" id="pkEyebrow">GAME VERSION · 选择版本</div>
+        <h2 class="pk__title" id="pkTitle">选择游戏版本</h2>
+      </div>
+      <div class="pk__nav">
+        <button type="button" class="pk__icon" id="pkUp" title="上一级">↑</button>
+        <button type="button" class="pk__icon" id="pkClose" title="关闭">✕</button>
+      </div>
+    </header>
+    <div class="pk__pathbar" id="pkPathbar" hidden>
+      <span class="pk__prompt">PATH</span>
+      <input class="pk__input" id="pkPath" spellcheck="false" autocomplete="off" />
+    </div>
+    <div class="pk__drives" id="pkDrives"></div>
+    <div class="pk__crumbs" id="pkCrumbs"></div>
+    <div class="pk__listwrap">
+      <div class="pk__list" id="pkList" role="listbox" tabindex="0"></div>
+      <div class="pk__state" id="pkState">正在读取…</div>
+    </div>
+    <div class="pk__detail">
+      <div class="pk__dtop">
+        <div class="pk__dname" id="pkDName">未选择</div>
+        <span class="pk__badge" id="pkBadge" hidden>游戏目录</span>
+      </div>
+      <div class="pk__dpath" id="pkDPath">在上面的列表里选一项</div>
+      <div class="pk__checks" id="pkChecks"></div>
+    </div>
+    <footer class="pk__foot">
+      <div class="pk__hint" id="pkHint">双击进入文件夹</div>
+      <div class="pk__acts">
+        <button type="button" class="pk__ghost" id="pkCancel">取消</button>
+        <button type="button" class="pk__primary" id="pkOk" disabled>确认 <span>→</span></button>
+      </div>
+    </footer>
+  </div>
+</div>
+
 <div class="announce" id="announceModal" hidden>
     <div class="announce__card" role="dialog" aria-modal="true" aria-label="公告">
       <div class="announce__bar" id="announceBar"></div>
-      <div class="announce__body">
-        <div class="announce__kicker" id="announceKicker">公告 · ANNOUNCEMENT</div>
-        <h2 class="announce__title" id="announceTitle" hidden></h2>
-        <div class="announce__text" id="announceText"></div>
-        <div class="announce__meta" id="announceMeta"></div>
-      </div>
-      <div class="announce__foot">
-        <label class="announce__snooze"><input type="checkbox" id="announceSnooze" /> 今天不再弹出</label>
-        <button type="button" class="btn" id="announceOk">知道了</button>
+      <div class="announce__grid">
+        <!-- 业主 2026-11-22：启动器也要有历史公告，位置与游戏内弹窗一致 —— 在**左侧** -->
+        <aside class="announce__hist">
+          <div class="announce__hist-h">历史公告</div>
+          <div class="announce__hist-list" id="announceHistory"></div>
+        </aside>
+        <div class="announce__main">
+          <div class="announce__body">
+            <div class="announce__head">
+              <span class="announce__pips" id="announcePips" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div class="announce__kicker" id="announceKicker">公告 · ANNOUNCEMENT</div>
+              <span class="announce__sev" id="announceSev">紧急程度 低</span>
+            </div>
+            <h2 class="announce__title" id="announceTitle" hidden></h2>
+            <div class="announce__text" id="announceText"></div>
+            <div class="announce__meta" id="announceMeta"></div>
+          </div>
+          <div class="announce__foot">
+            <label class="announce__snooze"><input type="checkbox" id="announceSnooze" /> 下次更新前不再弹出</label>
+            <button type="button" class="btn" id="announceOk">知道了</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
