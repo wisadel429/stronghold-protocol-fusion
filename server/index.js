@@ -527,6 +527,8 @@ if (isProcessEntry(import.meta.url)) {
   // 只有 data/list-agent.json 存在时才会启动；模块内部把所有异常都吞掉了，不影响游戏本体。
   // 用 .then/.catch 而不是 top-level await —— 别让这个可选功能改变模块的加载时机。
   import('./listReporter.mjs')
-    .then((m) => m.startListReporter?.({ dataDir: 'data', log: console }))
+    // 2026-11-22 17:1x：dataDir 必须用绝对路径。计划任务（开机自启）的 cwd 是 C:\Windows\System32，
+    // 传相对 'data' 会让上报器找不到 data/list-agent.json 而静默关闭 —— 且异常被吞，日志里看不出来。
+    .then((m) => m.startListReporter?.({ dataDir: path.join(ROOT, 'data'), log: console }))
     .catch(() => { /* 可选功能：加载失败就当没有 */ });
 }
