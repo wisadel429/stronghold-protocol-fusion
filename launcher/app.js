@@ -535,7 +535,7 @@
   // 所以优先让**宿主代为请求**（{t:'fetch'} → {t:'fetch-ok'}）；宿主不支持时退回直接 fetch。
   const NOTICE_SOURCES = [
     'http://8.134.50.56:3000/api/announcement',
-    'https://mon3tr.fun/api/announcement',
+    // mon3tr.fun 已停用（业主 2026-11-22，域名另作他用）→ 不再作为公告来源
   ];
   // history：服务端 /api/announcement 给的**历史公告**（新的在前）
   // shown  ：当前正文正在显示的那一条（可能是历史里的旧公告，也可能是最新那条）

@@ -1,14 +1,15 @@
-// public/js/ui/shareLink.js — 房间/邀请链接的公共链接头（业主 2026-11-21）
+// public/js/ui/shareLink.js — 房间/邀请链接的公共链接头（业主 2026-11-21，2026-11-22 改口径）
 //
-// 业主口径：「游戏里复制房间链接的主链接头改为 mon3tr.fun」。
-//   · 从公网入口（源站 IP 或域名）打开时，复制的房间链接统一用 https://mon3tr.fun/?room=CODE，
-//     分享出去是 HTTPS 主域名，不再带 IP:端口；
+// 业主口径变更（2026-11-22 13:15）：「mon3tr.fun 暂停转接，域名另有他用」——
+//   复制的房间链接**不再用域名**，改成直连 `http://8.134.50.56:3000/?room=CODE`；
 //   · 本机 / 局域网调试时仍用当前地址 —— 否则邀请链接会指向公网服务器上并不存在的那个房间。
 //
 // 纯函数（可单测）：不读 DOM，location 可注入。
 
-/** 公网主域名。 */
-export const PUBLIC_HOST = 'mon3tr.fun';
+/** 公网主入口（直连；域名 mon3tr.fun 已停用）。 */
+export const PUBLIC_ORIGIN = 'http://8.134.50.56:3000';
+/** 兼容旧引用：只保留主机部分。 */
+export const PUBLIC_HOST = '8.134.50.56:3000';
 
 const LOCAL_HOST_RE = /^(localhost|127(\.\d{1,3}){3}|\[::1\]|::1|0\.0\.0\.0)$/i;
 const LAN_RE = /^(10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2})$/;
@@ -30,10 +31,10 @@ export function isLocalHost(host) {
  */
 export function shareBase(loc = globalThis.location, { keepPath = false } = {}) {
   if (!loc || !loc.hostname || isLocalHost(loc.hostname)) {
-    if (!loc || !loc.origin) return `https://${PUBLIC_HOST}/`;
+    if (!loc || !loc.origin) return `${PUBLIC_ORIGIN}/`;
     return `${loc.origin}${loc.pathname || '/'}`;
   }
-  return `https://${PUBLIC_HOST}${keepPath ? (loc.pathname || '/') : '/'}`;
+  return `${PUBLIC_ORIGIN}${keepPath ? (loc.pathname || '/') : '/'}`;
 }
 
 /**

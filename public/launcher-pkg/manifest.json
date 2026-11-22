@@ -1,11 +1,11 @@
 {
-    "version":  "20261123-06",
-    "at":  "2026-11-22T12:57:58",
+    "version":  "20261123-07",
+    "at":  "2026-11-22T13:05:11",
     "zip":  "/launcher-pkg/launcher-pkg.zip",
-    "sha256":  "1915744bf07a8094a4f3629e72f5b51c38db89770a45719e6d3f85c8e8056af4",
-    "bytes":  7336528,
+    "sha256":  "ad033ff9e87e3fa6568ff5c776017b023481acac4766b20ad51a9475ff17c516",
+    "bytes":  7336612,
     "files":  1174,
-    "notes":  "公告持续时长新增「永久」；公告弹窗显示永久；启动器独立版本号与多版本（沿用）",
+    "notes":  "停用 mon3tr.fun：启动器更新源与公告源不再引用该域名（安全）；房间邀请链接改直连 IP",
     "policy":  "code-only; no art assets",
     "launcherVersion":  "1.0.0",
     "zipFallback":  "https://github.com/wisadel429/stronghold-protocol-fusion/releases/latest/download/launcher-pkg.zip"

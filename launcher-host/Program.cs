@@ -1,4 +1,4 @@
-﻿// Program.cs — 启动器宿主（重建版 v2，2026-11-21）
+// Program.cs — 启动器宿主（重建版 v2，2026-11-21）
 //
 // 背景：原 Program.cs 随 E:\stronghold\_merge-work 被删除且无备份。本文件是**重写**的宿主，
 // 目标：尽量还原原版的能力（按 launcher.log 里留下的行为线索逐项对齐）。
@@ -1204,7 +1204,8 @@ namespace StrongholdLauncher
                 var sources = new[]
                 {
                     "http://8.134.50.56:3000/launcher-pkg/manifest.json",
-                    "https://mon3tr.fun/launcher-pkg/manifest.json",
+                    // 业主 2026-11-22：mon3tr.fun 停用（域名另作他用）→ 不再作为更新源。
+                    // 安全理由：manifest 与 zip 的 sha 都由来源方提供，域名换手后等于把"可执行代码的供源"交出去。
                     GitHubPkgBase + "/launcher-pkg-manifest.json",
                 };
                 for (int i = 0; i < sources.Length; i++)
@@ -1366,7 +1367,7 @@ namespace StrongholdLauncher
                 var urls = new[]
                 {
                     "http://8.134.50.56:3000/api/announcement",
-                    "https://mon3tr.fun/api/announcement",
+                    // mon3tr.fun 已停用（业主 2026-11-22），不再从该域名取公告
                 };
                 foreach (var url in urls)
                 {
