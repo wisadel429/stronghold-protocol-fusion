@@ -3,7 +3,7 @@
 // 约定（业主 2026-11-14 定的口径）：
 //   · 用户名 + 密码，开放注册；用户名不区分大小写、全服唯一；**昵称不唯一**，靠四位 `#tag` 区分；
 //   · 登录多设备并存（业主 2026-11-21 改口径；在此之前是单设备、新登录顶掉旧 token）：
-//     同一账号最多 MAX_SESSIONS_PER_ACCOUNT 条会话并存，换设备不会把另一台踢下线；
+//     同一账号最多 8 条会话并存（`SP_SESSION_MAX` 可调，1..64），换设备不会把另一台踢下线；
 //   · 昵称/头像/头像框/名片可改；昵称改名 7 天冷却；
 //   · 云存档只做「白名单字段 + 体积上限」的透传与合并，字段语义由客户端（ui/cloudSave.js）定义。
 import { randomBytes, createHash } from 'node:crypto';
@@ -15,7 +15,16 @@ const SESSION_TTL_MS = 30 * 24 * 3600 * 1000;       // 30 天不活跃过期
 const RENAME_COOLDOWN_MS = 7 * 24 * 3600 * 1000;    // 改名冷却
 // 业主 2026-11-21「账号在其他设备登录时不清空登录状态」：同一账号允许多台设备同时在线，
 // 最多保留这么多条会话；超出时淘汰最久没活跃的那条（防止反复登录把会话表撑爆）。
-const MAX_SESSIONS_PER_ACCOUNT = 8;
+//
+// 业主 2026-11-22（T-02「会话上限 8 条是否合适」）：口径**维持 8 条**（正常玩家 1–2 台设备，
+// 8 条足以覆盖手机+电脑+多浏览器的组合，也能容忍换设备后忘了退出）。
+// 但不再写死：`SP_SESSION_MAX` 可调（1..64），非法值忽略并回落 8 —— 避免误写成 0 把所有人锁在门外。
+// 需要「单设备」旧行为时另用 `SP_SINGLE_DEVICE=1`（见 accounts/http.js）。
+const DEFAULT_MAX_SESSIONS_PER_ACCOUNT = 8;
+export function maxSessionsPerAccount() {
+  const n = Number.parseInt(process.env.SP_SESSION_MAX, 10);
+  return Number.isInteger(n) && n >= 1 && n <= 64 ? n : DEFAULT_MAX_SESSIONS_PER_ACCOUNT;
+}
 const SAVE_MAX_BYTES = 512 * 1024;
 export const SAVE_FIELDS = Object.freeze(['stats', 'loadout', 'skins', 'namecards', 'achievements', 'settings']);
 
@@ -155,8 +164,8 @@ export class AccountService {
   /**
    * 建会话。业主 2026-11-21「账号在其他设备登录时不清空登录状态」：**多设备并存** ——
    * 新登录不再作废旧 token，换手机/换浏览器另一台不会被踢下线。
-   * 同一账号最多保留 MAX_SESSIONS_PER_ACCOUNT 条，超出时淘汰最久没活跃的那条
-   * （单机反复登录 / 多标签页不会无限增长）。
+   * 同一账号最多保留 maxSessionsPerAccount() 条（默认 8，`SP_SESSION_MAX` 可调），
+   * 超出时淘汰最久没活跃的那条（单机反复登录 / 多标签页不会无限增长）。
    * @returns {{ token: string, replaced: boolean }} replaced = 之前是否已有其它会话（仅作提示，不再踢人）
    */
   createSession(accountId) {
@@ -164,7 +173,7 @@ export class AccountService {
     if (!protectedAllowsLogin()) assertMutable(this.store.get(accountId), '登录');
     const hashes = this.store.sessionsOf(accountId);
     const replaced = hashes.length > 0;
-    const over = hashes.length - MAX_SESSIONS_PER_ACCOUNT + 1;
+    const over = hashes.length - maxSessionsPerAccount() + 1;
     if (over > 0) {
       const byAge = hashes
         .map((h) => [h, this.store.sessions.get(h) || {}])
