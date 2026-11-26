@@ -64,13 +64,8 @@ const NOTICE_MAX = 2000;
 /** 公告正文放宽到 4000 字后，请求体上限也得跟着放（4000 汉字约 12 KB，原来那 8 KB 会直接把连接掐掉）。 */
 const ANNOUNCEMENT_BODY_MAX = 96 << 10;
 
-/** 两个时间是否是**同一个本地自然日**（业主 2026-11-22：同一天的公告只维护一条）。 */
-function sameLocalDay(a, b) {
-  const d1 = new Date(a);
-  const d2 = new Date(b);
-  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return false;
-  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-}
+/** 两个时间是否是**同一个本地自然日**（业主 2026-11-22：同一天的公告只维护一条）。
+ *  2026-11-26 起这段判断搬进了 `server/announcementPlan.js`（纯函数、可单测），这里只留注释指路。 */
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(HERE, 'admin.html');
@@ -683,39 +678,14 @@ export function createAdminServer({
         return;
       }
 
-      // ---- 原有语义：追加 / 覆盖「第一条」公告（其余条目原样保留） ------------------------
-      const prev = rows[0] && rows[0].text ? rows[0] : null;
-      const sameDay = !!(prev && prev.startAt && sameLocalDay(prev.startAt, Date.now()));
-      let finalText = text;
-      let appended = false;
-      if (text && prev && sameDay && mode === 'append') {
-        if (prev.text.indexOf(text) >= 0) {
-          finalText = prev.text;               // 已经加过同样的内容：不重复追加
-        } else {
-          finalText = prev.text.replace(/[\s\u3000]+$/, '') + '\n' + text;
-          appended = true;
-        }
-      }
-      const finalTitle = text ? (title || (sameDay && prev && appended ? (prev.title || '') : '')) : '';
-      const finalLevel = text ? (raw.level ? level : (sameDay && prev && appended ? (prev.level || level) : level)) : level;
-      // 追加时保留当天的 startAt（同一天一条公告），只把截止时间顺延到「现在 + 时长」
-      const startAtMs = sameDay && prev && appended ? Date.parse(prev.startAt) : nowMs - 60_000;
-      // 追加时会保留当天的 startAt，再顺延 720 小时就可能超过 30 天上限 → 截到 2592000 秒（parseAnnouncements 的上限）
-      // 永久（durationSeconds=0）不走这条计算：endAt 为 null，永不过期
-      const durationSeconds = permanent ? 0
-        : Math.min(2592000, Math.max(60, Math.round((nowMs + hours * 3600_000 - startAtMs) / 1000)));
-      const doc = text ? {
-        announcements: [{
-          id: prev && prev.id ? prev.id : 'admin',
-          ...(finalTitle ? { title: finalTitle } : {}),
-          text: finalText,
-          // 服务器时区 ISO（带 +08:00），与 parseAnnouncements 的校验一致
-          startAt: startIso(startAtMs),
-          durationSeconds,
-          level: finalLevel,
-          enabled: true,
-        }, ...rows.slice(1)],
-      } : { announcements: [] };
+      // ---- 追加 / 覆盖「今天那条」公告（其余条目原样保留） --------------------------------
+      // 业主 2026-11-26 复盘：这里原来固定拿 `rows[0]`，于是**跨天**时会把上一条整条换掉 ——
+      // 11-26 那次 `-Notes` 就把 11-22 那条 927 字的更新说明替换成了 51 字（只是历史里还留着一份）。
+      // 口径是「每天一条」：同一天 → 在当天那条上追加 / 覆盖；换天了 → 当天新起一条，上一条只停用、不删除。
+      // 全部判断都在 announcementPlan.js（纯函数、不碰文件、有单测），这里只负责读写与校验。
+      const { planAnnouncementWrite } = await import('./announcementPlan.js');
+      const plan = planAnnouncementWrite({ rows, text, title, level, hours, permanent, mode, nowMs });
+      const doc = plan.doc;
       try {
         const { parseAnnouncements } = await import('../shared/announcements.js');
         parseAnnouncements(doc);            // 先校验，坏内容绝不写盘
@@ -732,11 +702,10 @@ export function createAdminServer({
         sendJson(res, 500, { error: '写入失败：' + (e && e.message || e) });
         return;
       }
-      const chars = [...finalText].length;
-      const note = !text ? '已撤下公告'
-        : appended ? `已追加到今天的公告（现在共 ${chars} 字${permanent ? '，永久有效' : ''}，约 2 秒内对全服生效）`
-          : (sameDay && mode === 'replace' ? `已覆盖今天的公告（共 ${chars} 字${permanent ? '，永久有效' : ''}，约 2 秒内生效）` : `已保存${permanent ? '（永久有效）' : ''}，约 2 秒内对全服生效（客户端每次连接弹窗）`);
-      sendJson(res, 200, { ok: true, mode, appended, permanent, chars, doc, note });
+      sendJson(res, 200, {
+        ok: true, mode, appended: plan.appended, sameDay: plan.sameDay, permanent,
+        chars: plan.chars, doc, note: plan.note,
+      });
       return;
     }
     // 历史公告（业主 2026-11-22）：玩家在弹窗右侧能翻回旧公告，后台在这里看/删
