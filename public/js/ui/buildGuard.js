@@ -22,11 +22,11 @@
 // Kept dependency-free and injectable (fetch / reload / inMatch / timers) so test/ui/buildGuard.test.js can drive it.
 
 /** How often a page re-asks the server for its build tag. */
-export const BUILD_CHECK_MS = 60_000;
+export const BUILD_CHECK_MS = 10_000;   // 2026-11-26 业主：热更要尽快传到所有人（10 秒一查）
 /** Give up on a `/healthz` that does not answer: a request left hanging must not stop the guard from ever checking again. */
 export const BUILD_FETCH_TIMEOUT_MS = 5_000;
 /** How many checks in a row must report the same NEW build before the page acts on it. */
-export const BUILD_CONFIRMATIONS = 2;
+export const BUILD_CONFIRMATIONS = 1;    // 2026-11-26 业主：见到新 build 立刻刷新（不再等第二次确认）
 
 /**
  * Fetch `/healthz` and return its `build` tag (null when unavailable, not reported, or too slow). Never throws.
@@ -86,6 +86,7 @@ export function startBuildGuard(o = {}) {
   // 业主 2026-10-21：等「整局彻底走完」再刷新 —— 结算页也算对局的一部分。
   // 以前只看 inMatch()（是不是 game 路由），玩家打完一局看到结算页会突然被刷掉。
   const settled = typeof o.settled === 'function' ? o.settled : () => true;
+  // 2026-11-26 业主：每次热更强制让所有玩家刷新 —— 即使正在对局也不等
   const setIv = o.setInterval || ((fn, ms) => globalThis.setInterval(fn, ms));
   const clearIv = o.clearInterval || ((h) => globalThis.clearInterval(h));
   const intervalMs = Number.isFinite(o.intervalMs) && o.intervalMs > 0 ? o.intervalMs : BUILD_CHECK_MS;
@@ -118,7 +119,7 @@ export function startBuildGuard(o = {}) {
     const first = !stale;
     stale = true;
     // 「还要等」= 还在对局里，或对局刚结束但结算页还没走完
-    const waiting = inMatch() || !settled();
+    const waiting = o.forceReload === true ? false : (inMatch() || !settled());
     if (first) { try { o.onStale?.({ build: r.build, known, waiting }); } catch { /* ignore */ } }
     if (!waiting) reloadNow();
     return { status: 'stale', build: r.build, known };

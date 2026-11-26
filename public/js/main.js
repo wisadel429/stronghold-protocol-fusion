@@ -1,4 +1,4 @@
-﻿// Client entry: boot (fonts, identity, socket), net → store wiring, router, global overlays.
+// Client entry: boot (fonts, identity, socket), net → store wiring, router, global overlays.
 //
 // Router (derived from the store, no URL routes):
 //   not entered            → Title
@@ -414,6 +414,8 @@ function wireNet() {
     if (!msg || msg.status !== 'searching') {
       store.set({ matchmake: null, matchmaking: { ...(store.get().matchmaking || {}), status: 'idle' } });
       if (msg && msg.reason === 'timeout') toast(t('匹配超时，已取消；可以再试或先创建同盟'), 'warn', { ttl: 6000 });
+      // 2026-11-26：准备超时 —— 未准备的人被请出房间，已准备的人留在房里继续匹配
+      if (msg && msg.reason === 'prep-timeout') toast(t('准备超时：未准备的博士已退出，房间继续匹配'), 'warn', { ttl: 6000 });
       return;
     }
     const progress = {
@@ -443,6 +445,9 @@ function wireNet() {
     if (selectRoute(s) === 'game' && msg.playerId === s.me?.playerId) audio.layerGain(msg.bondId, msg.add);
   });
   net.on('m.field', (msg) => store.patch('match', { field: payload(msg) }));
+  // 调试钩子（2026-11-26，「观战修整期看不到干员」排查用）：只读地把 store 暴露到 window，
+  // 方便在观战页控制台看 __spStore.get().match.field 里到底有没有 units。无副作用，可随时删。
+  if (typeof window !== 'undefined') window.__spStore = store;
   net.on('m.result', (msg) => {
     const res = payload(msg);
     store.patch('match', { result: res });
@@ -906,6 +911,7 @@ async function boot() {
   // so a running game is never thrown away.
   try {
     startBuildGuard({
+  forceReload: true,   // 2026-11-26 业主：每次热更强制所有人刷新（对局中也刷）
       inMatch: () => selectRoute(store.get()) === 'game',
       onStale: ({ waiting }) => { if (waiting) store.patch('ui', { buildStale: true }); },
       // the same /healthz names how many plugins the server has: the title screen shows it before any hello
