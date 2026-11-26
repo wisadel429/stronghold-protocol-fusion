@@ -16,7 +16,7 @@ import { sendSession } from './net.js';
 
 const MATCHMAKING_DEFAULTS = Object.freeze({
   tickIntervalMs: 1000,
-  timeoutMs: 10_000, // 10 秒超时自动补 AI 或发车
+  timeoutMs: 30_000, // 业主 2026-11-26：确认入场倒计时 30 秒（超时踢掉未准备的、保留已准备的继续匹配）
   targetPlayers: MAX_SEATS, // 4 人同盟
 });
 
@@ -276,7 +276,9 @@ export class Matchmaker {
         if (room.freeSeat() < 0) break;
       if (entry.mode === targetMode && entry.difficulty === targetDiff) {
           this.queue.delete(pid);
-          // 加入房间
+          // 加入房间（2026-11-26：这是匹配撮合进来的房间，打上持久标记，客户端据此显示「匹配完成」页）
+          room.matchmade = true;
+          for (const s of room.seats) if (s && !s.isBot) s.ready = false;   // 2026-11-26：进匹配页时全部重置为未准备
           this.lobby.join(entry.session, { code: room.code });
           sendSession(entry.session, {
             t: 'match.found',
@@ -306,12 +308,45 @@ export class Matchmaker {
         continue;
       }
 
-      // 超时：有人加入才开；没人加入就取消匹配并通知房主「补齐失败」
+      // 超时（业主 2026-11-26 改口径）：**没准备完全时保留已准备的人、踢掉未准备的，房间继续排队补位**。
+      // 以前是「有人加入就开，否则取消匹配并提示补齐失败」——现在只有「全体未准备」才走原来的失败分支。
       if (now >= rEntry.deadlineAt) {
         const joined = humansNow > before;
+        if (joined && hostSession) {
+          this.cancelRoomQueue(room);
+          this.tryStartRoom(room, hostSession);
+          continue;
+        }
+        const humans = typeof room.activeHumans === 'function' ? room.activeHumans() : [];
+        const readySeats = humans.filter((s) => s && s.ready);
+        const unreadySeats = humans.filter((s) => s && !s.ready);
+        if (readySeats.length > 0 && unreadySeats.length > 0) {
+          // 未准备的回大厅（附一句原因），已准备的留在房间里继续等补位
+          for (const seat of unreadySeats) {
+            const sess = this.lobby.registry.byId(seat.playerId);
+            if (!sess) continue;
+            sendSession(sess, {
+              t: 'match.status', status: 'idle', reason: 'prep-timeout',
+              filled: readySeats.length, needed: humans.length, at: this.lobby.now(),
+            });
+            this.lobby.leave(sess);
+          }
+          const now2 = this.lobby.now();
+          rEntry.deadlineAt = now2 + this.waitFor(0);
+          rEntry.humansAtStart = room.activeHumans().length;
+          if (room.matching) {
+            room.matching = {
+              ...room.matching,
+              startedAt: now2,
+              deadlineAt: rEntry.deadlineAt,
+              humansAtStart: rEntry.humansAtStart,
+            };
+          }
+          this.lobby.broadcastState(room);
+          continue;
+        }
         this.cancelRoomQueue(room);
-        if (joined && hostSession) this.tryStartRoom(room, hostSession);
-        else this.notifyFillFailed(room, before);
+        this.notifyFillFailed(room, before);
       }
     }
 
@@ -399,6 +434,9 @@ export class Matchmaker {
 
     const room = this.lobby.roomOf(hostSession);
     if (!room) return;
+    // 2026-11-26：散人撮合建出来的房，打上持久标记（客户端据此显示「匹配完成」页）
+    room.matchmade = true;
+    for (const s of room.seats) if (s && !s.isBot) s.ready = false;   // 2026-11-26：匹配成立 → 全部未准备
 
     for (let i = 1; i < matched.length; i++) {
       const guestSession = matched[i].session;

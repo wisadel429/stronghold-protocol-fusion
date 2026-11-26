@@ -615,6 +615,9 @@ export class Room {
       ...(this.matching
         ? { matching: { startedAt: this.matching.startedAt, deadlineAt: this.matching.deadlineAt, humansAtStart: this.matching.humansAtStart ?? null } }
         : {}),
+      // 2026-11-26：这个房间是由「搜寻队友」撮合出来的（持久标记）。客户端据此显示「匹配完成」页；
+      // 普通房间没有这个键，room.state 与以前逐字节一致。
+      ...(this.matchmade ? { matchmade: true } : {}),
       // 房间人数 (room.setSeats): the room's capacity, published only when it is above the default — a default room's
       // room.state keeps exactly the keys it had, and the client reads an absent key as MAX_SEATS.
       ...(this.maxSeats > MAX_SEATS ? { maxSeats: this.maxSeats } : {}),
