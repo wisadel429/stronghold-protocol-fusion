@@ -1230,17 +1230,14 @@ namespace StrongholdLauncher
             });
         }
 
-        /// <summary>自有服务器（IP，不用域名 —— 域名换手等于把代码供源交出去）。</summary>
-        private const string ServerOrigin = "http://8.134.50.56:3000";
-
         /// <summary>
-        /// 查「启动器页面」通道：自有服务器优先（国内实测 9 MB/s），连不上/下载失败才落到 GitHub Release
-        /// （实测 63 KB/s，但服务器挂了也能更）。**游戏代码通道已关闭，这里不再有第二条。**
+        /// 查「启动器页面」通道。业主 2026-11-22 最终口径：**全部走 GitHub Release**（自有服务器不再参与更新）。
+        /// 好处：更新与游戏服务器彻底解耦，服务器挂了/换机都不影响；代价是国内拉取慢（实测 63 KB/s，
+        /// 30 KB 的页面包几秒内下完，可以接受）。manifest 用 Release 里的绝对地址版。
         /// </summary>
         private void CheckLauncherChannel()
         {
-            var ghManifest = GitHubPkgBase + "/launcher-pkg-manifest.json";
-            var sources = new[] { ServerOrigin + "/launcher-pkg/manifest.json", ghManifest };
+            var sources = new[] { GitHubPkgBase + "/launcher-pkg-manifest.json" };
             for (int i = 0; i < sources.Length; i++)
             {
                 var src = sources[i];

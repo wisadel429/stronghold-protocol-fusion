@@ -1,12 +1,13 @@
 {
     "version":  "20261123-08",
     "kind":  "launcher",
-    "at":  "2026-11-22T18:14:41",
+    "at":  "2026-11-22T18:25:11",
     "zip":  "/launcher-pkg/launcher-pkg.zip",
     "sha256":  "d79f2919cbeef30b560deae90275c275517f77705ebd32202daf3f615eea2754",
     "bytes":  31385,
     "files":  4,
-    "notes":  "关闭游戏热更通道；热更只更新启动器页面（仅自家服务器）",
+    "notes":  "启动器更新全部走 GitHub；只更新启动页（launcher/）",
     "policy":  "code-only; launcher page only",
-    "launcherVersion":  "1.1.0"
+    "launcherVersion":  "1.1.0",
+    "zipFallback":  "https://github.com/wisadel429/stronghold-protocol-fusion/releases/latest/download/launcher-pkg.zip"
 }
