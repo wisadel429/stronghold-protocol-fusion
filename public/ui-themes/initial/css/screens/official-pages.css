@@ -1,4 +1,4 @@
-﻿/* ==========================================================================================
+/* ==========================================================================================
    official-pages.css — 2026-10-27 round 6: eight pages dressed in the Arkdays pack's own sprites (img/official/hub/ac/,
    copied byte for byte by work/video-replica-20261027/scripts/build-r6-art.py; outer = [uc]autochessouter,
    outer/shop = its auto_chess_shop_atlas, battle = [uc]autochessbattle, icons = ui/icons). Pixels are the recording's
@@ -2559,3 +2559,67 @@
   .brief.brief--split .brief__enemy-column { padding: 0; overflow: visible; max-width: 75%; justify-self: center; }
 }
 
+/* ---- 2026-11-26 匹配完成改版（业主）：套用房间名片，只留「名片 + 下方信息行 + 右下角准备键」 ----
+ * 名片直接复用 .rseat（房间同款，准备动画走房间那套 is-ready / is-flash），
+ * 信息行放在原来难度/版本标签的位置（名片正下方），准备键固定在右下角。 */
+.mfo--room .mfo__inner { position: relative; width: min(1180px, 94vw); padding: calc(var(--p) * 18) 0; }
+.mfo--room .mfo__grid { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: calc(14 * var(--p)); }
+.mfo__meta { display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: calc(14 * var(--p)) calc(18 * var(--p)); margin-top: calc(16 * var(--p)); }
+.mfo__stat { display: inline-flex; align-items: baseline; gap: .3em; }
+.mfo__stat b { font: 900 calc(20 * var(--p))/1 var(--code, monospace); color: #6bf7cd; }
+.mfo__stat em { font-style: normal; font-size: calc(13 * var(--p)); letter-spacing: .08em; color: #9fc4b9; }
+.mfo__tag { padding: calc(3 * var(--p)) calc(12 * var(--p)); border: 1px solid rgba(107, 247, 205, .38);
+  border-radius: 999px; font-size: calc(13 * var(--p)); letter-spacing: .04em; color: #cfe7de; }
+.mfo__ready { position: fixed; right: calc(30 * var(--p)); bottom: calc(30 * var(--p)); z-index: 2;
+  min-width: calc(180 * var(--p)); padding: calc(12 * var(--p)) calc(28 * var(--p));
+  font-size: calc(16 * var(--p)); font-weight: 800; letter-spacing: .1em; color: #06231a;
+  background: linear-gradient(180deg, #7bf7cf, #35d07f); border: 0; border-radius: 2px; cursor: pointer;
+  box-shadow: 0 0 calc(24 * var(--p)) rgba(53, 208, 127, .35); }
+.mfo__ready:disabled { opacity: .55; cursor: default; }
+.mfo__ready:not(:disabled):hover { filter: brightness(1.06); }
+
+/* 2026-11-26：匹配完成页的倒计时（大字，标在名片上方；读服务端 deadlineAt，30 秒） */
+.mfo__countdown { display: flex; align-items: baseline; justify-content: center; gap: calc(8 * var(--p));
+  margin-bottom: calc(16 * var(--p)); }
+.mfo__countdown b { font: 900 calc(64 * var(--p))/1 var(--code, monospace); color: #8df5c6;
+  text-shadow: 0 0 calc(24 * var(--p)) rgba(53, 208, 127, .45); }
+.mfo__countdown span { font-size: calc(15 * var(--p)); letter-spacing: .12em; color: #9fc4b9; }
+
+/* 2026-11-26 二次调整（业主）：背景改用房间页背景（.rs__bg），座位改用房间的 .rs-seats，卡片不再被压缩 */
+.mfo--room { background: #0a0b0b; }
+.mfo--room .rs__bg { z-index: 0; }
+.mfo--room .mfo__inner { position: relative; z-index: 1; width: auto; max-width: 96vw; }
+.mfo--room .mfo__seats { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center;
+  gap: calc(22 * var(--p)); padding: 0; }
+.mfo--room .mfo__seats .rseat { flex: 0 0 auto; }
+.mfo--room .mfo__seats:has(.rseat:nth-child(5)) { max-width: min(1400px, 96vw); }
+
+/* 2026-11-26 三调：名片宽度显式钉死为房间设计值（避免被其它 --w 规则覆盖后压窄） */
+.mfo--room .mfo__inner { width: fit-content; max-width: 96vw; margin: 0 auto; }
+.mfo--room .mfo__seats .rseat { --w: min(calc(var(--p, 1) * 252), calc((100vw - 160px) / var(--n, 4))) !important; }
+
+/* 2026-11-26 四调：卡片高度塌陷 —— 显式给回房间卡片的画框高度，并让立绘铺满 */
+.mfo--room .mfo__seats .rseat { min-height: calc(var(--p, 1) * 500); }
+.mfo--room .mfo__seats .rseat__art { height: calc(var(--p, 1) * 380) !important; }
+.mfo--room .mfo__seats .rseat__art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mfo--room .mfo__seats .rseat__plate { min-height: calc(var(--p, 1) * 72); }
+
+/* 2026-11-26：匹配完成页的难度/版本沿用房间的 `.rs-pill` 胶囊样式 */
+.mfo__meta .mfo__pill { display: inline-flex; align-items: center; gap: calc(6 * var(--p)); }
+.mfo__meta .mfo__pill .rs-pill__diff { cursor: default; }
+
+/* 2026-11-26 五调：匹配页不滚动（整页适配视口），名片画框按视口高度收缩 */
+.mfo--room { overflow: hidden; }
+.mfo--room .mfo__inner { display: flex; flex-direction: column; justify-content: center; max-height: 100vh; padding: calc(var(--p) * 10) 0; }
+.mfo--room .mfo__seats .rseat__art { height: min(calc(var(--p) * 380), 44vh) !important; }
+.mfo--room .mfo__seats .rseat { min-height: 0; }
+
+/* 2026-11-26 六调：房间名片的底部名牌会溢出卡片盒（房间页里是叠在底栏上的），
+   匹配页要把信息行让到它下面，否则「人数/准备/难度/版本」会被名牌压住 */
+.mfo--room .mfo__seats { margin-bottom: calc(var(--p) * 96); }
+.mfo--room .mfo__meta { position: relative; z-index: 2; margin-top: 0; }
+
+/* 2026-11-26 七调：立绘下沿太高 —— 画框原来被 44vh 截短（房间设计值是 380×p），抬到 56vh，图按上沿对齐裁切 */
+.mfo--room .mfo__seats .rseat__art { height: min(calc(var(--p) * 380), 56vh) !important; }
+.mfo--room .mfo__seats .rseat__art img { object-position: 50% 6%; }

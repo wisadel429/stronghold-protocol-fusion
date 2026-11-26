@@ -228,7 +228,7 @@ function CardPicker({ current, list, m, onPick, onClose }) {
       <button type="button" class=${`cardpick__op cardpick__op--auto${!current ? ' is-on' : ''}`} onClick=${() => onPick('')} title=${t('按博士编号自动分配')}>
         <span class="cardpick__img"><${Icon} name="refresh" /></span><span class="cardpick__name">${t('默认')}</span></button>
       ${shown.map((c) => html`<button key=${c.charId} type="button" class=${`cardpick__op${current === c.charId ? ' is-on' : ''}`} onClick=${() => onPick(c.charId)} title=${c.name}>
-        <span class="cardpick__img"><img src=${chessAvatarUrl(m, c)} alt="" loading="lazy" draggable=${false} /></span>
+        <span class="cardpick__img"><img src=${chessPortraitUrl(m, c) || chessAvatarUrl(m, c)} alt="" loading="lazy" draggable=${false} /></span>
         <span class="cardpick__name">${c.name}</span>${c.rarity ? html`<span class=${`cardpick__star r${c.rarity}`}>${c.rarity}★</span>` : null}</button>`)}
     </div>
     <p class="cardpick__note"><${Icon} name="info" />${CARD_SYNC ? t('选择后，同盟里的博士都会看到这张立绘') : t('目前只有你自己看得到；服务器下次更新后，同盟里的其他博士也能看到你的选择')}</p>
@@ -444,52 +444,54 @@ function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onMa
   </div>`;
 }
 
-/** 匹配成功 / 确认入场（业主 2026-11-15）：仿官方「PUBLIC MATCHMAKING」。
- *  每个真人点「确认入场」；确认过的座位卡**边框变绿**。全员确认后房主自动开局。 */
-function MatchFoundOverlay({ room, facts, me, portraits, left, busy, online, myReady, onConfirm, onExit, versionText }) {
+/** 匹配完成（业主 2026-11-26 改版）：**套用房间的名片**，只留三样东西——
+ *  ① 中间的座位名片（房间同款，准备动画也是房间那套 `is-ready` / `is-flash`）；
+ *  ② 名片下面的信息行：人数 / 准备人数 / 难度 / 版本；
+ *  ③ 右下角一个「准备」键。
+ *  其余（PUBLIC MATCHMAKING 标题、倒计时、退出匹配、底部标签行）全部去掉。 */
+function MatchFoundOverlay({ room, facts, me, portraits, busy, online, myReady, onConfirm, versionText, cardList = [], m = null, myCard = "", onPickCard = null }) {
+  const [picking, setPicking] = useState(false);
   const total = facts.seats.length;
-  const confirmed = facts.humans.filter((s) => s.ready).length;
-  // 人数适配（业主 2026-11-15）：最多 4 列，8 / 12 人自动换行
+  const humans = facts.humans.length;
+  const readyCount = facts.humans.filter((s) => s.ready).length;
   const cols = Math.min(total, 4);
-  return html`<div class="mfo" role="dialog" aria-label=${t('匹配成功')}>
+  // 只读视图：名片原样复用，但隐藏房主操作（移人 / 加机器人）
+  const view = { ...facts, isHost: false, spectating: false, emptySeats: 0 };
+  const noop = () => {};
+  // 倒计时（业主 2026-11-26）：大字标在名片上方，读服务端的 matching.deadlineAt，每秒重画
+  const [, tick] = useState(0);
+  useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, []);
+  const deadline = room?.matching?.deadlineAt || 0;
+  const openedAt = useRef(Date.now());
+  // 有服务端截止时间就按它算；散人撮合出来的房间没有 deadline，就从打开这一页起本地数 30 秒
+  const left = deadline
+    ? Math.max(0, Math.ceil((deadline - serverNow()) / 1000))
+    : Math.max(0, 30 - Math.floor((Date.now() - openedAt.current) / 1000));  return html`<div class="mfo mfo--room rs" role="dialog" aria-label=${t('匹配完成')} style=${`--n:${cols}`}>
+    <div class="rs__bg" aria-hidden="true"></div>
     <div class="mfo__inner">
-      <div class="mfo__eyebrow"><i></i>PUBLIC MATCHMAKING<span>${t('队友已集结')}</span></div>
-      <h2 class="mfo__title">${t('匹配成功')}</h2>
-      <div class="mfo__cards" data-many=${total > 4 ? '1' : undefined} style=${`--cols:${cols}`}>
-        ${facts.seats.map((seat, i) => {
-          const mine = !!seat && seat.playerId === me.playerId;
-          const ready = !!seat && seat.ready;
-          const src = seat ? seatPortrait(seat, portraits) : null;
-          return html`<article key=${i} class=${`mfo__slot${seat ? '' : ' is-empty'}${ready ? ' is-ready' : ''}${mine ? ' is-me' : ''}`}>
-            ${mine ? html`<span class="mfo__you">${t('你')}</span>` : null}
-            <div class="mfo__art">
-              ${seat
-                ? (src ? html`<img src=${src} alt="" draggable=${false} />` : html`<span class="mfo__glyph">${[...(seat.name || '?')][0]}</span>`)
-                : html`<span class="mfo__ghost" aria-hidden="true"><i></i></span>`}
-            </div>
-            <div class="mfo__who">${seat ? (seat.name || t('博士')) : t('等待博士')}</div>
-            ${ready ? html`<span class="mfo__ok">${t('已确认')}</span>` : null}
-          </article>`;
-        })}
+      <div class="mfo__countdown" aria-live="polite"><b class="num">${left}</b><span>${t('秒后开始')}</span></div>
+      <div class="rs-seats mfo__seats" style=${`--n:${cols}`}>
+        ${facts.seats.map((seat, i) => html`<${SeatCard} key=${i} seat=${seat} index=${i} room=${room} facts=${view}
+          myId=${me.playerId} busy=${null} onKick=${noop} onInvite=${noop} onAddBot=${noop} onRemoveBot=${noop}
+          onPickCard=${cardList.length && onPickCard ? () => setPicking(true) : null}
+          searching=${!seat} portraits=${portraits} />`)}
       </div>
-      <div class="mfo__count"><b class="num">${confirmed}</b> / ${total} ${t('已确认')}</div>
-      <div class="mfo__timer"><b class="num">${left}</b></div>
-      <div class="mfo__acts">
-        <button type="button" class="mfo__confirm" disabled=${myReady || !online || busy === 'ready'} onClick=${onConfirm}>
-          ${busy === 'ready' ? html`<${Spinner} size="sm" />` : null}${myReady ? t('已确认，等待队友') : t('确认入场')}
-        </button>
-        <button type="button" class="mfo__exit" onClick=${onExit}>${t('退出本次匹配')}</button>
+      <div class="mfo__meta">
+        <span class="mfo__stat"><b class="num">${humans}</b><em>${t('人数')}</em></span>
+        <span class="mfo__stat"><b class="num">${readyCount}</b><em>${t('准备')}</em></span>
+        <div class="rs-pill mfo__pill">
+          <span class="rs-pill__diff" title=${t('难度')}><${DifficultyIcon} difficulty=${room.difficulty} />${difficultyName(room.difficulty)}</span>
+          ${versionText ? html`<i class="rs-pill__sep"></i><span class="rs-pill__diff" title=${t('游戏版本')}><${Icon} name="book" />${versionText}</span>` : null}
+        </div>
       </div>
-      <p class="mfo__hint">${t('请在 {n} 秒内确认入场', { n: left })}</p>
-      <div class="mfo__tags">
-        <span class="mfo__tag is-hot">${difficultyName(room.difficulty)}</span>
-        <span class="mfo__tag">${t('{n} 名真人 · 不自动补 AI', { n: facts.humans.length })}</span>
-        ${versionText ? html`<span class="mfo__tag">${versionText}</span>` : null}
-      </div>
+      ${picking ? html`<${CardPicker} current=${myCard} list=${cardList} m=${m}
+        onPick=${(id) => { onPickCard?.(id); setPicking(false); }} onClose=${() => setPicking(false)} />` : null}
+      <button type="button" class="mfo__ready" disabled=${!online || busy === 'ready'} onClick=${onConfirm}>
+        ${busy === 'ready' ? html`<${Spinner} size="sm" />` : null}${myReady ? t('已准备，等待队友') : t('准备')}
+      </button>
     </div>
   </div>`;
 }
-
 /** Room screen component. */
 export function RoomScreen() {
   const room = useStore((s) => s.room);
@@ -598,7 +600,8 @@ export function RoomScreen() {
   const [exiting, setExiting] = useState(false);
 
   // ---- 匹配成功 / 确认入场（业主 2026-11-15，仿官方「PUBLIC MATCHMAKING」）----
-  // 触发：房间里有 2 名以上真人且还没开局（不要求「刚刚人数变多」，否则刷新/直进房间不弹）
+  // 触发（2026-11-26 修）：只有「搜寻队友」排队中的房间（room.matching）且已有 ≥2 名真人才弹。
+  // 以前只判断「≥2 名真人」，用房间码加入一个已坐两人的普通房间时会误弹「匹配成功」。
   const [mfOpen, setMfOpen] = useState(false);
   const [mfLeft, setMfLeft] = useState(29);
   const mfRoomRef = useRef(null);
@@ -606,11 +609,11 @@ export function RoomScreen() {
   useEffect(() => {
     if (!room || !facts) return;
     if (mfRoomRef.current !== room.code) { mfRoomRef.current = room.code; setMfOpen(false); mfAutoStarted.current = false; }
-    if (!coop || room.inMatch) return;
+    if (!coop || room.inMatch || !(room.matching || room.matchmade)) return;
     const n = facts.humans.length;
     if (n >= 2 && !mfOpen) { setMfOpen(true); setMfLeft(29); mfAutoStarted.current = false; }
     if (n < 2 && mfOpen) setMfOpen(false);
-  }, [room?.code, room?.inMatch, facts?.humans?.length, coop, mfOpen]);
+  }, [room?.code, room?.inMatch, room?.matching, room?.matchmade, facts?.humans?.length, coop, mfOpen]);
   useEffect(() => {
     if (!mfOpen) return undefined;
     const id = setInterval(() => setMfLeft((x) => Math.max(0, x - 1)), 1000);
@@ -900,13 +903,13 @@ export function RoomScreen() {
     ${stoppedShown && !foundShown ? html`<${FoundPanel} fail=${true} class=${stoppedLeaving ? 'is-leaving' : ''} seats=${facts.seats.length} text=${t('已返回房间')} />` : null}
     ${picking ? html`<${CardPicker} current=${myCard} list=${cardList} m=${m} onPick=${pickCard} onClose=${() => setPicking(false)} />` : null}
     ${protoShown ? html`<${RoomProtocol} room=${room} variant=${variant} busy=${busy} onClose=${() => setPicker(false)} onPick=${setDifficulty} leaving=${protoLeaving} />` : null}
-    ${mfOpen && facts && coop
+    ${mfOpen && facts && coop && (room.matching || room.matchmade)
       ? html`<${MatchFoundOverlay}
           room=${room} facts=${facts} me=${me} portraits=${portraits}
-          left=${mfLeft} busy=${busy} online=${online} myReady=${myReady}
+          busy=${busy} online=${online} myReady=${myReady}
           onConfirm=${toggleReady}
-          onExit=${() => run('leave', () => net.request('room.leave', {}))}
-          versionText=${versionLabel(roomVersion(room))} />`
+          versionText=${versionLabel(roomVersion(room))}
+          cardList=${cardList} m=${m} myCard=${myCard} onPickCard=${pickCard} />`
       : null}
     ${versionOpen ? html`<${VersionPicker} mode="room" versions=${versions || []} current=${roomVersion(room)} serverDefault=${versions?.find(v => v.default)?.id || DEFAULT_VERSION} roomMode=${room.mode} editable=${facts.isHost && !facts.spectating && !room.inMatch} busy=${!!busy} onPick=${proposeVersion} onClose=${() => setVersionOpen(false)} />` : null}
   </div>`;
