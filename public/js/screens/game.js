@@ -663,7 +663,9 @@ function MatchScreen() {
   // prep rendering (own board) vs battle rendering (m.field). The field object present when prep starts is stale
   // (last round's battle): combat only enters an m.field pushed after that (a new object), and every new m.field
   // push (watch switch, reconnect) re-enters the battle view.
-  const showPrep = (mode === 'prep' || mode === 'boot') && !watchingOther;
+  // 观战席没有自己的棋盘：修 2026-11-26「观战修整期看不到干员」——以前 showPrep 对它也为真，
+  // 于是走 setPrep(null) 画出一块空棋盘，而不是渲染服务端推来的 prep 侦察场（m.field.prep）。
+  const showPrep = (mode === 'prep' || mode === 'boot') && !watchingOther && !spectator;
 
   // public issue #602: while a piece is picked up on the own prep board — a deploy / equip / reposition drag, or the
   // direction wheel a legal drop opens — the official client folds the shop and zooms to the shop-collapsed prep

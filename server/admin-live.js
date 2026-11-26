@@ -331,7 +331,10 @@ export function createAdminLive({ lobby, registry, network, monitor = null, log,
       const deadline = Number.isFinite(m.deadline) ? m.deadline : 0;
       match = {
         round: Number.isFinite(m.round) ? m.round : 0,
-        lastRound: Number.isFinite(m.totalRounds) ? m.totalRounds : 0,
+        // 总回合数：Match 上真实字段是 gd.lastRound（= m.public.lastRound）。**没有 m.totalRounds 这个字段**
+        // —— 2026-11-26 修：后台「回合 N/总」一直显示 /0，就是因为这里读了一个不存在的属性。
+        // 超限 / 无尽湮灭没有回合上限（lastRound 为 null）→ 返回 null，页面显示「–」。
+        lastRound: (m.gd && Number.isFinite(m.gd.lastRound)) ? m.gd.lastRound : null,
         phase: m.phase || '',
         phaseLabel: PHASE_NAMES[m.phase] || m.phase || '',
         kind: m.phase === 'PREP' ? 'prep' : (m.phase === 'COMBAT' || m.phase === 'UNITE' || m.phase === 'FINAL_ASSAULT' || m.phase === 'HIDDEN_CORE' ? 'combat' : 'other'),
