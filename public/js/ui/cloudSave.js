@@ -40,6 +40,22 @@ const writeRaw = (key, value) => {
   } catch { /* 隐私模式/配额：静默，下一次还会再试 */ }
 };
 
+/**
+ * 这份**本地**存档属于哪个账号（业主 2026-11-24：切号后成就统计读的还是本地的）。
+ * 不参与云端同步（不在 FIELD_KEYS 里），只用来判断「本地数据是不是上一个账号的」。
+ */
+const SAVE_OWNER_KEY = 'sp.saveOwner';
+const SWITCH_MARK = 'sp.saveSwitched';
+const readOwner = () => { try { return globalThis.localStorage?.getItem(SAVE_OWNER_KEY) || null; } catch { return null; } };
+const writeOwner = (id) => {
+  if (!id) return;
+  try { globalThis.localStorage?.setItem(SAVE_OWNER_KEY, String(id)); } catch { /* ignore */ }
+};
+/** 清空全部受云同步管理的本地字段（换号时用：上一个账号的数据不能留在本机）。 */
+const clearLocalFields = () => {
+  for (const keys of Object.values(FIELD_KEYS)) for (const k of keys) writeRaw(k, undefined);
+};
+
 /** 把本地存档拍成云端结构。 */
 export function localSnapshot() {
   /** @type {Record<string, any>} */
@@ -73,10 +89,12 @@ const same = (a, b) => { try { return JSON.stringify(a) === JSON.stringify(b); }
 
 /**
  * 登录后调用：拉取 → 首次合并 → 挂钩同步。
- * @param {{ api: any, onError?: (e: any) => void, log?: any }} opts
+ * @param {{ api: any, onError?: (e: any) => void, log?: any, accountId?: string|null, onAccountSwitched?: () => void }} opts
+ *   `accountId`：当前登录账号。带上它才能判断本地存档是不是**上一个账号**的（换号时以云端为准、不合并本地）；
+ *   `onAccountSwitched`：检测到「换号并已换成云端数据」时调一次（通常让页面刷新，把内存里的旧统计/调配换掉）。
  * @returns {{ flush: () => Promise<void>, dispose: () => void }}
  */
-export function installCloudSave({ api, onError = () => {}, log = console }) {
+export function installCloudSave({ api, onError = () => {}, log = console, accountId = null, onAccountSwitched = null }) {
   let timer = null;
   let last = null;
   let disposed = false;
@@ -100,21 +118,39 @@ export function installCloudSave({ api, onError = () => {}, log = console }) {
     timer = setTimeout(() => { timer = null; flush().catch(() => {}); }, FLUSH_MS);
   };
 
-  // 首次：拿云端存档；没有就合并本地（= 迁移），有就把两边合并（取大/并集）后写回本地
+  // 首次：看本地存档属于哪个账号 ——
+  //   · 没有归属 / 就是这个账号：拿云端 + 合并本地（老玩家首次登录把本地战绩迁上去，之后取大/并集）；
+  //   · 归属是**别的**账号（业主 2026-11-24「登录其他账号时成就统计读的还是本地的」）：
+  //     本地那份是上一个账号的，**绝不合并**——清空本地受管字段，直接以该账号的云端存档为准。
   (async () => {
+    const owner = readOwner();
+    const foreign = !!(accountId && owner && owner !== accountId);
     try {
-      const res = await api.getSave();
-      const local = localSnapshot();
-      let merged = null;
-      if (!res.save) {
-        const r = await api.mergeSave(local);
-        merged = r.save?.fields || r.save || null;
+      if (foreign) {
+        clearLocalFields();
+        const res = await api.getSave();
+        const cloud = res && res.save ? (res.save.fields || res.save) : null;
+        if (cloud) applySnapshot(cloud);
+        last = localSnapshot();
+        writeOwner(accountId);
+        log.debug?.('[cloudSave] 换号：已改用该账号的云端存档');
+        if (typeof onAccountSwitched === 'function') {
+          let marked = null;
+          try { marked = globalThis.sessionStorage?.getItem(SWITCH_MARK) || null; } catch { /* ignore */ }
+          if (marked !== String(accountId)) {
+            try { globalThis.sessionStorage?.setItem(SWITCH_MARK, String(accountId)); } catch { /* ignore */ }
+            try { onAccountSwitched(); } catch { /* ignore */ }
+          }
+        }
       } else {
+        const res = await api.getSave();
+        const local = localSnapshot();
         const r = await api.mergeSave(local);
-        merged = r.save?.fields || r.save || null;
+        const merged = r.save?.fields || r.save || null;
+        if (merged) { applySnapshot(merged); last = localSnapshot(); }
+        else last = localSnapshot();
+        writeOwner(accountId);
       }
-      if (merged) { applySnapshot(merged); last = localSnapshot(); }
-      else last = localSnapshot();
     } catch (e) {
       try { onError(e); } catch { /* ignore */ }
       last = localSnapshot();

@@ -466,3 +466,13 @@ html[data-ac-terminal-theme="ac_s_closur"] .shopbar .lvcard{
   filter:hue-rotate(150deg) saturate(1.15)!important;
 }
 
+
+/* ── 干员调配 · 皮肤区（closure 主题适配，2026-11-23） ────────────────────────────────
+   抽屉与右侧详情栏都偏窄，共享样式按 5 列排会把每格压到 ~80px，皮肤名被省略号吃掉。
+   closure 主题内改成 3 列、名字最多两行（组名仍单行省略），格宽 ≈140px，立绘看得出人。
+   只作用于 closure 页面：本文件只被 /ui-theme-closure.html 以 data-ui-theme-css 加载。 */
+.lo-sec--skin .lo-skins{grid-template-columns:repeat(3,minmax(0,1fr));gap:.28rem;}
+.lo-sec--skin .lo-skin__name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25;}
+@media (max-width:900px){
+  .lo-sec--skin .lo-skins{grid-template-columns:repeat(2,minmax(0,1fr));}
+}

@@ -244,6 +244,22 @@
       <div id="warn-now" style="margin-top:6px"></div>
     </section>
 
+    <!-- 快捷操作（业主 2026-11-24）：跳转观战 + 直接登录他人账号 -->
+    <section class="card" id="quick-card">
+      <h2>快捷操作 <span class="micro">QUICK · 跳转观战 / 直接登录他人账号</span></h2>
+      <div class="row" style="margin-top:6px">
+        <input id="spec-code" placeholder="房间码（5 位）" maxlength="6" style="width:130px;text-transform:uppercase" />
+        <button id="btn-spec">观战该房间</button>
+        <span class="t-dim" style="font-size:12px">在新标签页以<b>观战</b>身份进入（每房最多 2 人；大厅/对局中都可以）</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="login-as-qq" placeholder="账号 QQ 号" style="width:170px" />
+        <button id="btn-login-as">以该账号登录</button>
+        <span class="t-dim" style="font-size:12px">给这个账号签发会话、替换本浏览器的登录态，随后自动跳到游戏页；不会踢掉玩家自己的会话</span>
+      </div>
+      <div class="msg" id="quick-msg"></div>
+    </section>
+
     <section class="card" id="update-card">
       <h2>热更 <span class="micro">HOT UPDATE · 上传 zip 覆盖到安装目录，服务器不停</span>
         <span class="tag" id="update-tag">–</span></h2>
@@ -328,10 +344,20 @@
           </label>
           <label class="t-lo" title="勾上：今天的公告只维护一条，新内容追加到它后面；不勾：整段覆盖今天的公告"><input type="checkbox" id="ap-append" checked /> 追加到当天这条</label>
           <button id="btn-ap">保存弹窗公告</button>
+          <button id="btn-ap-new" title="另起一条独立公告：不覆盖、不追加到已有公告；玩家按「级别 → 起始时间」取一条显示">＋ 新建公告</button>
           <button class="ghost" id="btn-ap-clear">撤下</button>
           <span class="msg" id="ap-msg"></span>
         </div>
         <div class="t-dim" id="ap-now" style="font-size:11.5px;margin-top:6px"></div>
+
+        <!-- 公告列表（业主 2026-11-22「新建公告」）：新建出来的是独立条目，这里逐条看状态 / 停用 / 删除 -->
+        <div style="margin-top:10px">
+          <div class="row" style="justify-content:space-between;align-items:baseline">
+            <h4 style="margin:0;font-size:12.5px">公告列表 <span class="micro">ALL POPUPS · 生效中的按「级别 → 起始时间」挑一条弹给玩家</span></h4>
+            <button class="ghost" id="btn-ap-list" style="padding:2px 8px">刷新</button>
+          </div>
+          <div id="ap-list" style="margin-top:6px"><div class="t-dim" style="font-size:11.5px">加载中…</div></div>
+        </div>
 
         <!-- 历史公告（业主 2026-11-22）：玩家弹窗右侧能翻回去看，这里可以逐条删除/清空 -->
         <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">
@@ -765,7 +791,7 @@ function render(data) {
       <td class="num ${remain ? 't-hi' : 't-dim'}">${remain || '—'}</td>
       <td>${r.inMatch ? '<span class="tag warn">模拟中</span>' : '<span class="tag on">大厅</span>'}</td>
       <td class="hide-sm t-lo">${esc(r.hostName || '–')}</td>
-      <td style="text-align:right"><button class="danger" data-close="${esc(r.code)}">关闭房间</button></td>
+      <td style="text-align:right;white-space:nowrap"><button class="ghost" data-spec="${esc(r.code)}" title="以观战身份打开这个房间">观战</button> <button class="danger" data-close="${esc(r.code)}">关闭房间</button></td>
     </tr>${detail}${playrow}`;
   }).join('');
 }
@@ -795,6 +821,46 @@ function showPanel(on) {
   if (!on && timer) { clearInterval(timer); timer = null; }
   if (on) { loadAccounts(); loadFeedback(); }
 }
+
+// ---- 快捷操作（业主 2026-11-24）：跳转观战 / 直接登录他人账号 --------------------------
+/** 打开 `/?room=CODE&spectate=1`：客户端会以 room.spectate 进房（新标签页；弹窗被拦就走当前页）。 */
+function openSpectate(rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,6}$/.test(code)) { flash($('quick-msg'), '房间码应为 4–6 位字母或数字', 'err'); return; }
+  const url = '/?room=' + encodeURIComponent(code) + '&spectate=1';
+  let w = null;
+  try { w = window.open(url, '_blank', 'noopener'); } catch (e) { w = null; }
+  if (!w) location.href = url; else flash($('quick-msg'), '已在新标签页打开观战：' + code, 'ok');
+}
+
+/** 调后台接口换取该账号的会话 cookie，然后跳到游戏页（那里就是该账号身份了）。 */
+async function loginAsAccount(payload, label) {
+  try {
+    const r = await api('/api/accounts/login-as', payload);
+    const a = (r && r.account) || {};
+    const who = a.nickname ? `${a.nickname}${a.tag ? '#' + a.tag : ''}` : (label || '该账号');
+    flash($('quick-msg'), '已切换为 ' + who + '，正在打开游戏页…', 'ok');
+    setTimeout(() => { location.href = '/'; }, 700);
+  } catch (e) {
+    flash($('quick-msg'), '登录失败：' + e.message, 'err');
+  }
+}
+
+/** 账号行里的「登录」：二次确认后直接切号。 */
+function accLoginAs(id, name) {
+  if (!id) return;
+  if (!confirm(`以「${name || id}」的身份登录当前浏览器？\n\n会把本浏览器的游戏登录态切换成该账号（玩家自己的会话不受影响）。`)) return;
+  loginAsAccount({ id }, name);
+}
+
+if ($('btn-spec')) $('btn-spec').onclick = () => openSpectate($('spec-code') ? $('spec-code').value : '');
+if ($('spec-code')) $('spec-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') openSpectate($('spec-code').value); });
+if ($('btn-login-as')) $('btn-login-as').onclick = () => {
+  const qq = $('login-as-qq') ? String($('login-as-qq').value || '').trim() : '';
+  if (!qq) { flash($('quick-msg'), '请输入账号 QQ 号', 'err'); return; }
+  if (!confirm(`以 QQ ${qq} 的账号登录当前浏览器？\n\n会把本浏览器的游戏登录态切换成该账号（玩家自己的会话不受影响）。`)) return;
+  loginAsAccount({ qq }, qq);
+};
 
 // ---- 账号管理（账号系统第二期）--------------------------------------------
 /** 时间戳 → 「2026-11-14 22:03」。 */
@@ -846,6 +912,7 @@ async function loadAccounts() {
           <button class="ghost" data-acc-ban="${escapeHtml(a.id)}" data-acc-banned="${a.ban ? '1' : ''}" style="font-size:11.5px">${a.ban ? '解封' : '封禁'}</button>
           <button class="ghost" data-acc-reset="${escapeHtml(a.id)}" style="font-size:11.5px">重置密码</button>
           <button class="ghost" data-acc-rename="${escapeHtml(a.id)}" data-acc-cur="${escapeHtml(a.nickname || '')}" style="font-size:11.5px">改名</button>
+          <button class="ghost" data-acc-login="${escapeHtml(a.id)}" data-acc-login-name="${escapeHtml(a.nickname || '')}" style="font-size:11.5px;color:#8fd3ff;border-color:#8fd3ff55">登录</button>
           <button class="ghost" data-acc-delete="${escapeHtml(a.id)}" data-acc-qq="${escapeHtml(a.qq || '')}" style="font-size:11.5px;color:#ff8a7a;border-color:#ff8a7a55">删除账号</button>
           <button class="ghost" data-acc-admin="${escapeHtml(a.id)}" data-acc-isadmin="${a.admin ? '1' : ''}" style="font-size:11.5px;${a.admin ? 'color:#f2c94c;border-color:#f2c94c55' : ''}">${a.admin ? '★ 取消管理员' : '设为管理员'}</button>`}
         </td>
@@ -1014,6 +1081,8 @@ $('acc-list') && $('acc-list').addEventListener('click', (e) => {
   if (resetBtn) { accResetPassword(resetBtn.getAttribute('data-acc-reset')); return; }
   const renameBtn = e.target.closest('[data-acc-rename]');
   if (renameBtn) { accRename(renameBtn.getAttribute('data-acc-rename'), renameBtn.getAttribute('data-acc-cur') || ''); return; }
+  const loginBtn = e.target.closest('[data-acc-login]');
+  if (loginBtn) { accLoginAs(loginBtn.getAttribute('data-acc-login'), loginBtn.getAttribute('data-acc-login-name') || ''); return; }
   const deleteBtn = e.target.closest('[data-acc-delete]');
   if (deleteBtn) { accDelete(deleteBtn.getAttribute('data-acc-delete'), deleteBtn.getAttribute('data-acc-qq') || ''); }
 });
@@ -1098,6 +1167,7 @@ if ($('btn-ap')) $('btn-ap').onclick = async () => {
     const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours, permanent: hoursVal === 0, mode });
     flash($('ap-msg'), (r && r.note) || '已保存', 'ok');
     loadPopupAnnouncement();
+    loadPopupList();
     loadPopupHistory();
   } catch (e) { flash($('ap-msg'), '保存失败：' + e.message, 'err'); }
 };
@@ -1108,10 +1178,104 @@ if ($('btn-ap-clear')) $('btn-ap-clear').onclick = async () => {
     if ($('ap-title')) $('ap-title').value = '';
     flash($('ap-msg'), '弹窗公告已撤下', 'ok');
     loadPopupAnnouncement();
+    loadPopupList();
     loadPopupHistory();
   } catch (e) { flash($('ap-msg'), '撤下失败：' + e.message, 'err'); }
 };
+
+// ---- 新建公告（业主 2026-11-22）：mode:'new' 另起一条独立公告，不覆盖、不追加已有条目 -------
+if ($('btn-ap-new')) $('btn-ap-new').onclick = async () => {
+  const text = $('ap-text').value.trim();
+  const title = $('ap-title').value.trim();
+  flash($('ap-msg'), '', '');
+  if (!text) { flash($('ap-msg'), '新建公告需要正文（正文为空时请用「撤下」）', 'err'); return; }
+  try {
+    const hoursVal = Number($('ap-hours').value);
+    const hours = Number.isFinite(hoursVal) ? hoursVal : 720;
+    const r = await api('/api/announcement', { title, text, level: $('ap-level').value, hours, permanent: hoursVal === 0, mode: 'new' });
+    flash($('ap-msg'), (r && r.note) || '已新建公告', 'ok');
+    loadPopupAnnouncement();
+    loadPopupList();
+    loadPopupHistory();
+  } catch (e) { flash($('ap-msg'), '新建失败：' + e.message, 'err'); }
+};
+
+// ---- 公告列表（业主 2026-11-22）：逐条看状态 / 停用 / 删除 -------------------------------
+function apRowState(row) {
+  const now = Date.now();
+  const start = Date.parse(row && row.startAt);
+  if (!row || row.enabled === false) return { label: '已停用', color: '#8b93a1' };
+  if (Number.isFinite(start) && start > now) return { label: '未开始', color: '#ffc65c' };
+  if (Number.isFinite(row.durationSeconds) && row.durationSeconds > 0 && Number.isFinite(start)
+      && now >= start + row.durationSeconds * 1000) return { label: '已过期', color: '#8b93a1' };
+  return { label: row.durationSeconds === 0 ? '生效中 · 永久' : '生效中', color: '#50e0b0' };
+}
+async function loadPopupList() {
+  const box = $('ap-list');
+  if (!box) return;
+  try {
+    const r = await api('/api/announcement');
+    const rows = (r && r.doc && Array.isArray(r.doc.announcements)) ? r.doc.announcements : [];
+    box.innerHTML = '';
+    if (!rows.length) {
+      const d = document.createElement('div');
+      d.className = 't-dim'; d.style.fontSize = '11.5px';
+      d.textContent = '暂无公告：点上方「＋ 新建公告」发布一条。';
+      box.appendChild(d);
+      return;
+    }
+    for (const row of rows) {
+      const st = apRowState(row);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)';
+      const dot = document.createElement('span');
+      dot.style.cssText = 'width:4px;height:22px;border-radius:2px;background:' + st.color;
+      const main = document.createElement('div');
+      main.style.cssText = 'min-width:0';
+      const line1 = document.createElement('div');
+      line1.style.cssText = 'font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      line1.textContent = (row.title ? row.title + ' · ' : '') + String(row.text || '').split('\n')[0];
+      const meta = document.createElement('div');
+      meta.style.cssText = 'font-size:11px;color:var(--dim);margin-top:2px';
+      const start = Date.parse(row.startAt);
+      const endTxt = row.durationSeconds === 0 ? '永久'
+        : (Number.isFinite(start) ? apTime(start + row.durationSeconds * 1000) : '未知');
+      meta.textContent = `${st.label} · ${AP_LEVEL_LABEL[row.level] || row.level || '普通'} · ${apTime(start)} → ${endTxt} · id ${row.id}`;
+      main.appendChild(line1); main.appendChild(meta);
+      const ops = document.createElement('div');
+      ops.style.cssText = 'display:flex;gap:6px;align-items:center';
+      const toggle = document.createElement('button');
+      toggle.className = 'ghost'; toggle.style.cssText = 'padding:2px 8px';
+      toggle.textContent = row.enabled === false ? '启用' : '停用';
+      toggle.onclick = async () => {
+        try {
+          await api('/api/announcement', { action: row.enabled === false ? 'enable' : 'disable', id: row.id });
+          flash($('ap-msg'), row.enabled === false ? '已启用' : '已停用', 'ok');
+          loadPopupList(); loadPopupAnnouncement();
+        } catch (e) { flash($('ap-msg'), '操作失败：' + e.message, 'err'); }
+      };
+      const del = document.createElement('button');
+      del.className = 'ghost'; del.style.cssText = 'padding:2px 8px';
+      del.textContent = '删除';
+      del.onclick = async () => {
+        if (!confirm('删除这条公告？玩家将不再看到它（不可撤销）。')) return;
+        try {
+          await api('/api/announcement', { action: 'delete', id: row.id });
+          flash($('ap-msg'), '已删除', 'ok');
+          loadPopupList(); loadPopupAnnouncement();
+        } catch (e) { flash($('ap-msg'), '删除失败：' + e.message, 'err'); }
+      };
+      ops.appendChild(toggle); ops.appendChild(del);
+      wrap.appendChild(dot); wrap.appendChild(main); wrap.appendChild(ops);
+      box.appendChild(wrap);
+    }
+  } catch (e) {
+    box.textContent = '读取失败：' + e.message;
+  }
+}
+if ($('btn-ap-list')) $('btn-ap-list').onclick = () => { loadPopupList(); };
 void loadPopupAnnouncement();
+void loadPopupList();
 
 // ---- 历史公告（业主 2026-11-22）：玩家弹窗右侧能翻回去看，后台在这里逐条删除/清空 ----
 const AP_LEVEL_LABEL = { info: '普通', warning: '警告', urgent: '紧急' };
@@ -1310,6 +1474,8 @@ document.addEventListener('click', async (ev) => {
     refresh();
     return;
   }
+  const spec = ev.target.closest('[data-spec]');
+  if (spec) { openSpectate(spec.getAttribute('data-spec')); return; }
   const close = ev.target.closest('[data-close]');
   if (close) {
     const code = close.getAttribute('data-close');

@@ -1,4 +1,4 @@
-// Client entry: boot (fonts, identity, socket), net → store wiring, router, global overlays.
+﻿// Client entry: boot (fonts, identity, socket), net → store wiring, router, global overlays.
 //
 // Router (derived from the store, no URL routes):
 //   not entered            → Title
@@ -185,8 +185,22 @@ let joinInFlight = false;
 /** The rehearsal installer (battle/rehearsal.js): its tasks follow the match on screen (see wireNet's store hook). */
 let rehearsal = null;
 
+/** `?room=CODE&spectate=1` 是否以观战身份进房（后台「快捷跳转观战」用）。 */
+// 注意：**不要从 './screens/lobby.js' 导入** —— 主题入口把那个模块换成了分享包的 lobby.js，
+// 它没有这个新导出，缺了会让 main.js 整个模块图加载失败（2026-11-24 线上「游戏脚本加载失败」）。
+function parseSpectateParam(search) {
+  try {
+    const q = new URLSearchParams(search || '');
+    const v = q.get('spectate');
+    if (v === '1' || v === 'true' || (v === '' && q.has('spectate'))) return true;
+    const type = q.get('type');
+    return type === 'spectate' || type === 'room.spectate';
+  } catch {
+    return false;
+  }
+}
 function clearPendingJoin() {
-  store.patch('ui', { pendingJoin: null });
+  store.patch('ui', { pendingJoin: null, pendingSpectate: null });
   clearRoomParam();
 }
 
@@ -196,6 +210,7 @@ function schedulePendingJoin() {
   joinTimer = setTimeout(async () => {
     const s = store.get();
     const code = s.ui.pendingJoin;
+    const spectate = s.ui.pendingSpectate === true;
     if (!code || joinInFlight || !s.session.entered || net.status !== 'online') return;
     if (s.room) {
       if (s.room.code !== code) toast(t('你已在其他同盟中，请先离开当前同盟'), 'warn');
@@ -204,7 +219,8 @@ function schedulePendingJoin() {
     }
     joinInFlight = true;
     try {
-      await joinKnown('room.join', code);
+      // 后台「快捷跳转观战」给的链接带 spectate=1 → 用 room.spectate 而不是 room.join
+      await joinKnown(spectate ? 'room.spectate' : 'room.join', code);
     } catch (err) {
       toastError(err);
     } finally {
@@ -362,9 +378,27 @@ function wireNet() {
       closeOnExpire: msg.closeOnExpire !== false,
     } });
   });
+  // 同一轮关服会来两次：先是 `server.closed` 帧，300ms 后服务端再用 4004 关 socket（net.js 会补发一次
+  // `server.closed`）。这里按时间戳去重，避免连弹两个 toast / 重复清理。
+  let serverClosedAt = 0;
   net.on('server.closed', (msg) => {
     store.set({ flashWarn: null });
-    if (msg && msg.open === false) toast(msg.text ? ('服务器已关闭：' + msg.text) : t('服务器已关闭，请稍后再来'), 'warn', { ttl: 8000 });
+    if (msg && msg.open === false) {
+      const at = Date.now();
+      if (at - serverClosedAt < 3000) return;
+      serverClosedAt = at;
+      // 业主 2026-11-22「服务器关闭时把所有人踢到标题页」：断开且不自动重连，清掉房间/对局，
+      // session.entered=false 让 selectRoute 回到 title（对局中的玩家也一并退出）。
+      try { net.close(); } catch { /* 已经断开 */ }
+      backToLobby();
+      store.set((s) => ({
+        ...s,
+        matchmake: null,
+        matchmaking: { ...(s.matchmaking || {}), status: 'idle' },
+        session: { ...(s.session || {}), entered: false },
+      }));
+      toast(msg.text ? ('服务器已关闭：' + msg.text) : t('服务器已关闭，请稍后再来'), 'warn', { ttl: 8000 });
+    }
   });
   // 消息中心实时推送（业主 2026-11-22）：server/accounts/messages.js 一落盘就推 `account.msg`（好友请求 / 同盟邀请 /
   // 后台回复反馈都走这一条通道）。消息中心是原生 DOM 浮层、不在 Preact 树里，所以这里只广播一个窗口事件，
@@ -762,6 +796,8 @@ async function boot() {
   const { account, accountsEnabled } = await loadAccount();
 
   const pendingJoin = parseRoomParam(location.search);
+  // 后台「快捷跳转观战」：/?room=CODE&spectate=1 → 进房时用 room.spectate 而不是 room.join
+  const pendingSpectate = pendingJoin ? parseSpectateParam(location.search) : false;
   // 登录后昵称以账号为准（昵称#tag 是公开身份）；没登录时沿用本机记住的代号。
   const savedName = (account ? sanitizeName(account.nickname) : '') || sanitizeName(identity.loadName()) || '';
   // 启动时不跳过登录页：只有同一页面的「刷新」才沿用已进入状态；新打开/重新启动一律先回标题页。
@@ -775,13 +811,20 @@ async function boot() {
     accountsEnabled,
     me: { ...s.me, name: savedName },
     session: { entered },
-    ui: { ...s.ui, pendingJoin },
+    ui: { ...s.ui, pendingJoin, pendingSpectate },
   }));
 
   wireNet();
   // 云存档（账号系统）：首次登录把本地战绩/调配/皮肤/名片/设置合并进账号，之后节流回写
   if (account) {
-    try { installCloudSave({ api: accountApi, onError: (e) => console.warn('[cloudSave] 同步失败', e && e.message) }); }
+    try {
+      installCloudSave({
+        api: accountApi,
+        accountId: (account && account.id) || null,
+        onAccountSwitched: () => { try { globalThis.location?.reload(); } catch { /* ignore */ } },
+        onError: (e) => console.warn('[cloudSave] 同步失败', e && e.message),
+      });
+    }
     catch (err) { console.warn('[cloudSave] 安装失败', err); }
     // 好友邀请浮层：注册一次，之后任何界面收到 social.invite 都会弹
     try { installSocialInvites(); } catch (err) { console.warn('[social] 邀请浮层安装失败', err); }

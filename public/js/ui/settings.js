@@ -259,6 +259,26 @@ function DiagSection() {
   const [fbText, setFbText] = useState('');
   const [fbSending, setFbSending] = useState(false);
   const [fbSent, setFbSent] = useState(null);
+  // 业主 2026-11-23「在设置加一个我的历史反馈」：按当前登录账号拉取自己的反馈 + 管理员回复。
+  // null = 还没拉过；'loading' | 'anon'（没登录）| 'error' | 数组
+  const [fbHist, setFbHist] = useState(null);
+  const loadFbHistory = async () => {
+    setFbHist('loading');
+    try {
+      const res = await fetch('/api/feedback/mine', { cache: 'no-store' });
+      if (res.status === 401) { setFbHist('anon'); return; }
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j || j.ok !== true) throw new Error('bad');
+      setFbHist(Array.isArray(j.items) ? j.items : []);
+    } catch { setFbHist('error'); }
+  };
+  const fbWhen = (ms) => {
+    const t0 = Number(ms) || 0;
+    if (!t0) return '';
+    const d = new Date(t0);
+    const p = (v) => String(v).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
   const boxRef = useRef(null);
   // the box opens selected for a manual copy, scrolled to its first line (select() leaves it at the end)
   useLayoutEffect(() => {
@@ -305,6 +325,32 @@ function DiagSection() {
       setFbSending(false);
     }
   };
+  // 「我的历史反馈」列表（业主 2026-11-23）：在这里先算好节点，主模板只插一个 ${fbListNode}，
+  // 免得把三层嵌套的模板串在一个大模板里（解析器会报 Missing } in template expression）。
+  const fbCard = (r) => html`<div key=${r.id} data-fb-id=${r.id}
+      style="border:1px solid rgba(53,208,127,.28);border-radius:8px;padding:8px 10px;background:rgba(4,10,8,.6)">
+    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:12px;color:#9fb8ae">
+      <b style="color:#cfeee2;font-weight:600">${fbWhen(r.at)}</b>
+      <span style=${r.status === 'resolved'
+        ? 'padding:1px 6px;border-radius:999px;background:rgba(80,224,176,.15);color:#50e0b0'
+        : 'padding:1px 6px;border-radius:999px;background:rgba(255,198,92,.15);color:#ffc65c'}>
+        ${r.status === 'resolved' ? t('已解决') : t('待处理')}
+      </span>
+      <span style="opacity:.7">${r.reply ? t('管理员已回复') : t('暂无回复')}</span>
+    </div>
+    <p style="margin:6px 0 0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;color:#d8ece3">${r.text}</p>
+    ${r.reply ? html`<div style="margin-top:8px;padding:6px 10px;border-left:2px solid #50e0b0;background:rgba(80,224,176,.06)">
+      <div style="font-size:11.5px;color:#50e0b0">${t('管理员回复')}${r.repliedAt ? ' · ' + fbWhen(r.repliedAt) : ''}</div>
+      <p style="margin:4px 0 0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.55;color:#e6f4ee">${r.reply}</p>
+    </div>` : null}
+  </div>`;
+  const fbHint = (text) => html`<p class="set-hint" style="margin:0">${text}</p>`;
+  let fbListNode = null;
+  if (fbHist === 'loading') fbListNode = fbHint(t('加载中…'));
+  else if (fbHist === 'anon') fbListNode = fbHint(t('登录后才能查看自己的反馈记录。'));
+  else if (fbHist === 'error') fbListNode = fbHint(t('读取失败，请稍后再试。'));
+  else if (Array.isArray(fbHist) && fbHist.length === 0) fbListNode = fbHint(t('还没有提交过反馈。'));
+  else if (Array.isArray(fbHist)) fbListNode = fbHist.map(fbCard);
   return html`<section class="set-diag" aria-labelledby="set-diag-title">
     <div class="set-keys__head">
       <span class="set-row__label" id="set-diag-title">${t('问题反馈')}<${MicroLabel}>DIAGNOSTICS<//></span>
@@ -324,6 +370,15 @@ function DiagSection() {
       </div>
       ${fbSent ? html`<p class="set-keys__note" role="status" aria-live="polite">${fbSent}</p>` : null}
     </div>
+    <details class="set-fbh" data-testid="feedback-history"
+      onToggle=${(e) => { if (e.currentTarget.open && (fbHist === null || fbHist === 'error')) loadFbHistory(); }}>
+      <summary style="cursor:pointer;font-size:13px;color:#a9d9c6;list-style:none;display:flex;align-items:center;gap:6px;margin:2px 0 6px">
+        <span aria-hidden="true">▸</span>${t('我的历史反馈')}<span class="micro" style="opacity:.65">MY FEEDBACK</span>
+      </summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin:4px 0 8px" aria-live="polite">
+        ${fbListNode}
+      </div>
+    </details>
     <${Toggle} label=${t('出错时弹出详细说明')} micro="ERROR REPORT" value=${s.errorReport !== false} onChange=${(v) => updateSettings({ errorReport: v })} />
     <p class="set-hint">${t('出错时会弹窗说明可能的原因和相关的日志，并提示到 QQ 群询问管理员。关掉后只保留一行提示，错误仍会记录。')}</p>
     <div class="set-diag__meta">

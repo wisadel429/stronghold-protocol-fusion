@@ -30,11 +30,20 @@ html[data-ui-theme] body.sw-open { overflow: hidden; }
 html[data-ui-theme] .lobby-hub .oh-logo__l2 { display: none; }
 
 /* ---- 大厅：右上角那一簇控件不再挤 --------------------------------------------
- * 主题的 `.oh-topbar` 是「右上、纵向排列、gap = p*6」的容器；但本仓在大厅里还多塞了
- * 一颗「界面 · 可露希尔」按钮（.ui-theme-friend-stack，标题页已有同一入口），它挤在同一行。
- * 注意：**只隐藏那颗「界面」按钮，保留 FriendsTile（好友入口）** —— 之前整块隐藏把好友入口
- * 也一起藏了，业主报「好友键无反应」（2026-11-14）。 */
-html[data-ui-theme] .lobby-hub .ui-theme-friend-stack .title-ui-theme { display: none; }
+ * 主题的 `.oh-topbar` 是「右上、纵向排列、gap = p*6」的容器；本仓在大厅里多塞了一颗
+ * 「界面 · 可露希尔」按钮（.ui-theme-friend-stack，标题页已有同一入口）。
+ * 业主 2026-11-14 曾要求隐藏它；业主 2026-11-23「切换皮肤功能不见了，把它弄回来」——
+ * **不再隐藏**，改为让这簇控件自己撑开一行（允许换行、按钮不被压扁），
+ * FriendsTile（好友入口）与主题按钮都保留。 */
+html[data-ui-theme] .lobby-hub .ui-theme-friend-stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--p, 1px) * 6);
+}
+html[data-ui-theme] .lobby-hub .ui-theme-friend-stack > * { flex: 0 0 auto; }
+html[data-ui-theme] .lobby-hub .ui-theme-friend-stack .title-ui-theme { display: inline-flex; }
 html[data-ui-theme] .lobby-hub > .oh-topbar { gap: calc(var(--p, 1) * 10); }
 
 /* 大厅「无限火力 1.1」入口：业主 2026-11-14 要求去掉（本仓的无限火力走的是各自的模式卡，不走这条）。

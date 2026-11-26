@@ -760,6 +760,52 @@ html[data-script="alphabetic"] .title-login .btn--xl { letter-spacing: .3em; }
 .tentry__start:hover { filter: brightness(1.06); }
 .tentry__start:active { transform: translateY(1px); }
 .tentry__start:disabled { opacity: .45; cursor: default; filter: none; }
+/* 业主 2026-11-22：服务器关闭 —— 开始键整块变红、保持不透明（禁用的 .45 太灰，玩家会以为是没加载完），
+   文案由脚本换成「服务器关闭」。 */
+.tentry__start.is-down,
+.tentry__start.is-down:disabled {
+  background: #c0393f;
+  color: #fff4f4;
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+.tentry__start.is-down:hover { filter: none; }
+.tentry__start.is-down::after { opacity: .25; }
+
+/* 业主 2026-11-23：关服时**整页边框**与**中间登录卡的边界**一起闪红光（呼吸 1.8s）。
+   · 整页：固定层 inset 阴影（不吃点击），跟着 .title-screen.is-server-closed 出现；
+   · 登录卡：.title-login（未登录）/ .tentry__acct + 开始键（已登录）的边框与光晕同步闪。 */
+@keyframes sp-closed-glow { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes sp-closed-frame {
+  0%, 100% { border-color: rgba(226, 72, 72, .5); box-shadow: 0 0 0 1px rgba(226, 72, 72, .3), 0 0 14px rgba(226, 72, 72, .18); }
+  50% { border-color: rgba(255, 98, 98, .98); box-shadow: 0 0 0 1px rgba(255, 98, 98, .9), 0 0 30px rgba(255, 72, 72, .5); }
+}
+.title-screen.is-server-closed::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(226, 72, 72, .85), inset 0 0 80px rgba(226, 72, 72, .28);
+  animation: sp-closed-glow 1.8s ease-in-out infinite;
+}
+.title-screen.is-server-closed .title-login,
+.title-screen.is-server-closed .tentry__acct,
+.title-screen.is-server-closed .tentry__start {
+  animation: sp-closed-frame 1.8s ease-in-out infinite;
+}
+.title-screen.is-server-closed .title-login::before {
+  background: linear-gradient(90deg, #e24848, transparent 60%);
+  animation: sp-closed-glow 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-screen.is-server-closed::after,
+  .title-screen.is-server-closed .title-login,
+  .title-screen.is-server-closed .tentry__acct,
+  .title-screen.is-server-closed .tentry__start,
+  .title-screen.is-server-closed .title-login::before { animation: none; opacity: 1; }
+}
 
 /* 底部工具行 */
 .tentry__tools { display: flex; align-items: center; justify-content: center; gap: .1rem; }

@@ -867,7 +867,13 @@ export class Lobby {
    * @param {{ resumed: boolean, repeat: boolean }} info
    */
   onHello(session, { resumed, repeat }) {
-    if (!resumed && !repeat) return;
+    if (!resumed && !repeat) {
+      // 业主 2026-11-24「进入账号后仍要保留房间」：**新会话**（后台「以该账号登录」、换设备登录、
+      // 关服被踢后重连）hello 时，如果这个账号还有「暂离中 / 已停放」的独立模拟，直接接回来，
+      // 不用再去大厅点「继续游戏」。adoptAccountRoom 只在没有其它在线会话占着座位时才生效。
+      try { this.adoptAccountRoom(session); } catch (e) { this.log.warn?.('[lobby] 自动接回房间失败', e); }
+      return;
+    }
     const room = this.roomOf(session);
     if (!room) {
       if (session.notice) {
@@ -3036,6 +3042,44 @@ export class Lobby {
     try { this.sendState(room, session); } catch { /* ignore */ }
     this.log.info(`[lobby] ${room.code} 独立模拟已回到对局`);
     return OK;
+  }
+
+  /**
+   * 进入账号后自动回到该账号原来的房间（业主 2026-11-24）。
+   *
+   * 触发点：新会话 hello（后台「以该账号登录」、换设备、关服被踢后重开）。只处理**独立模拟**的两种保留形态：
+   *   · kind 'away'   —— 座位还在、对局/房间原样（room.park 或掉线保留），走 unparkSoloRun 接管座位；
+   *   · kind 'parked' —— 备战阶段离开、房间被停放（座位已清空），在空位上重新坐下。
+   * 有其它在线会话占着座位时 parkedSoloOf 不会返回 'away'（它要求 seat.connected === false），所以不会抢人。
+   * @param {import('./net.js').Session} session
+   * @returns {boolean} true = 已接回某个房间
+   */
+  adoptAccountRoom(session) {
+    const accountId = session.accountId || null;
+    if (!accountId) return false;
+    if (this.roomOf(session)) return false;                       // 已经在一间房里
+    const info = this.parkedSoloOf(accountId);
+    if (!info) return false;
+    const room = this.rooms.get(info.code);
+    if (!room || room.disposed) return false;
+    if (info.kind === 'away') {
+      const res = this.unparkSoloRun(session);
+      return !!(res && res.ok !== false);
+    }
+    // 停放的房间：座位被清空，按房间号重新坐下（等同 room.join 的最小实现）
+    if (baseRoomMode(room.mode) !== 'solo' || room.match) return false;
+    const at = room.seats.findIndex((s) => !s);
+    if (at < 0) return false;
+    room.parkedAt = null;
+    room.parkedFor = null;
+    room.parkedSeatId = null;
+    room.seats[at] = this.humanSeat(at, session, room);
+    session.roomCode = room.code;
+    if (!room.hostId) this.migrateHost(room);
+    this.broadcastState(room);
+    try { this.sendState(room, session); } catch { /* ignore */ }
+    this.log.info(`[lobby] ${room.code} 已按账号自动回到房间（${session.name || session.playerId}）`);
+    return true;
   }
 
   /** 结束暂离的独立模拟（room.endParked，业主 2026-11-14）：以**当前进度结算、结果记为失败**。

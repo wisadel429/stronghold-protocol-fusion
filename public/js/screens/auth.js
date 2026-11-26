@@ -110,7 +110,8 @@ export function AuthCard({ onReady, autoFocus = false, onTabChange = () => {} })
   ensureStyle();
   const [tab, setTab] = useState('login');
   const [qq, setQq] = useState('');
-  const [nickname, setNickname] = useState('博士');
+  // 业主 2026-11-23：注册时「昵称」一栏**留空**，不再预填「博士」（占位提示仍然有）
+  const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [agree, setAgree] = useState(false);
@@ -160,7 +161,7 @@ export function AuthCard({ onReady, autoFocus = false, onTabChange = () => {} })
         placeholder=${t('5–12 位数字')} autoFocus=${autoFocus && tab === 'login'}
         onInput=${setQq} onEnter=${submit} />
       ${tab === 'register' ? html`<${TextField} label=${t('昵称')} micro="公开显示" value=${nickname} maxLength=${12}
-        placeholder=${t('默认「博士」')} onInput=${setNickname} onEnter=${submit} />` : null}
+        placeholder=${t('输入昵称（2–12 字）')} onInput=${setNickname} onEnter=${submit} />` : null}
       <${TextField} type="password" revealable=${true} label=${t('密码')} value=${password} maxLength=${128}
         placeholder=${tab === 'login' ? t('输入密码') : t('至少 8 位')} onInput=${setPassword} onEnter=${submit} />
       ${tab === 'register' ? html`<${TextField} type="password" revealable=${true} label=${t('确认密码')} value=${password2} maxLength=${128}

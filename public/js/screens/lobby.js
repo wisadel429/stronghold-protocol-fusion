@@ -265,6 +265,24 @@ export function parseRoomParam(search) {
   }
 }
 
+/**
+ * `?room=CODE` 是否要**以观战身份**进入（后台「快捷跳转观战」用 `?room=CODE&spectate=1`）。
+ * 兼容几种写法：`spectate=1` / `spectate` / `type=spectate` / `type=room.spectate`。
+ * @param {string} [search] e.g. location.search
+ * @returns {boolean}
+ */
+export function parseSpectateParam(search) {
+  try {
+    const q = new URLSearchParams(search || '');
+    const v = q.get('spectate');
+    if (v === '1' || v === 'true' || (v === '' && q.has('spectate'))) return true;
+    const type = q.get('type');
+    return type === 'spectate' || type === 'room.spectate';
+  } catch {
+    return false;
+  }
+}
+
 /** Recently joined/created co-op room codes (most recent first). */
 export function recentRooms() {
   const list = loadPref('recentRooms', []);

@@ -56,6 +56,11 @@ export const CLIENT_ERR_TEXT = Object.freeze({
 export const CLOSE_REPLACED = 4001;
 /** Server close code: the socket never sent `hello` (server/net.js CLOSE.HELLO_TIMEOUT, ~30–60 s). */
 export const CLOSE_HELLO_TIMEOUT = 4002;
+/**
+ * 后台「关闭服务器」踢人时用的关闭码（server/admin-live.js CLOSE_SERVER_CLOSED）。
+ * 收到它 = 服务端主动关服，不是网络抖动：**不要自动重连**，交给 main.js 把玩家送回标题页。
+ */
+export const CLOSE_SERVER_CLOSED = 4004;
 /** A pre-hello socket must have lived this long before a 4002 close is swapped quietly (no loop). */
 const QUIET_SWAP_MIN_AGE_MS = 5000;
 
@@ -366,6 +371,16 @@ export class Net {
       // Idle pre-hello socket dropped by the server: replace it without a visible status change.
       this._quietSwap = true;
       this.connect();
+      return;
+    }
+    if (ev && ev.code === CLOSE_SERVER_CLOSED) {
+      // 后台关服踢人（server/admin-live.js CLOSE_SERVER_CLOSED）：不重连，并补发一次 `server.closed`，
+      // 让 main.js 统一把玩家送回标题页 —— 即使这一帧 `server.closed` 没赶上（刚连上就被踢）。
+      this._manualClose = true;
+      this._failPending('CLOSED', true);
+      this.lastError = new NetError('CLOSED');
+      this._setStatus('closed');
+      this._emit('server.closed', { open: false, code: ev.code });
       return;
     }
     this._scheduleReconnect();

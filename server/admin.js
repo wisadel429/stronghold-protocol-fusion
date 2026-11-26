@@ -190,6 +190,8 @@ const API_ROUTES = Object.freeze({
   '/api/accounts/setAdmin': 'POST',
   '/api/accounts/rename': 'POST',
   '/api/accounts/delete': 'POST',
+  // 业主 2026-11-24：后台「直接登录他人账号」——签发一个该账号的会话，把 sp_acc cookie 种到后台浏览器
+  '/api/accounts/login-as': 'POST',
   // 热更（业主 2026-11-14）：上传 zip 覆盖到安装目录，不重启服务器；客户端靠 buildGuard 察觉 build 变化后提示刷新
   '/api/update': 'POST',
   // 远程自重启（业主 2026-11-14）：上传完 server/** 后用它，先语法自检再拉起新进程
@@ -586,13 +588,103 @@ export function createAdminServer({
       // 业主 2026-11-22：「更新公告不再是更一次发一条」——**同一天内的公告只维护一条**，
       // 再发就是在这一条上**追加内容**（mode:'append'，默认），而不是另起一条。
       // 需要整段替换（例如写错要重写）时传 mode:'replace'。
-      const mode = raw.mode === 'replace' ? 'replace' : 'append';
-      let prev = null;
+      // 业主 2026-11-22 追加需求「后台弹窗公告加一个新建公告功能」：mode:'new' 另起**独立**一条（保留已有条目），
+      // 并支持对单条做启用 / 停用 / 删除（action + id），否则新建出来的条目没法管理。
+      const mode = raw.mode === 'new' ? 'new' : raw.mode === 'replace' ? 'replace' : 'append';
+      const action = ['delete', 'enable', 'disable'].includes(raw.action) ? raw.action : null;
+      const rowId = typeof raw.id === 'string' ? raw.id.trim() : '';
+      const nowMs = Date.now();
+      // 先读出当前所有条目（坏文件 / 不存在都当空表）
+      let rows = [];
       try {
         const cur = JSON.parse(await fsp.readFile(file, 'utf8'));
-        const row = cur && Array.isArray(cur.announcements) ? cur.announcements[0] : null;
-        if (row && typeof row.text === 'string' && row.text) prev = row;
+        if (cur && Array.isArray(cur.announcements)) rows = cur.announcements.filter((r) => r && typeof r === 'object' && typeof r.id === 'string');
       } catch { /* 还没有旧公告 */ }
+      rows = rows.slice(0, 100);
+
+      // ---- 单条操作：启用 / 停用 / 删除 -------------------------------------------------
+      if (action) {
+        const i = rows.findIndex((r) => r.id === rowId);
+        if (i < 0) { sendJson(res, 404, { error: '没有这条公告：' + (rowId || '(空 id)') }); return; }
+        if (action === 'delete') rows.splice(i, 1);
+        else rows[i] = { ...rows[i], enabled: action === 'enable' };
+        const opDoc = { announcements: rows };
+        try {
+          const { parseAnnouncements } = await import('../shared/announcements.js');
+          parseAnnouncements(opDoc);
+        } catch (e) {
+          sendJson(res, 400, { error: '公告内容不合法：' + (e && e.message || e) });
+          return;
+        }
+        try {
+          await fsp.mkdir(path.dirname(file), { recursive: true });
+          const tmp = `${file}.tmp`;
+          await fsp.writeFile(tmp, JSON.stringify(opDoc, null, 2), 'utf8');
+          await fsp.rename(tmp, file);
+        } catch (e) {
+          sendJson(res, 500, { error: '写入失败：' + (e && e.message || e) });
+          return;
+        }
+        const note = action === 'delete' ? '已删除这条公告' : action === 'enable' ? '已启用这条公告' : '已停用这条公告';
+        sendJson(res, 200, { ok: true, mode, action, id: rowId, doc: opDoc, note });
+        return;
+      }
+
+      /** 新建公告的 id：admin-<日期>-<随机>，与 parseAnnouncements 的 [A-Za-z0-9_-]{1,64} 兼容且不重复 */
+      const newId = () => {
+        const d = new Date(nowMs);
+        const p = (v) => String(v).padStart(2, '0');
+        const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+        let id = '';
+        do { id = `admin-${stamp}-${Math.random().toString(36).slice(2, 6)}`; } while (rows.some((r) => r.id === id));
+        return id;
+      };
+      const startIso = (ms) => new Date(ms).toISOString().replace('Z', '+00:00');
+
+      // ---- 新建：独立一条，不覆盖任何已有条目 -------------------------------------------
+      if (mode === 'new') {
+        if (!text) { sendJson(res, 400, { error: '新建公告需要正文（不能为空）' }); return; }
+        const startAtMs = nowMs - 60_000;
+        const durationSeconds = permanent ? 0
+          : Math.min(2592000, Math.max(60, Math.round(hours * 3600)));
+        const row = {
+          id: newId(),
+          ...(title ? { title } : {}),
+          text,
+          startAt: startIso(startAtMs),
+          durationSeconds,
+          level,
+          enabled: true,
+        };
+        rows.push(row);
+        if (rows.length > 100) rows = rows.slice(rows.length - 100);
+        const doc = { announcements: rows };
+        try {
+          const { parseAnnouncements } = await import('../shared/announcements.js');
+          parseAnnouncements(doc);
+        } catch (e) {
+          sendJson(res, 400, { error: '公告内容不合法：' + (e && e.message || e) });
+          return;
+        }
+        try {
+          await fsp.mkdir(path.dirname(file), { recursive: true });
+          const tmp = `${file}.tmp`;
+          await fsp.writeFile(tmp, JSON.stringify(doc, null, 2), 'utf8');
+          await fsp.rename(tmp, file);
+        } catch (e) {
+          sendJson(res, 500, { error: '写入失败：' + (e && e.message || e) });
+          return;
+        }
+        const chars = [...text].length;
+        sendJson(res, 200, {
+          ok: true, mode: 'new', id: row.id, appended: false, permanent, chars, doc,
+          note: `已新建公告${title ? `「${title}」` : ''}（${chars} 字${permanent ? '，永久有效' : ''}，约 2 秒内对全服生效）`,
+        });
+        return;
+      }
+
+      // ---- 原有语义：追加 / 覆盖「第一条」公告（其余条目原样保留） ------------------------
+      const prev = rows[0] && rows[0].text ? rows[0] : null;
       const sameDay = !!(prev && prev.startAt && sameLocalDay(prev.startAt, Date.now()));
       let finalText = text;
       let appended = false;
@@ -607,22 +699,22 @@ export function createAdminServer({
       const finalTitle = text ? (title || (sameDay && prev && appended ? (prev.title || '') : '')) : '';
       const finalLevel = text ? (raw.level ? level : (sameDay && prev && appended ? (prev.level || level) : level)) : level;
       // 追加时保留当天的 startAt（同一天一条公告），只把截止时间顺延到「现在 + 时长」
-      const startAtMs = sameDay && prev && appended ? Date.parse(prev.startAt) : Date.now() - 60_000;
+      const startAtMs = sameDay && prev && appended ? Date.parse(prev.startAt) : nowMs - 60_000;
       // 追加时会保留当天的 startAt，再顺延 720 小时就可能超过 30 天上限 → 截到 2592000 秒（parseAnnouncements 的上限）
       // 永久（durationSeconds=0）不走这条计算：endAt 为 null，永不过期
       const durationSeconds = permanent ? 0
-        : Math.min(2592000, Math.max(60, Math.round((Date.now() + hours * 3600_000 - startAtMs) / 1000)));
+        : Math.min(2592000, Math.max(60, Math.round((nowMs + hours * 3600_000 - startAtMs) / 1000)));
       const doc = text ? {
         announcements: [{
-          id: 'admin',
+          id: prev && prev.id ? prev.id : 'admin',
           ...(finalTitle ? { title: finalTitle } : {}),
           text: finalText,
           // 服务器时区 ISO（带 +08:00），与 parseAnnouncements 的校验一致
-          startAt: new Date(startAtMs).toISOString().replace('Z', '+00:00'),
+          startAt: startIso(startAtMs),
           durationSeconds,
           level: finalLevel,
           enabled: true,
-        }],
+        }, ...rows.slice(1)],
       } : { announcements: [] };
       try {
         const { parseAnnouncements } = await import('../shared/announcements.js');
@@ -782,6 +874,32 @@ export function createAdminServer({
         closeOnExpire: body.closeOnExpire !== false,
       });
       sendJson(res, 200, { ok: true, warn });
+      return;
+    }
+
+    // ---- 直接登录他人账号（业主 2026-11-24）----------------------------------------------
+    // 后台点「登录」/输入 QQ → 给这个账号签发一个新会话，把 sp_acc cookie 种到后台自己的浏览器，
+    // 之后打开游戏页就是以该账号身份。**不会**踢掉玩家自己的会话（后台只是多一个客户端）。
+    if (route === '/api/accounts/login-as') {
+      if (!accounts) { sendJson(res, 400, { error: '本服务器未启用账号系统' }); return; }
+      const idIn = typeof body.id === 'string' ? body.id.trim() : '';
+      const qqIn = typeof body.qq === 'string' ? body.qq.trim() : '';
+      let acc = null;
+      if (idIn) acc = accounts.accountById(idIn);
+      else if (qqIn) {
+        const rows = accounts.adminList({ query: qqIn, limit: 20 }).filter((r) => r && String(r.qq || '') === qqIn);
+        if (rows.length > 1) { sendJson(res, 409, { error: '同一个 QQ 命中多个账号，请改用账号 id' }); return; }
+        if (rows.length === 1) acc = accounts.accountById(rows[0].id);
+      }
+      if (!acc) { sendJson(res, 404, { error: '找不到这个账号（请填账号 id 或完整 QQ 号）' }); return; }
+      // view() 不带封禁状态 / QQ：后台行里有（adminRowsOf → adminList 的同一行）
+      const adminRow = accounts.adminRowsOf(acc.id);
+      if (adminRow && adminRow.ban) { sendJson(res, 400, { error: '该账号已被封禁，无法登录' }); return; }
+      const { token } = accounts.createSession(acc.id);
+      // 与 server/accounts/http.js 的登录 cookie 同一口径（路径 /、HttpOnly、SameSite=Lax、30 天）
+      res.setHeader('Set-Cookie', `sp_acc=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 3600}`);
+      log.info?.(`[admin] 直接登录账号 ${acc.nickname}${acc.tag ? '#' + acc.tag : ''} (${acc.id})`);
+      sendJson(res, 200, { ok: true, account: { id: acc.id, nickname: acc.nickname, tag: acc.tag, qq: (adminRow && adminRow.qq) || null } });
       return;
     }
 

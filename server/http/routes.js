@@ -157,9 +157,14 @@ export function createRequestHandler({ serveStatic, health, log, trustProxy = 'a
     if (parts.rawPath === '/healthz') {
       const withTraffic = wantsTraffic(parts.query) && isLocalIp(clientAddress(req, trustProxy).ip);
       const report = healthReport(health, withTraffic);
-      // 关服（后台「关闭服务器」）时进程仍在跑：把状态告诉探针，服务器列表才不会一直显示在线
+      // 关服（后台「关闭服务器」）时进程仍在跑：**只回版本号 + status:'closing'**（业主 2026-11-23），
+      // 不暴露在线人数 / 房间 / 版本列表等细节；标题页、服务器列表都按 `status === 'closing'` 判关闭。
       const gate = health && health.lobby ? health.lobby.gate : null;
-      if (gate && gate.open === false) { report.closed = true; report.closedText = gate.text || ''; report.online = 0; }
+      if (gate && gate.open === false) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        sendJson(req, res, 200, { version: report.version, status: 'closing' });
+        return;
+      }
       res.setHeader('Access-Control-Allow-Origin', '*');
       sendJson(req, res, 200, report);
       return;

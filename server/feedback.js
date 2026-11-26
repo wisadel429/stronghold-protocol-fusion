@@ -132,9 +132,31 @@ export function createFeedbackApi({ store, log = console, now = Date.now, identi
   }
 
   return {
-    handles: (p) => p === '/api/feedback' || p === '/api/feedback/',
+    // 业主 2026-11-23：`GET /api/feedback/mine` —— 玩家在设置里看「我的历史反馈」（含管理员回复）
+    handles: (p) => p === '/api/feedback' || p === '/api/feedback/' || p === '/api/feedback/mine',
     async handle(req, res, _p, query) {
       void query;
+      // ---- 我的历史反馈（按当前登录账号过滤，不需要 CORS：同源页面自己取） -----------------------
+      if (String(_p || '') === '/api/feedback/mine') {
+        if (req.method === 'OPTIONS') {
+          res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '600' });
+          res.end();
+          return;
+        }
+        if (req.method !== 'GET') { json(res, 405, { ok: false, error: 'METHOD_NOT_ALLOWED' }); return; }
+        const accountId = typeof identify === 'function' ? (identify(req) || '') : '';
+        if (!accountId) { json(res, 401, { ok: false, error: 'AUTH_REQUIRED', message: '登录后才能查看自己的反馈记录' }); return; }
+        const items = store.list()
+          .filter((r) => r && r.accountId === accountId)
+          .map((r) => ({
+            id: r.id, at: r.at, text: r.text,
+            status: r.status === 'resolved' ? 'resolved' : 'open',
+            reply: typeof r.reply === 'string' ? r.reply : '',
+            repliedAt: Number.isFinite(r.repliedAt) ? r.repliedAt : null,
+          }));
+        json(res, 200, { ok: true, items });
+        return;
+      }
       if (req.method === 'OPTIONS') {
         res.writeHead(204, {
           'access-control-allow-origin': '*',

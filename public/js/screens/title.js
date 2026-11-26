@@ -198,6 +198,39 @@ export function TitleScreen() {
     if (currentName) setName((draft) => draft || currentName);
   }, [currentName]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 业主 2026-11-22：**服务器关闭**时，标题页的开始键要变红、不可点、文字改成「服务器关闭」。
+  // 判定：定时探一次 /healthz ——
+  //   · 进程没起 / 端口不通 → fetch 抛错；
+  //   · 后台「关闭服务器」（gate.open=false）→ 仍是 200，但 body 里 `closed: true`（server/http/routes.js 这么写）。
+  // 所以两个条件都要看；另外 WS 已经明确 closed 也算关闭。探活失败时 2 秒后再探，服务一恢复按钮立刻变回「开始」。
+  const [serverDown, setServerDown] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    let wasDown = false;
+    const probe = async () => {
+      let ok = false;
+      try {
+        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        const to = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch { /* ignore */ } }, 3000) : null;
+        const r = await fetch('/healthz', { cache: 'no-store', ...(ctrl ? { signal: ctrl.signal } : {}) });
+        let body = null;
+        try { body = await r.json(); } catch { body = null; }
+        // 关服的两种写法都认：新版只回 {version, status:'closing'}，旧版回 closed:true（兼容代理/旧服）
+        ok = !!r && r.ok && !(body && (body.closed === true || body.status === 'closing'));
+        if (to) clearTimeout(to);
+      } catch { ok = false; }
+      if (!alive) return;
+      // 业主 2026-11-23：关服时客户端被 net.close() 主动断开（不再自动重连），如果这里只把按钮复原，
+      // socket 仍然是关的 → 「开始」因为 !online 永远不可点，只能刷新页面。所以**一探测到重新开服**就主动重连。
+      if (ok && wasDown) { try { net.connect(); } catch { /* 连接失败交给 net 自己重试 */ } }
+      wasDown = !ok;
+      setServerDown(!ok);
+      timer = setTimeout(probe, ok ? 5000 : 2000);
+    };
+    probe();
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, []);
   // 彩蛋入口（业主 2026-10-22）：连点页脚的版本号 5 次进 /arg/ —— 那套 REC 解谜页不放在任何菜单里，
   // 只有知道的人点得到。计数放在 ref 里，5 次后整页跳转。
   const egg = useRef({ n: 0, at: 0 });
@@ -234,6 +267,9 @@ export function TitleScreen() {
 
   const valid = isValidName(name);
   const start = () => {
+    // 业主 2026-11-23：点「开始」先确保 socket 在连 —— 关服被踢（net.close，不自动重连）之后，
+    // 即使探活还没跑回来，点一下也能立刻重新握手，不用刷新页面。
+    try { net.connect(); } catch { /* net 自己会退避重试 */ }
     // 已登录：用账号昵称进游戏，不再要求输入代号
     if (hasAccount) {
       const n = sanitizeName(account.nickname);
@@ -248,7 +284,15 @@ export function TitleScreen() {
     if (!acc) return;
     const name = sanitizeName(acc.nickname);
     store.set((s) => ({ ...s, account: acc, accountsEnabled: true, me: { ...s.me, name: name || s.me.name } }));
-    try { installCloudSave({ api: accountApi, onError: (e) => console.warn('[cloudSave] 同步失败', e && e.message) }); }
+    // 云存档：accountId 用来判断「本地是不是上一个账号的数据」——换号时以云端为准，不合并本地
+    try {
+      installCloudSave({
+        api: accountApi,
+        accountId: acc.id || null,
+        onAccountSwitched: () => { try { globalThis.location?.reload(); } catch { /* ignore */ } },
+        onError: (e) => console.warn('[cloudSave] 同步失败', e && e.message),
+      });
+    }
     catch (err) { console.warn('[cloudSave] 安装失败', err); }
     try { installSocialInvites(); } catch (err) { console.warn('[social] 邀请浮层安装失败', err); }
     try { net.connect(); } catch (err) { console.warn('[net] 登录后连接失败', err); }
@@ -257,19 +301,24 @@ export function TitleScreen() {
   };
 
   const online = conn.status === 'online' || conn.status === 'connected';
+  // 服务器关闭：只认 /healthz 的探活结果（关闭服时 body 的 closed:true，进程没了则 fetch 失败）。
+  // 不看 conn.status —— 未登录时它本来就不是 online，会把「开始」误判成关闭。
+  const serverClosed = serverDown;
   // 未登录时不连 socket：状态行说「登录后自动连接」，别让一个 idle/closed 的红点吓人
   const waitingLogin = loginMode && !online;
-  const dotClass = online ? 'is-on' : waitingLogin ? 'is-warn' : conn.status === 'reconnecting' || conn.status === 'connecting' || conn.status === 'handshaking' ? 'is-warn' : 'is-bad';
-  const statusText = waitingLogin
-    ? t('登录后自动连接服务器')
-    : (STATUS_TEXT[conn.status] ? t(STATUS_TEXT[conn.status]) : conn.status);
+  const dotClass = serverClosed ? 'is-bad' : online ? 'is-on' : waitingLogin ? 'is-warn' : conn.status === 'reconnecting' || conn.status === 'connecting' || conn.status === 'handshaking' ? 'is-warn' : 'is-bad';
+  const statusText = serverClosed
+    ? t('服务器已关闭')
+    : waitingLogin
+      ? t('登录后自动连接服务器')
+      : (STATUS_TEXT[conn.status] ? t(STATUS_TEXT[conn.status]) : conn.status);
 
   // touch screens: no autofocus (it would pop the on-screen keyboard over a landscape phone's whole view)
   const touchUi = useMemo(() => detectFeatures().coarse, []);
   // a title in an alphabetic script (English, French …) is the big one in the display face and the wordmark above it
   // hides; a CJK / kana / Hangul title keeps the Chinese layout (shared/i18nPacks.js scriptOf — a pack needs no flag)
   const alphabetic = scriptOf(t('卫戍协议')) === 'alphabetic';
-  return html`<div class=${`screen title-screen${loginMode ? ' title-screen--auth' : ''}${loginMode && authTab === 'register' ? ' title-screen--register' : ''}`}>
+  return html`<div class=${`screen title-screen${loginMode ? ' title-screen--auth' : ''}${loginMode && authTab === 'register' ? ' title-screen--register' : ''}${serverClosed ? ' is-server-closed' : ''}`}>
     <div class=${`title-bg${bgLoaded ? ' has-art' : ''}${ridgesLoaded ? ' has-ridges' : ''}`} aria-hidden="true">
       ${backdrop ? html`<img class="title-bg__art" src=${backdrop} alt="" draggable=${false}
         onLoad=${() => setBgLoadedUrl(backdrop)} />` : null}
@@ -332,9 +381,9 @@ export function TitleScreen() {
                   </span>
                   <button type="button" class="tentry__switch tapx" onClick=${switchAccount}>${t('切换账号')}</button>
                 </div>
-                <button type="button" class="tentry__start tapx" disabled=${!online} onClick=${start}>
-                  <span class="tentry__start-label">${t('开始')}</span>
-                  <svg class="tentry__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5l7.5 7.5L5 19.5M12.5 4.5L20 12l-7.5 7.5" /></svg>
+                <button type="button" class=${`tentry__start tapx${serverClosed ? ' is-down' : ''}`} disabled=${serverClosed} onClick=${start}>
+                  <span class="tentry__start-label">${serverClosed ? t('服务器关闭') : t('开始')}</span>
+                  ${serverClosed ? null : html`<svg class="tentry__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5l7.5 7.5L5 19.5M12.5 4.5L20 12l-7.5 7.5" /></svg>`}
                 </button>
                 <div class="tentry__tools">
                   <button type="button" class="tentry__line tapx" title=${serverTip} onClick=${() => toast(serverTip)}>
@@ -349,7 +398,7 @@ export function TitleScreen() {
             : html`<${TextField} label=${t('博士代号')} micro="CALLSIGN" size="lg" icon="user" value=${name} maxLength=${NAME_MAX_LEN}
                 placeholder=${t('输入你的代号（最多 {NAME_MAX_LEN} 字）', { NAME_MAX_LEN })} autoFocus=${!touchUi}
                 onInput=${setName} onEnter=${start} />
-              <${Button} variant="primary" size="xl" block=${true} iconRight="chevrons" disabled=${!valid} onClick=${start}>${t('开始')}<//>`}
+              <${Button} variant=${serverClosed ? 'danger' : 'primary'} size="xl" block=${true} iconRight=${serverClosed ? null : 'chevrons'} disabled=${serverClosed || !valid} onClick=${start}>${serverClosed ? t('服务器关闭') : t('开始')}<//>`}
         ${hasAccount ? null : html`<div class="title-conn">
           <span class=${`status-dot ${dotClass}`}></span>
           <span>${statusText}</span>
