@@ -227,7 +227,16 @@ export async function startServer(opts = {}) {
   // 账号头像（业主 2026-11-14）：座位/对局/结算按 accountId 读每个玩家**自己**的干员立绘头像
   lobby.accounts = accountsOn ? accountService : null;
   // 搜寻队友 (server/matchmaking.js): starts on the first queue entry; the lobby forwards room.matchmake to it.
-  const matchmaker = new Matchmaker(lobby, { timeoutMs: Number(process.env.SP_MATCHMAKE_TIMEOUT_MS) || 10_000 });
+  // 两个超时是分开的（业主 2026-11-27）：
+  //   queueTimeoutMs   = 散人撮合单次等待 45 秒（到点把已匹到的人全部送进房间，只匹到一个就取消匹配）
+  //   confirmTimeoutMs = 房间补齐 / 确认入场倒计时 30 秒（超时踢掉未准备的、保留已准备的继续匹配）
+  // 以前这里只有 `timeoutMs: 10_000`，把 matchmaking.js 的默认值压掉了 —— 线上两个超时其实都是 10 秒
+  // （所以 11-26 那次「确认倒计时 30 秒」从来没生效过）。
+  const matchmaker = new Matchmaker(lobby, {
+    queueTimeoutMs: Number(process.env.SP_MATCH_QUEUE_TIMEOUT_MS) || 45_000,
+    confirmTimeoutMs: Number(process.env.SP_MATCH_CONFIRM_TIMEOUT_MS)
+      || Number(process.env.SP_MATCHMAKE_TIMEOUT_MS) || 30_000,
+  });
   lobby.matchmaker = matchmaker;
   // Main-thread event-loop delay sampling (server/health/eventLoop.js): opt-in with SP_LOOP_SAMPLE=1, no worker pool involved, and a
   // LOCAL log line per window (`[loop] p50=… p95=… p99=… max=… cpu=… mem=… rooms=… humans=… phase=…`) — deliberately not

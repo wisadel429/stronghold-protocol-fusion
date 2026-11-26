@@ -6,7 +6,8 @@
 //   3. 按 (mode, difficulty) 分桶进行撮合
 //   4. 优先补齐房间：若有房间正处于 matching 状态，优先将匹配池中的散人博士填入房间空位
 //   5. 散人组队：凑齐 4 人立即创建新同盟房间
-//   6. 超时补位：排队超时（默认 10 秒）且允许 fillBots，自动按已有玩家建房或将房间剩余空位填充 AI 队友并自动开启对局
+//   6. 超时：散人撮合单次等待 `queueTimeoutMs`（业主 2026-11-27：45 秒）到点，把**已匹到的所有人**
+//      送进同一个房间（进「匹配完成」页确认）；只匹到一个人就取消匹配（不补 AI、不硬开空房）
 //   7. 状态同步：下发 match.status / match.found，更新 room.state.matching
 
 import { randomBytes } from 'node:crypto';
@@ -16,7 +17,13 @@ import { sendSession } from './net.js';
 
 const MATCHMAKING_DEFAULTS = Object.freeze({
   tickIntervalMs: 1000,
-  timeoutMs: 30_000, // 业主 2026-11-26：确认入场倒计时 30 秒（超时踢掉未准备的、保留已准备的继续匹配）
+  // 散人撮合的单次等待上限（业主 2026-11-27：45 秒）——
+  // 到点就把**已经匹到的所有人**送进房间；只匹到一个人就取消匹配（不补 AI、不硬开）。
+  queueTimeoutMs: 45_000,
+  // 房间补齐 / 确认入场的倒计时（业主 2026-11-26：30 秒；超时踢掉未准备的、保留已准备的继续匹配）。
+  // 2026-11-27 起与上面的 queueTimeoutMs 分开：以前两者共用一个 opts.timeoutMs，
+  // 而 server/index.js 又把它写死成 10_000 → 线上两个超时其实都是 10 秒（11-26 的「30 秒」从未生效）。
+  confirmTimeoutMs: 30_000,
   targetPlayers: MAX_SEATS, // 4 人同盟
 });
 
@@ -28,6 +35,12 @@ export class Matchmaker {
   constructor(lobby, opts = {}) {
     this.lobby = lobby;
     this.opts = { ...MATCHMAKING_DEFAULTS, ...opts };
+    // 兼容旧调用方：只给 `timeoutMs` 时，两个超时都用它（历史上是同一个值）
+    const legacy = Number(opts.timeoutMs);
+    if (Number.isFinite(legacy) && legacy > 0) {
+      if (!Number.isFinite(Number(opts.confirmTimeoutMs))) this.opts.confirmTimeoutMs = legacy;
+      if (!Number.isFinite(Number(opts.queueTimeoutMs))) this.opts.queueTimeoutMs = legacy;
+    }
     /** @type {Map<string, { session: any, mode: string, difficulty: string, fillBots: boolean, joinedAt: number }>} */
     this.queue = new Map();
     /** @type {Map<string, { room: any, queueId: string, startedAt: number, deadlineAt: number, fillBots: boolean }>} */
@@ -209,13 +222,13 @@ export class Matchmaker {
 
   /**
    * 补齐房间的等待时长（业主 2026-11-15）：调用方可以指定，限幅 5 秒 ~ 5 分钟；
-   * 不指定时沿用服务端默认（SP_MATCHMAKE_TIMEOUT_MS，10 秒）。
+   * 不指定时用 `confirmTimeoutMs`（业主 2026-11-26：确认入场倒计时 30 秒）。
    * @param {number} asked
    * @returns {number}
    */
   waitFor(asked) {
     const n = Number(asked);
-    if (!Number.isFinite(n) || n <= 0) return this.opts.timeoutMs;
+    if (!Number.isFinite(n) || n <= 0) return this.opts.confirmTimeoutMs;
     return Math.min(Math.max(Math.round(n), 5000), 300_000);
   }
 
@@ -378,11 +391,13 @@ export class Matchmaker {
 
         if (entries.length === 0) continue;
 
-        // 4.3 超时：多出人才开房并直接开局；仍然只有一个人就取消匹配（不补 AI）
+        // 4.3 超时（业主 2026-11-27：单次撮合 45 秒）：
+        //     到点就把**这个桶里已经匹到的所有人**送进同一个房间（进「匹配完成」页确认）；
+        //     只匹到一个人就取消匹配（不补 AI、不硬开空房）。
         const oldest = entries.reduce((prev, curr) => (curr.joinedAt < prev.joinedAt ? curr : prev), entries[0]);
         const waitTime = now - oldest.joinedAt;
 
-        if (waitTime >= this.opts.timeoutMs) {
+        if (waitTime >= this.opts.queueTimeoutMs) {
           const matched = entries.splice(0, this.opts.targetPlayers);
           for (const m of matched) this.queue.delete(m.session.playerId);
           if (matched.length > 1) {
