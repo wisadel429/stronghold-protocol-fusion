@@ -20,7 +20,14 @@ import { ROOT } from './config.js';
  * this fingerprint for the process lifetime: files changing on disk do not advertise a new build before restart.
  * The rest of `server/` and downloaded media are not included.
  */
-export const BUILD_INPUTS = Object.freeze(['public/index.html', 'public/js', 'public/css', 'server/sim', 'shared', 'data']);
+export const BUILD_INPUTS = Object.freeze([
+  // 业主 2026-11-28：**网页原版 UI 已移除**（public/index.html 与那批基础界面代码都删了），所以这里换成
+  // 两套主题的入口 + 它们真正加载的两棵目录（ui-themes / ui-compat）。不带上这两棵目录的话，
+  // 只改主题界面时 build 不变 → 客户端「热更后强制刷新」永远不会触发，玩家一直看旧界面。
+  'public/ui-theme-closure.html', 'public/ui-theme-initial.html', 'public/ui-theme.html',
+  'public/js', 'public/css', 'public/ui-themes', 'public/ui-compat',
+  'server/sim', 'shared', 'data',
+]);
 
 /** Names the static server never serves: dot files (`.DS_Store`, `.main.js.swp`) and editor backups (`main.js~`). */
 const isIgnoredBuildName = (name) => name.startsWith('.') || name.endsWith('~');

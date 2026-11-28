@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState , useRef } from '../../vendor/hooks.module
 import { NAME_MAX_LEN, APP_VERSION, DEV_BUILD } from '../../../shared/constants.js';
 import { html, Button, Icon, MicroLabel, TextField, PingPill } from '../ui/components.js';
 import { GuideButton } from '../ui/guide.js';
-// 界面主题的局外入口（网页原版 / 卫戍协议终端 / 可露希尔）——与「皮肤」系统无关，跳 /ui-theme.html。
+// 界面主题的局外入口（卫戍协议终端 / 可露希尔；网页原版已于 2026-11-28 移除）——与「皮肤」系统无关，跳 /ui-theme.html。
 // 主页(`/`)本身仍是本仓原版 UI：这里只放一颗入口按钮，不做任何自动跳转。
 import { UiThemeButton } from '../ui/uiThemeSwitch.js';
 // 账号系统：标题页右上角的「昵称#tag」按钮（改名 / 退出登录），以及「开始」卡里的登录/注册表单（AuthCard）

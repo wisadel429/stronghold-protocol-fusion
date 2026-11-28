@@ -25,6 +25,28 @@ import { clientAddress, isLocalIp } from '../net.js';
 
 const MAX_URL_LENGTH = 4096;
 
+/** 两套界面主题的入口（主题靠 import map 在模块解析前定死，所以各有一个静态 HTML）。 */
+const UI_ENTRY = Object.freeze({ initial: '/ui-theme-initial.html', closure: '/ui-theme-closure.html' });
+
+/**
+ * `/ui-theme.html` 里选的界面（cookie `sp_ui_theme`）。只认这两套；没选过或值不认识 → null（走默认 closure）。
+ * 业主 2026-11-28 移除网页原版后，`/` 的跳转就靠它记住玩家的选择。
+ * @param {string|undefined} header
+ * @returns {'initial'|'closure'|null}
+ */
+function parseUiThemeCookie(header) {
+  try {
+    for (const part of String(header || '').split(';')) {
+      const i = part.indexOf('=');
+      if (i < 0) continue;
+      if (part.slice(0, i).trim() !== 'sp_ui_theme') continue;
+      const v = decodeURIComponent(part.slice(i + 1).trim());
+      return v === 'initial' || v === 'closure' ? v : null;
+    }
+  } catch { /* 坏 cookie 当没选过 */ }
+  return null;
+}
+
 /** `{ plugins: n }` when the server has n > 0 unofficial plugins (the lobby's visual sets count them), else nothing. */
 function pluginCount(lobby) {
   let n;
@@ -179,6 +201,19 @@ export function createRequestHandler({ serveStatic, health, log, trustProxy = 'a
     }
     // 缺人同盟: GET /api/recruit — public co-op rooms still waiting for players (the card polls it)
     if (recruitApi && await recruitApi(req, res, parts.rawPath)) return;
+    // 入口跳转（业主 2026-11-28：**网页原版 UI 已移除**，`/` 与 `/index.html` 不再有那个页面）。
+    // 两套主题各有一个静态入口 HTML（主题靠 import map + 整套 CSS 替换，必须在模块解析前定下来），
+    // 这里只做「上次选了哪套就进哪套」：选择记在 cookie `sp_ui_theme`（由 /ui-theme.html 写入），
+    // 没选过 / 值不认识 → 默认 closure（「全能的」可露希尔，2026-11-15 起的默认界面）。
+    // 一定要保留查询串：房间邀请是 `/?room=CODE`，丢了就进不去房。
+    if (parts.rawPath === '/' || parts.rawPath === '/index.html') {
+      const saved = parseUiThemeCookie(req.headers.cookie);
+      const target = saved === 'initial' ? UI_ENTRY.initial : UI_ENTRY.closure;
+      const query = parts.query ? '?' + parts.query : '';
+      res.writeHead(302, { Location: target + query, 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     await serveStatic(req, res, parts.rawPath, parts.query);
   }
 

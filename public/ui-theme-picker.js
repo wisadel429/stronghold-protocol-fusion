@@ -1,27 +1,19 @@
 /* public/ui-theme-picker.js — 局外的「界面主题」选择页（独立页面，不依赖任何会被主题替换的模块）。
  *
- * 三个可选界面 + 一张未开放的锁定卡：
- *   web      = 网页原版（本服务器当前这套界面，保持原样）
+ * 业主 2026-11-28：**网页原版 UI 已移除**（入口页、旧的界面代码都删了），这里只剩两套主题：
  *   initial  = 分享包的「卫戍协议终端」
- *   closure  = 分享包的「“全能的”可露希尔」
- * 选择写进 localStorage 的 sp.ui-theme.v1（与分享包同键），然后跳到对应入口。
- * 入口之所以是三个 HTML：主题靠 import map + 整套 CSS 替换，必须在模块解析前定下来。
+ *   closure  = 分享包的「“全能的”可露希尔」（默认）
+ * 选择写进 localStorage 的 sp.ui-theme.v1（与分享包同键）**和 cookie sp_ui_theme**，
+ * 后者是给服务端用的：`/` 是 302，得在浏览器解析任何模块之前就知道该进哪套（见 server/http/routes.js）。
+ * 入口之所以是两个静态 HTML：主题靠 import map + 整套 CSS 替换，必须在模块解析前定下来。
  */
 (function () {
   'use strict';
 
   var KEY = 'sp.ui-theme.v1';
+  var COOKIE = 'sp_ui_theme';
 
   var THEMES = [
-    {
-      id: 'web',
-      name: '网页原版',
-      micro: 'ORIGINAL WEB',
-      desc: '本服务器当前这套界面，一个像素都不改。想回到原来的样子就选它。',
-      entry: '/',
-      thumb: null,
-      accent: '#17d9a0',
-    },
     {
       id: 'initial',
       name: '卫戍协议终端',
@@ -53,18 +45,24 @@
   ];
 
   function readSaved() {
-    try { return localStorage.getItem(KEY) || 'web'; } catch (e) { return 'web'; }
+    try {
+      var v = localStorage.getItem(KEY);
+      return v === 'initial' || v === 'closure' ? v : 'closure';   // 没选过 / 旧值（含已移除的 'web'）→ 默认 closure
+    } catch (e) { return 'closure'; }
   }
 
   function save(id) {
-    try { localStorage.setItem(KEY, id); return true; } catch (e) { return false; }
+    try { localStorage.setItem(KEY, id); } catch (e) { /* 隐私模式：继续写 cookie */ }
+    try {
+      // 给服务端用：`/` 要 302 到对应主题入口。1 年、全站、Lax。
+      document.cookie = COOKIE + '=' + encodeURIComponent(id) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+      return true;
+    } catch (e) { return false; }
   }
 
-  /** 当前实际在哪一套界面：主题入口会写 <meta name="sp-ui-theme">，原版没有这个标记。 */
+  /** 当前实际在哪一套界面：只认记住的那套（没有「原版」这一档了）。 */
   function currentId() {
-    var saved = readSaved();
-    for (var i = 0; i < THEMES.length; i++) if (THEMES[i].id === saved && THEMES[i].entry) return saved;
-    return 'web';
+    return readSaved();
   }
 
   function card(theme, active) {
@@ -133,11 +131,8 @@
 
   function choose(theme) {
     if (!theme || !theme.entry) return;
-    if (!save(theme.id)) {
-      note('这台浏览器不允许写入本地存储（隐私模式？），选择不会被记住，但本次仍会切换。', 'warn');
-    } else {
-      note('正在切换到「' + theme.name + '」…', 'ok');
-    }
+    note('正在切换到「' + theme.name + '」…', 'ok');
+    save(theme.id);
     location.href = theme.entry;
   }
 
