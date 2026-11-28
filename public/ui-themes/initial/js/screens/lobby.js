@@ -2,6 +2,7 @@ import { UIThemeButton } from '/js/ui/uiThemePicker.js';
 import {publicRoomCode} from '/ui-compat/shared/unifiedRegion-20261024.js';
 import {CrisisRoomBadge,isCrisisRoom} from '/js/ui/crisisRoomBadge.js';
 import { reversePolicyLabel } from '/js/ui/roomPolicy.js';
+import { roomCodeFromText, looksLikeInviteLink } from '/js/ui/inviteParse.js';
 import { FeedbackButton, NoticeButton } from '/js/ui/playerSupport.js';
 import { LobbyMusicButton } from '/js/ui/lobbyMusic.js';
 import { AccountMeChip, AccountNickname, useAccount } from '/js/ui/accounts.js';
@@ -237,6 +238,17 @@ export function normalizeCode(v) {
   const m = s.match(/[?&]room=([A-Za-z0-9]+)/);
   if (m) s = m[1];
   return s.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, federationEnabled ? 5 : ROOM_CODE_LEN);
+}
+
+/**
+ * Pasted text → room code (empty string when the text holds no code). 业主 2026-11-21：整段邀请里只取网址的
+ * `?room=`，填进密钥并直接进房；纯密钥（4~5 位）照旧可用。
+ * @param {string} text
+ * @returns {string}
+ */
+export function codeFromPastedText(text) {
+  const c = roomCodeFromText(text);
+  return c ? normalizeCode(c) : '';
 }
 
 /**
@@ -669,7 +681,16 @@ function AllianceSelect({ onClose, code, onCode, codeOk, recent, online, maint, 
           <span class="ally-card__art"><${JoinArt} /></span>
           <label class="ally-key"><${Icon} name="search" />
             <input type="text" value=${code} placeholder=${t('输入同盟密钥')} maxlength="64" autocomplete="off" spellcheck="false"
-              onInput=${(e) => onCode(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === 'Enter') onJoin(); }} />
+              onInput=${(e) => onCode(e.currentTarget.value)} onKeyDown=${(e) => { if (e.key === 'Enter') onJoin(); }}
+              onPaste=${(e) => {
+                // 业主 2026-11-21「粘贴邀请适配」：整段邀请里只取网址的 ?room=，填进密钥并直接进房
+                const text = e && e.clipboardData ? e.clipboardData.getData('text') : '';
+                const pasted = codeFromPastedText(text);
+                if (!pasted) return;              // 不是邀请：交给浏览器正常粘贴（onInput 还会再过滤一次）
+                e.preventDefault();
+                onCode(pasted);
+                onJoin(pasted);
+              }} />
             ${codeOk ? html`<button type="button" class="ally-key__spec" disabled=${!online || busy === 'spectate'} onClick=${onSpectate}
               title=${t('以观战者身份进入：不占博士席位，只能观看（每个同盟最多 {MAX_SPECTATORS} 名，模拟进行中也可进入）', { MAX_SPECTATORS })}><${Icon} name="eye" />${t('观战')}</button>` : null}
           </label>
@@ -1003,6 +1024,25 @@ export function LobbyScreen() {
       throw err;
     }));
   };
+  // 业主 2026-11-21「粘贴邀请即进房」：主题化后密钥输入框被收进「密钥加入」弹层，先粘贴、再找输入框很别扭。
+  // 所以大厅里直接 Ctrl+V 也走同一条路：焦点不在输入框时接管，取到 ?room= 就进房。输入框那两处自己处理。
+  const joinRef = useRef(join);
+  joinRef.current = join;
+  useEffect(() => {
+    const onPaste = (e) => {
+      const tgt = e.target;
+      if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
+      const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+      if (!looksLikeInviteLink(text)) return;   // 背景粘贴只认邀请链接，免得把普通 4 字词当成密钥
+      const pasted = codeFromPastedText(text);
+      if (!pasted) return;                      // 有链接但没有 room=：不接管这次粘贴
+      e.preventDefault();
+      setCode(pasted);
+      joinRef.current(pasted);
+    };
+    addEventListener('paste', onPaste);
+    return () => removeEventListener('paste', onPaste);
+  }, []);
   const backToTitle = () => {
     identity.setEntered(false);
     store.set((s) => ({ session: { ...s.session, entered: false } }));
@@ -1137,12 +1177,21 @@ export function LobbyScreen() {
 
     ${allyOpen ? html`<${AllianceSelect} onClose=${() => setAllyOpen(false)} code=${code} onCode=${(v) => setCode(normalizeCode(v))} codeOk=${codeOk}
       recent=${recent} online=${online} maint=${maint} busy=${busy} difficulty=${difficulty} recruiting=${recruitingRooms(rooms).length}
-      onCreate=${create} onJoin=${() => join()} onSpectate=${() => spectate()} onBrowse=${() => setModalOpen(true)} onSearch=${openSearch} />` : null}
+      onCreate=${create} onJoin=${(c) => join(typeof c === 'string' ? c : undefined)} onSpectate=${() => spectate()} onBrowse=${() => setModalOpen(true)} onSearch=${openSearch} />` : null}
 
     <${HubDialog} open=${joinOpen} micro="JOIN WITH ALLIANCE KEY" title=${t('密钥加入')} onClose=${() => setJoinOpen(false)}>
       <div class="join-row">
         <${TextField} size="code" icon="key" value=${code} placeholder=${t('输入同盟密钥 / 粘贴邀请链接')}
-          transform=${normalizeCode} onInput=${(v) => setCode(normalizeCode(v))} onEnter=${() => join()} />
+          transform=${normalizeCode} onInput=${(v) => setCode(normalizeCode(v))} onEnter=${() => join()}
+          onPaste=${(e) => {
+            // 粘贴整段邀请链接 → 取出 ?room= → 直接进房（业主 2026-11-21 的口径，主题化时丢了，2026-11-28 补回）
+            const text = e && e.clipboardData ? e.clipboardData.getData('text') : '';
+            const pasted = codeFromPastedText(text);
+            if (!pasted) return;
+            e.preventDefault();
+            setCode(pasted);
+            join(pasted);
+          }} />
       </div>
       <div class="join-row hub-join__buttons">
         <${Button} variant="amber" size="lg" icon="users" loading=${busy === 'join'} disabled=${!codeOk || !online} onClick=${() => join()}>${t('加入同盟')}<//>
