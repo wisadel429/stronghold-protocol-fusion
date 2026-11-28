@@ -93,40 +93,55 @@ export function startListReporter({ dataDir = 'data', log = console } = {}) {
 
   const warn = (m) => { try { (log.warn || log.info || console.log).call(log, '[list-reporter] ' + m); } catch { /* ignore */ } };
 
-  let ticking = false;
-  const cycle = async () => {
-    if (ticking) return;
-    ticking = true;
+  // 业主 2026-11-28「让玩家刷新时是真刷新」：
+  // 不能只在自己的 30 秒节拍里探测，否则玩家点刷新要等半分钟。
+  // 改成**每 4 秒轻量轮询一次列表**（只读 JSON，没有副作用），两种情况立刻探：
+  //   ① 到了自己的常规间隔（intervalMs）② 列表里 refreshAt 比上一轮新（有玩家点了刷新）
+  const TICK_MS = 3000;
+  let busy = false;
+  let lastCycleAt = 0;
+  let lastHandledRefresh = 0;
+
+  const runProbe = async (doc, probeTimeout) => {
+    const servers = (doc.servers || []).filter((s) => s && s.url);
+    if (!servers.length) { warn('列表为空'); return; }
+    const results = await Promise.all(servers.map((srv) => probe(srv, probeTimeout)));
+    const up = await request(`${cfg.listUrl}/api/report`, {
+      method: 'POST',
+      timeout: cfg.timeoutMs * 2,
+      body: { token: cfg.token, source: cfg.source, at: Date.now(), results },
+    });
+    const online = results.filter((r) => r.ok).length;
+    if (up.status !== 200) warn(`上报失败 HTTP ${up.status} ${String(up.body).slice(0, 120)}`);
+    else (log.info || console.log).call(log, `[list-reporter] ${results.length} 个服 · 在线 ${online} · 已上报`);
+  };
+
+  const tick = async () => {
+    if (busy) { setTimeout(tick, TICK_MS).unref?.(); return; }
+    busy = true;
     try {
-      // 1) 取列表
       const listRes = await request(`${cfg.listUrl}/api/servers`, { timeout: cfg.timeoutMs * 2 });
       if (listRes.status !== 200) { warn(`拉列表失败 HTTP ${listRes.status}`); return; }
       const doc = JSON.parse(listRes.body);
-      const servers = (doc.servers || []).filter((s) => s && s.url);
-      if (!servers.length) { warn('列表为空'); return; }
-
-      // 2) 并发探测
-      const results = await Promise.all(servers.map((srv) => probe(srv, cfg.timeoutMs)));
-
-      // 3) 上报
-      const up = await request(`${cfg.listUrl}/api/report`, {
-        method: 'POST',
-        timeout: cfg.timeoutMs * 2,
-        body: { token: cfg.token, source: cfg.source, at: Date.now(), results },
-      });
-      const online = results.filter((r) => r.ok).length;
-      if (up.status !== 200) warn(`上报失败 HTTP ${up.status} ${String(up.body).slice(0, 120)}`);
-      else (log.info || console.log).call(log, `[list-reporter] ${results.length} 个服 · 在线 ${online} · 已上报`);
+      const refreshAt = Number(doc.refreshAt) || 0;
+      const due = Date.now() - lastCycleAt >= cfg.intervalMs;
+      const asked = refreshAt > lastHandledRefresh && refreshAt > lastCycleAt;
+      if (due || asked) {
+        if (asked) lastHandledRefresh = refreshAt;
+        lastCycleAt = Date.now();
+        // 玩家正在等结果 → 探测超时收紧到 5 秒（连不上的服本来就该判失败，不值得再等 8 秒）
+        await runProbe(doc, asked ? Math.min(cfg.timeoutMs, 5000) : cfg.timeoutMs);
+      }
     } catch (e) {
       warn('本轮失败：' + (e && (e.code || e.message) || e));
     } finally {
-      ticking = false;
-      setTimeout(() => { cycle(); }, cfg.intervalMs).unref?.();
+      busy = false;
+      setTimeout(tick, TICK_MS).unref?.();
     }
   };
 
   // 启动后先等 10 秒再开始（别和服务器自己的启动期抢资源）
-  setTimeout(() => { cycle(); }, 10000).unref?.();
-  try { (log.info || console.log).call(log, `[list-reporter] 已启用 → ${cfg.listUrl}（每 ${cfg.intervalMs}ms）`); } catch { /* ignore */ }
+  setTimeout(tick, 10000).unref?.();
+  try { (log.info || console.log).call(log, `[list-reporter] 已启用 → ${cfg.listUrl}（常规每 ${cfg.intervalMs}ms，每 ${TICK_MS}ms 检查一次刷新请求）`); } catch { /* ignore */ }
   return true;
 }
