@@ -624,7 +624,7 @@ function renderResource(r) {
   const cpu = r.cpu || {};
   $('res-cpu').textContent = Number.isFinite(cpu.systemPct) ? cpu.systemPct + '%' : '–';
   setMeter($('res-cpu-bar'), cpu.systemPct);
-  $('res-cpu-note').textContent = '整机 · 本进程 ' + (Number.isFinite(cpu.processPct) ? cpu.processPct + '%' : '–')
+  $('res-cpu-note').textContent = '整机 5 秒均值 · 本进程 ' + (Number.isFinite(cpu.processPct) ? cpu.processPct + '%' : '–');
     + (Number.isFinite(cpu.cores) ? ' · ' + cpu.cores + ' 核' : '')
     + (cpu.model ? ' · ' + (String(cpu.model).replace(/\s+/g, ' ').length > 30
       ? String(cpu.model).replace(/\s+/g, ' ').slice(0, 29) + '…'
@@ -633,7 +633,9 @@ function renderResource(r) {
   $('res-mem').textContent = Number.isFinite(mem.usedPct) ? mem.usedPct + '%' : '–';
   setMeter($('res-mem-bar'), mem.usedPct);
   const procMem = mem.process || {};
-  $('res-mem-note').textContent = '已用 ' + fmtBytes(mem.usedBytes) + ' / ' + fmtBytes(mem.totalBytes)
+  // source='os' 时 os.freemem() 不含可回收的页缓存，usedPct 会偏高：如实标注，避免误读（业主 2026-11-28）
+  const memSrc = mem.source === 'proc' ? '' : (mem.source === 'os' ? '（Windows 口径：不含可回收的系统缓存/备用内存）' : '');
+  $('res-mem-note').textContent = '已用 ' + fmtBytes(mem.usedBytes) + ' / ' + fmtBytes(mem.totalBytes) + memSrc
     + ' · 进程 RSS ' + fmtBytes(procMem.rssBytes)
     + (Number.isFinite(procMem.rssPctOfSystem) ? '（' + procMem.rssPctOfSystem + '%）' : '');
   const b = r.bandwidth;

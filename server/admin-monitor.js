@@ -12,6 +12,7 @@
 //
 // Used by server/admin-live.js (snapshot().resource) and by server/index.js (noteHttp / the page-view count).
 
+import fs from 'node:fs';
 import os from 'node:os';
 import { clientAddress } from './net.js';
 
@@ -25,18 +26,48 @@ const dayKey = (ms) => {
 /** A client address, without the IPv4-mapped prefix, or '?' when the socket already went away. */
 const addrOf = (req, trustProxy) => String(clientAddress(req, trustProxy).ip || '?').replace(/^::ffff:/, '');
 
-/** The cumulative CPU times of every core, as one `{ idle, total }` pair (ms). */
+/**
+ * 整机累计 CPU 时间（毫秒）。优先直接读 `/proc/stat`：它带 iowait / steal，
+ * 和 `top` 的口径一致；Node 的 `os.cpus()` 少了这两项，在云主机上会把占用率算高（业主 2026-11-28「探测不准确」）。
+ * 读不到（非 Linux）再退回 `os.cpus()`。
+ */
 function cpuTimes() {
   const cpus = os.cpus() || [];
+  const cores = cpus.length || 1;
+  const model = cpus[0]?.model || '';
+  try {
+    const line = fs.readFileSync('/proc/stat', 'utf8').split('\n').find((l) => l.startsWith('cpu '));
+    if (line) {
+      const v = line.trim().split(/\s+/).slice(1).map(Number);
+      // user nice system idle iowait irq softirq steal
+      const [user = 0, nice = 0, system = 0, idle = 0, iowait = 0, irq = 0, softirq = 0, steal = 0] = v;
+      return { idle: idle + iowait, total: user + nice + system + idle + iowait + irq + softirq + steal, cores, model, source: 'proc' };
+    }
+  } catch { /* 非 Linux：用 os.cpus() */ }
   let idle = 0;
   let total = 0;
   for (const c of cpus) {
     const t = c.times || {};
-    const sum = (t.user || 0) + (t.nice || 0) + (t.sys || 0) + (t.irq || 0) + (t.idle || 0);
-    total += sum;
+    total += (t.user || 0) + (t.nice || 0) + (t.sys || 0) + (t.irq || 0) + (t.idle || 0);
     idle += t.idle || 0;
   }
-  return { idle, total, cores: cpus.length, model: cpus[0]?.model || '' };
+  return { idle, total, cores, model, source: 'os' };
+}
+
+/** `/proc/meminfo` 的 MemTotal / MemAvailable（字节）；读不到返回 null。 */
+let memInfoError = null;
+function memInfo() {
+  try {
+    const txt = fs.readFileSync('/proc/meminfo', 'utf8');
+    const kb = (key) => {
+      const m = txt.match(new RegExp('^' + key + ':\\s+(\\d+)\\s+kB', 'm'));
+      return m ? Number(m[1]) * 1024 : null;
+    };
+    const total = kb('MemTotal');
+    const available = kb('MemAvailable');
+    if (total && available != null) return { total, available, used: Math.max(0, total - available) };
+  } catch (e) { memInfoError = String((e && (e.code || e.message)) || e); }
+  return null;
 }
 
 /** Two cumulative CPU samples → whole-machine usage in percent (0–100). null when the window is too short. */
@@ -69,6 +100,41 @@ export function createResourceMonitor({
   /** @type {{ idle: number, total: number, cores: number, model: string } | null} */
   let lastCpu = null;
   let lastCpuAt = 0;
+  /** 1 秒一次的采样环形缓冲：整机占用率按 5 秒均值上报，避免 2 秒轮询窗口的抖动（业主 2026-11-28） */
+  /** @type {{ at: number, pct: number }[]} */
+  const cpuHist = [];
+  const CPU_SAMPLE_MS = 1000;
+  const CPU_HIST_MAX = 120;
+  const CPU_IDLE_STOP_MS = 30_000;
+  let cpuTimer = null;
+  let lastSnapshotAt = 0;
+  /** 取最近 ms 毫秒内的采样均值；没有样本时 null。 */
+  const meanSince = (ms) => {
+    const from = now() - ms;
+    const xs = cpuHist.filter((x) => x.at >= from);
+    return xs.length ? xs.reduce((a, x) => a + x.pct, 0) / xs.length : null;
+  };
+  const pushCpuSample = () => {
+    const at = now();
+    const t = cpuTimes();
+    if (lastCpu && at > lastCpuAt) {
+      const pct = cpuPct(lastCpu, t);
+      if (pct !== null) {
+        cpuHist.push({ at, pct });
+        while (cpuHist.length > CPU_HIST_MAX) cpuHist.shift();
+      }
+    }
+    lastCpu = t;
+    lastCpuAt = at;
+    // 没人看后台就停掉采样（这份检测器原本是纯拉取式，不常驻跑定时器）
+    if (cpuTimer && at - lastSnapshotAt > CPU_IDLE_STOP_MS) { clearInterval(cpuTimer); cpuTimer = null; cpuHist.length = 0; }
+  };
+  const ensureCpuSampler = () => {
+    if (cpuTimer) return;
+    pushCpuSample();
+    cpuTimer = setInterval(pushCpuSample, CPU_SAMPLE_MS);
+    cpuTimer.unref?.();
+  };
   /** @type {{ user: number, system: number, at: number } | null} */
   let lastProc = null;
   /** @type {{ out: number, in: number, at: number } | null} */
@@ -131,13 +197,14 @@ export function createResourceMonitor({
     const nowKey = dayKey(at);
     if (nowKey !== todayKey) todayKey = nowKey;
 
-    // ---- CPU: whole machine over the window since the previous snapshot, and this process over the same window ----
+    // ---- CPU: 整机占用率取 5 秒均值（1 秒采样），本进程仍按同一窗口算 ----
+    ensureCpuSampler();
+    lastSnapshotAt = at;
     const cpus = cpuTimes();
-    let systemPct = null;
-    if (lastCpu && at > lastCpuAt) {
-      // a very short window is dominated by sampling noise: keep the previous figure instead
-      if (at - lastCpuAt >= 200) systemPct = cpuPct(lastCpu, cpus);
-    }
+    let systemPct = meanSince(5000);
+    // 刚启动 / 采样还没攒够时，退回「距上次快照的差值」
+    if (systemPct === null && lastCpu && at - lastCpuAt >= 200) systemPct = cpuPct(lastCpu, cpus);
+    const systemPct1m = meanSince(60_000);
     lastCpu = cpus;
     lastCpuAt = at;
     const usage = process.cpuUsage();
@@ -149,10 +216,11 @@ export function createResourceMonitor({
     }
     lastProc = { user: usage.user, system: usage.system, at };
 
-    // ---- memory ----
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = Math.max(0, totalMem - freeMem);
+    // ---- memory: 有 MemAvailable 就用它算（缓存不算"已用"，和 free -h / top 一致）----
+    const mi = memInfo();
+    const totalMem = mi ? mi.total : os.totalmem();
+    const usedMem = mi ? mi.used : Math.max(0, os.totalmem() - os.freemem());
+    const freeMem = Math.max(0, totalMem - usedMem);
     const mem = process.memoryUsage();
 
     // ---- bandwidth ----
@@ -201,9 +269,11 @@ export function createResourceMonitor({
       at,
       cpu: {
         systemPct: round1(systemPct),
+        systemPct1m: round1(systemPct1m),
         processPct: round1(processPct),
         // processPct is a share of ONE core (the usual `top` convention); this one is of the whole machine
         processPctOfHost: round1(processPct === null ? null : processPct / Math.max(1, cpus.cores)),
+        source: cpus.source || null,
         cores: cpus.cores,
         model: cpus.model,
         loadavg: os.loadavg().map((n) => round1(n)),
@@ -212,6 +282,10 @@ export function createResourceMonitor({
         totalBytes: totalMem,
         freeBytes: freeMem,
         usedBytes: usedMem,
+        // 'proc' = 用了 /proc/meminfo 的 MemAvailable；'os' = 退回 os.totalmem()/os.freemem()（容器里 /proc/meminfo 常被屏蔽）
+        source: mi ? 'proc' : 'os',
+        error: mi ? undefined : memInfoError,
+        availableBytes: mi ? mi.available : Math.max(0, os.freemem()),
         usedPct: totalMem > 0 ? round1((usedMem / totalMem) * 100) : null,
         process: {
           rssBytes: mem.rss,
