@@ -155,7 +155,7 @@ export function aiTakeoverOption(room, myId) {
  * Invite link for a room code.
  *
  * 业主 2026-11-21：「复制房间链接的主链接头改为 mon3tr.fun」，并且**不要**把对方带进
- * 主题页（ui-theme-closure.html 之类）。所以公网入口一律给 `https://mon3tr.fun/?room=CODE`，
+ * 主题页（ui-theme-closure.html 之类）。所以公网入口一律给 `http://8.134.50.56:3000/?room=CODE`（2026-11-22 CL-44 起域名已脱钩，mon3tr.fun 现在是服务器列表站），
  * 本机 / 局域网调试才保留当前页面地址（否则本地开的房间会指向公网服务器）。
  */
 export function inviteLink(code) {
