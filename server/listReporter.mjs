@@ -95,9 +95,9 @@ export function startListReporter({ dataDir = 'data', log = console } = {}) {
 
   // 业主 2026-11-28「让玩家刷新时是真刷新」：
   // 不能只在自己的 30 秒节拍里探测，否则玩家点刷新要等半分钟。
-  // 改成**每 4 秒轻量轮询一次列表**（只读 JSON，没有副作用），两种情况立刻探：
+  // 改成**每 2 秒轻量轮询一次列表**（只读 JSON，没有副作用），两种情况立刻探：
   //   ① 到了自己的常规间隔（intervalMs）② 列表里 refreshAt 比上一轮新（有玩家点了刷新）
-  const TICK_MS = 3000;
+  const TICK_MS = 2000;
   let busy = false;
   let lastCycleAt = 0;
   let lastHandledRefresh = 0;
@@ -120,11 +120,19 @@ export function startListReporter({ dataDir = 'data', log = console } = {}) {
     if (busy) { setTimeout(tick, TICK_MS).unref?.(); return; }
     busy = true;
     try {
+      // 配置热加载：改 data/list-agent.json 不用重启（业主 2026-11-28）
+      try {
+        const fresh = readConfig(dataDir);
+        if (fresh) Object.assign(cfg, fresh);
+      } catch { /* 配置坏了就沿用上一份 */ }
       const listRes = await request(`${cfg.listUrl}/api/servers`, { timeout: cfg.timeoutMs * 2 });
       if (listRes.status !== 200) { warn(`拉列表失败 HTTP ${listRes.status}`); return; }
       const doc = JSON.parse(listRes.body);
       const refreshAt = Number(doc.refreshAt) || 0;
-      const due = Date.now() - lastCycleAt >= cfg.intervalMs;
+      // 探测频率由列表站下发（线上 agentIntervalMs = 6000）；没下发就沿用本地 intervalMs。
+      // 结果夹在 [3 秒, 本地 intervalMs]：本地配置只能更慢，不能比列表站要求的更快
+      const target = Math.max(3000, Math.min(cfg.intervalMs, Number(doc.agentIntervalMs) || cfg.intervalMs));
+      const due = Date.now() - lastCycleAt >= target;
       const asked = refreshAt > lastHandledRefresh && refreshAt > lastCycleAt;
       if (due || asked) {
         if (asked) lastHandledRefresh = refreshAt;
