@@ -15,19 +15,28 @@
 import { sendJson } from '../http/common.js';
 import { parseCookies, COOKIE } from './http.js';
 
-const BODY_MAX = 8 * 1024;
+const BODY_MAX = 64 * 1024;
+// 超过这个量就不读了（保护内存），只有这一档才断连接；BODY_MAX 之上只是回 413（2026-11-28）。
+const BODY_DRAIN_MAX = 2 * 1024 * 1024;
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let size = 0;
+    let tooBig = false;
     /** @type {Buffer[]} */
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > BODY_MAX) { reject(Object.assign(new Error('too large'), { status: 413, code: 'E_BODY_BIG' })); req.destroy(); return; }
+      if (size > BODY_DRAIN_MAX) {
+        reject(Object.assign(new Error('way too large'), { status: 413, code: 'E_BODY_BIG' }));
+        req.destroy();
+        return;
+      }
+      if (size > BODY_MAX) { tooBig = true; return; }   // 超限也把流读完，才发得出 413（2026-11-28，同 accounts/http.js）
       chunks.push(c);
     });
     req.on('end', () => {
+      if (tooBig) { reject(Object.assign(new Error('too large'), { status: 413, code: 'E_BODY_BIG' })); return; }
       if (!chunks.length) { resolve({}); return; }
       try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { reject(Object.assign(new Error('bad json'), { status: 400, code: 'E_JSON' })); }
     });

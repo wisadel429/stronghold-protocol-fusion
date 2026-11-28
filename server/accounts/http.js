@@ -19,7 +19,13 @@ import { sendJson } from '../http/common.js';
 import { clientAddress } from '../net.js';
 
 const COOKIE = 'sp_acc';
-const BODY_MAX = 64 * 1024;
+// 请求体上限（业主 2026-11-28 报障：云存档同步报「连不上服务器」，接口是 /api/account/save/merge）。
+// 原来这里是 64 KB，而存档本身上限是 512 KB（service.js 的 SAVE_MAX_BYTES）—— 两个上限打架：
+// 存档一大就在 readBody 里被判超限，紧接着 req.destroy()，客户端只看到 ERR_EMPTY_RESPONSE。
+// 现在信封给到 1 MB（512 KB 存档 + JSON 包装余量）；超限时**读完再回 413**，不再砍连接。
+const BODY_MAX = 1024 * 1024;
+// 真正的护栏：超过这个量就不读了（保护内存），只有这一档才断连接。
+const BODY_DRAIN_MAX = 8 * 1024 * 1024;
 // 业主 2026-11-15：单 IP 1 小时内最多注册 10 个账号（原为 3）。
 // 只在**注册成功**后计数（wouldAllow 只检查、成功后 hit 记账），所以填错 QQ / 密码不会把自己锁一小时。
 // 另设一个宽松的「尝试上限」兜底，防止有人靠无限失败来枚举 QQ 号是否已注册。
@@ -65,14 +71,22 @@ function parseCookies(header) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let size = 0;
+    let tooBig = false;
     /** @type {Buffer[]} */
     const chunks = [];
     req.on('data', (c) => {
       size += c.length;
-      if (size > BODY_MAX) { reject(Object.assign(new Error('body too large'), { status: 413, code: 'E_BODY_BIG' })); req.destroy(); return; }
+      if (size > BODY_DRAIN_MAX) {
+        // 极端情况（几百 MB）：不值得为了回一句话把内存吃满，直接断
+        reject(Object.assign(new Error('body way too large'), { status: 413, code: 'E_BODY_BIG' }));
+        req.destroy();
+        return;
+      }
+      if (size > BODY_MAX) { tooBig = true; return; }   // 超限：不再攒数据，但继续把流读完，好让 413 真的发得出去
       chunks.push(c);
     });
     req.on('end', () => {
+      if (tooBig) { reject(Object.assign(new Error('body too large'), { status: 413, code: 'E_BODY_BIG' })); return; }
       if (!chunks.length) { resolve(null); return; }
       try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch { reject(Object.assign(new Error('bad json'), { status: 400, code: 'E_JSON' })); }
     });

@@ -7,6 +7,9 @@
 // connect-src names the one remote origin the page is allowed to read: the 感谢名单 ticker on the title screen
 // (screens/title.js ThanksMarquee) fetches https://ganxiemingdan.jiangjiangze.icu/api/thanks every 25 s. Without it
 // the fetch is refused by CSP and the ticker silently falls back to its built-in list — the "感谢名单不对" symptom.
+// `data:` 也在 connect-src 里（业主 2026-11-28 的控制台：`Fetch API cannot load data:image/png;base64,…`）：
+// 有些图片解码走 `fetch(url).blob()`（render/vfx/library.js `_image`），而这类 url 可能本就是内联的 data: URL。
+// data: 不指向任何网络位置（同文档内解析），放行它不会把页面暴露给外部源；img-src 早就允许 data: 了。
 // Nothing else leaves 'self'.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,5 +33,5 @@ export function siteCsp(publicDir) {
       hashes.add(`'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`);
     }
   }
-  return `default-src 'self'; script-src 'self'${hashes.size ? ' ' + [...hashes].join(' ') : ''}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ${THANKS_ORIGIN}; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'`;
+  return `default-src 'self'; script-src 'self'${hashes.size ? ' ' + [...hashes].join(' ') : ''}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' data: ${THANKS_ORIGIN}; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'none'`;
 }
