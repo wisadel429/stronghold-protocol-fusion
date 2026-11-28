@@ -50,6 +50,8 @@ import { ROOT, listenAddress, bindCandidates, serveDirs, makeLogger, parseTrustP
 import { WS_MAX_PAYLOAD, createSessionStack, attachWebSocket } from './http/websocket.js';
 import { siteCsp } from './http/csp.js';
 import { DATA_SHIM_JS, createStaticHandler } from './http/static.js';
+import { createDevGate } from './http/devGate.js';
+import { isLocalIp, normalizeIp } from './net.js';
 // 业主 2026-11-21：「域名 mon3tr.fun 一输入就进游戏」—— 额外端口（80）透明代理到主端口
 import { readExtraPorts, startExtraPorts } from './http/extraPorts.js';
 import { ensureArtKey, hasArtKey } from './artKeyFetch.js';
@@ -207,6 +209,20 @@ export async function startServer(opts = {}) {
       } catch { return null; }
     }
     : null;
+  // /dev/** 闸门（业主 2026-11-28）：管理员会话，或本机直连（无反代头）。见 server/http/devGate.js。
+  const devGate = createDevGate({
+    accountsOn,
+    accountOf: accountsOn
+      ? (req) => {
+        try {
+          const token = parseCookies(req && req.headers && req.headers.cookie)[COOKIE];
+          return token ? (accountService.resolve(token) || null) : null;
+        } catch { return null; }
+      }
+      : null,
+    isLocal: (req) => isLocalIp(normalizeIp(req && req.socket && req.socket.remoteAddress)),
+    log,
+  });
   const { registry, lobby, network } = createSessionStack({ ...opts, requireAccount: accountsOn, resolveAccount },
     { data, log, content, plugins: roomSets, hosts, versions, versionHosts, simPool });
   // 社交（账号系统第二期）：好友 / 黑名单 / 邀请；在线状态由 network 现算，不落盘
@@ -274,7 +290,7 @@ export async function startServer(opts = {}) {
     }, 30_000);
     timer.unref?.();
   }
-  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents, versions });
+  const serveStatic = createStaticHandler({ publicDir, dataDir, sharedDir, simDir, packsDir, pluginsDir, packs, content, log, assetIndex, views, visual, contents, versions, devGate });
   // the plugin studio (DESIGN §32.9): its page and API for this machine and the local network; it watches plugins/ only
   // once it is used (hot reload), and rooms whose host is the author or alone follow a plugin's changes by themselves
   const studio = opts.studio === false ? null : createStudio({ publicDir, pluginsDir, dataDir, registry: packs, lobby, sessions: registry, log, fetch: opts.fetch });

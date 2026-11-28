@@ -76,6 +76,7 @@ import { createPluginRegistry, sameIdentity, statIdentity } from '../plugins/reg
 import { computeVanillaContent } from '../plugins/identity.js';
 import { createVisualSets } from '../plugins/visualSet.js';
 import { isStudioPath } from '../studio/paths.js';
+import { isDevPath } from './devGate.js';
 import { PACKS_URL, PACK_INDEX_FILE } from '../../shared/packs.js';
 import { PLUGINS_URL, PLUGIN_INDEX_VERSION, buildPluginIndex, extOf, isPackPath, isPluginId } from '../../shared/plugins/manifest.js';
 import { csUrlPart } from '../../shared/plugins/identity.js';
@@ -144,7 +145,7 @@ const CS_FILE = /^\/cs\/([0-9a-f]{16})\/([A-Za-z0-9._\/-]{1,200})$/;
  */
 export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = path.join(ROOT, 'server', 'sim'), packsDir = path.join(ROOT, 'packs'),
   pluginsDir = path.join(path.dirname(path.resolve(packsDir)), 'plugins'), packs = null, content = null, log = noopLog,
-  assetIndex = null, views = null, visual = null, contents = null, versions = null }) {
+  assetIndex = null, views = null, visual = null, contents = null, versions = null, devGate = null }) {
   const registry = packs || createPluginRegistry({ publicDir, dataDir, packsDir, pluginsDir }, { log: /** @type {any} */ (log) });  // 美术资源「落盘加密、服务端透明解密」（业主 2026-11-15）：没有 data/art-key.json 时自动关闭，行为与以前完全一致。
   const artLock = createArtLock({ root: path.dirname(path.resolve(publicDir)), log });
   // 域名入口跳转（配置文件不存在 = 不跳，行为不变）
@@ -203,6 +204,12 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     try { decoded = decodeURIComponent(rawPath); } catch { sendError(req, res, 400, '请求地址无效 · Bad request'); return; }
     if (!decoded.startsWith('/') || decoded.includes('\0') || decoded.includes('\\')) {
       sendError(req, res, 400, '请求地址无效 · Bad request');
+      return;
+    }
+    // /dev/**（开发工具：game-mock、simcheck、trainer …）：只给管理员会话，见 server/http/devGate.js。
+    // 放在最前面、对「任何方式的命中」一视同仁：/dev/x、/assets/~h/dev/x、目录重定向之前都拦得住。
+    if (isDevPath(decoded) && !(devGate && devGate(req))) {
+      sendError(req, res, 404, '页面不存在 · Not found', decoded.length <= 200 ? decoded : '');
       return;
     }
     // the plugin studio's page is never a static file (server/studio/index.js isStudioPath: any spelling of /studio/)
