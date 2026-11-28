@@ -69,6 +69,19 @@ const ANNOUNCEMENT_BODY_MAX = 96 << 10;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(HERE, 'admin.html');
+/** 后台顶部显示的「服务器地址」：SP_PUBLIC_ORIGIN > data/public-origin.json > 本次请求的 Host */
+const PUBLIC_ORIGIN_FILE = path.join(HERE, '..', 'data', 'public-origin.json');
+function publicOriginOf(req) {
+  const env = String(process.env.SP_PUBLIC_ORIGIN || '').trim();
+  if (/^https?:\/\//i.test(env)) return env.replace(/\/+$/, '');
+  try {
+    const doc = JSON.parse(fs.readFileSync(PUBLIC_ORIGIN_FILE, 'utf8'));
+    const v = String((doc && doc.origin) || '').trim();
+    if (/^https?:\/\//i.test(v)) return v.replace(/\/+$/, '');
+  } catch { /* 没有配置文件 */ }
+  const host = String((req && req.headers && req.headers.host) || '').trim();
+  return host ? `http://${host}` : '';
+}
 /** 安装根目录（热更解压的落点）；server/index.js 传进来，默认 server/ 的上一层。 */
 const DEFAULT_ROOT = path.join(HERE, '..');
 /** Where a password changed in the page is kept (root of the installation, next to the launcher's own files). */
@@ -289,7 +302,7 @@ export function createAdminServer({
   // 热更锁：独立密钥，与后台口令解耦（见上面对 UPDATE_KEY_FILE 的说明）。缺失时按内置密文重建。
   const updateKey = ensureStoredUpdateKey(log);
   /** 是否仍是初始口令（页面据此显示登录页提示与登录后提醒）。 */
-  const usingDefaultPassword = () => !passwordFromEnv && typeof secret === 'string' && secret === DEFAULT_ADMIN_PASSWORD;
+  const usingDefaultPassword = () => !passwordFromEnv && typeof secret === 'string' && secret === DEFAULT_ADMIN_PASSWORD && !readStoredPassword();
   const adminBuild = build || computeAdminBuild();
   /** @type {Map<string, { n: number, until: number }>} failed logins per address */
   const failures = new Map();
@@ -432,6 +445,9 @@ export function createAdminServer({
       // 初始口令提示 (admin.html #gate-hint): shown only while the password is still DEFAULT_ADMIN_PASSWORD — once the
       // owner sets ADMIN_PASSWORD the line would be misleading, so the page keeps it hidden
       if (usingDefaultPassword()) html = html.replace('id="gate-hint" hidden', 'id="gate-hint"');
+      // 顶部「服务器地址 + 复制」用：把公网地址注入页面（业主 2026-11-28）
+      const bootJson = JSON.stringify({ origin: publicOriginOf(req), defaultPassword: usingDefaultPassword() });
+      html = html.replace('</head>', `<script>window.__ADMIN_BOOT__=${bootJson};</script></head>`);
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Content-Length': Buffer.byteLength(html),

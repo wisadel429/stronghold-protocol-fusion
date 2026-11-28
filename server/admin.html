@@ -128,6 +128,10 @@
     <span class="pill">房间 <b id="s-rooms">–</b></span>
     <span class="pill">对局 <b id="s-matches">–</b></span>
     <span class="pill">运行 <b id="s-uptime">–</b></span>
+    <span class="pill srv-url" title="这个后台对应的服务器地址（玩家用它进服）">
+      <span class="micro">服务器</span><code id="srv-url">–</code>
+      <button class="ghost" id="btn-copy-url" title="复制服务器网址" style="padding:2px 8px;margin-left:6px">复制</button>
+    </span>
     <button class="pwbtn" id="btn-password" title="修改后台口令">修改口令</button>
     <button class="ghost" id="btn-refresh">刷新</button>
     <button class="ghost" id="btn-logout" title="忘记本机保存的口令">退出</button>
@@ -1567,6 +1571,29 @@ window.addEventListener('keydown', (e) => {
   else if (!$('pw-modal').hidden) hidePwModal();
 });
 
+// ---- 顶部「服务器地址 + 复制」（业主 2026-11-28）：serve 时注入 window.__ADMIN_BOOT__.origin ----
+(() => {
+  try {
+    const boot = window.__ADMIN_BOOT__ || {};
+    const origin = String(boot.origin || location.origin || '').replace(/\/+$/, '');
+    const el = $('srv-url'); if (el) el.textContent = origin;
+    const copy = async (text) => {
+      try { await navigator.clipboard.writeText(text); return true; } catch { /* 退回到 execCommand */ }
+      try {
+        const t = document.createElement('textarea');
+        t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+        document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove();
+        return ok;
+      } catch { return false; }
+    };
+    const btn = $('btn-copy-url');
+    if (btn) btn.onclick = async () => {
+      const ok = await copy(origin);
+      if (ok) flash($('notice-msg'), '服务器网址已复制：' + origin, 'ok');
+      else alert('复制失败，请手动选中复制：' + origin);
+    };
+  } catch { /* 不影响后台其它功能 */ }
+})();
 if (password) { $('pw').value = password; refresh(); } else { showPanel(false); }
 </script>
 </body>
